@@ -1,11 +1,6 @@
-#   Sunrise:  A schematic agent to brighten your day
+# ATaLante:  Golden APL
 
-Use Sunrise to start a new “empty” Urbit app project.  Import the repo, then simply rename all text and files from `sunrise` to whatever your new agent's name will be.
+**WIP**
 
-Sunrise is modestly opinionated but generally straightforward.  If you are interested in having the `++abet` nested-core pattern in your agent, see [Moonrise](https://github.com/sigilante/moonrise).
+An implementation of APL in Urbit.
 
-![](logo.jpg)
-
-Prior art:
-
-- ~rabsef-bicrym and Dalten Collective, [`agent-skeleton`](https://github.com/dalten-collective/agent-skeleton)
