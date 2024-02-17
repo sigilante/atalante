@@ -1,8 +1,9 @@
   ::  /sur/atalante
 ::::
 ::
+/-  *lagoon
 |%
-+$  apple
++$  cultivar
   ^~
   $?  ::  Monadic functions
       %roll       :: ?B
@@ -76,20 +77,21 @@
       %is         :: A≡B
       %lam        :: A⍪B
       ::  Operators and axis indicators
+      %assign       :: ←
+      %separate     :: ⋄
       %reduce-last  :: +/B
       %reduce-first :: +⌿B
       %scan-last    :: +\B
       %scan-first   :: +⍀B
       %inner        :: A+.×B
       %outer        :: A∘.×B
-      ::  Function definitions
-      %func       :: ∇
+      %func         :: ∇
   ==
 ++  symbol-map
   ^~
-  ^-  (map @t apple)
+  ^-  (map @t cultivar)
   %-  malt
-  ^-  (list (pair @t apple))
+  ^-  (list (pair @t cultivar))
   :~  ::  Monadic operators
       :-  '?'  %roll
       :-  '⌈'  %ceiling
@@ -170,10 +172,113 @@
       :-  '∘.×'  %outer
       ::  Function definitions
       :-  '∇'  %func
+      :-  '←'   %assign
+  ==
+::  TODO  https://archive.is/jPzq
+++  ascii-map
+  ^~
+  ^-  (map @t @t)
+  %-  malt
+  ^-  (list (pair @t @t))
+  :~  ::  Monadic operators
+      :-  '?'   '?'
+      :-  '|^'  '⌈'
+      :-  '|_'  '⌊'
+      :-  '@r'  '⍴'
+      :-  '~'   '∼'
+      :-  '|'   '∣'
+      :-  '@i'   '⍳'
+      :-  '.'   '⋆'
+      :-  '-'   '−'
+      :: :-  '+'   '+'
+      :-  'x'   '×'
+      :-  ':-'  '÷'
+      :-  '-:'  '÷'
+      :: :-  ','   ','
+      :-  ':8'  '⌹'
+      :-  '8:'  '⌹'
+      :-  'o'   '○'
+      :-  'o*'  '⍟'
+      :-  '*o'  '⍟'
+      :-  'o|'  '⌽'
+      :-  '|o'  '⌽'
+      :-  'o-'  '⊖'
+      :-  '-o'  '⊖'
+      :-  '^|_'  '⍋'
+      :-  '_|_'  '⍒'
+      :-  'o|_'  '⍎'
+      :-  'o|^'  '⍕'
+      :-  'o\\'  '⍉'
+      :-  '\o'  '⍉'
+      :: :-  '!'  '!'
+      :-  '-='  '≡'
+      :-  '=-'  '≡'
+      :-  ',-'  '⍪'
+      :-  '-,'  '⍪'
+      ::  Dyadic operators
+      :: :-  '+'   '+'
+      :-  '-'   '−'
+      :-  'x'   '×'
+      :-  '-:'  '÷'
+      :-  ':-'  '÷'
+      :-  '⋆'  %pow
+      :-  '○'  %circle
+      :-  '?'  %deal
+      :-  '∈'  %in
+      :-  '⍷'  %find
+      :-  '⌈'  %max
+      :-  '⌊'  %min
+      :-  '⍴'  %reshape
+      :-  '↑'  %take
+      :-  '↓'  %drop
+      :-  '⊥'  %decode
+      :-  '⊤'  %encode
+      :-  '∣'  %mod
+      :-  ','  %cat
+      :-  '\\'  %expand
+      :-  '/'  %compress
+      :-  '⍳'  %index-of
+      :-  '⌹'  %matdiv
+      :-  '⌽'  %rotate
+      :-  '⊖'  %rotate-first
+      :-  '⍟'  %log-base
+      :-  '⍕'  %format
+      :-  '⍉'  %transpose-all
+      :-  '!'  %comb
+      :-  '¨'  %over-each
+      :-  '<'  %lt
+      :-  '≤'  %le
+      :-  '='  %eq
+      :-  '≥'  %ge
+      :-  '>'  %gt
+      :-  '≠'  %ne
+      :-  '∨'  %or
+      :-  '∧'  %and
+      :-  '⍱'  %nor
+      :-  '⍲'  %nand
+      :-  '⊣'  %left
+      :-  '⊢'  %right
+      :-  '≡'  %is
+      :-  '⍪'  %lam
+      ::  Operators and axis indicators
+      :-  '+/'  %reduce-last
+      :-  '+⌿'  %reduce-first
+      :-  '+\\'  %scan-last
+      :-  '+⍀'  %scan-first
+      :-  '+.×'  %inner
+      :-  '∘.×'  %outer
+      ::  Function definitions
+      :-  '∇'  %func
+      :-  '←'   %assign
   ==
 ::  APL AST
+::
+::  The AST ultimately bottoms out in one of 
 +$  apple-tree
   $%  [%empty ~]
+      [%error ~]
+      [%value p=apple]
+      [%fruit p=apple]
       ::  Monadic functions
       [%roll p=apple-tree]
       [%ceiling p=apple-tree]
@@ -255,6 +360,39 @@
       ::  Function definitions
       [%func p=apple-tree q=apple-tree r=apple-tree]
   ==
+::  Symbol table
+::    +$apple is a numeric value, nominally compatible with Lagoon but also
+::    supporting characters and strings in the same interface.
+::    ATL/APL needs to support inference, so there are some supertypes here.
+::    ATL/APL distinguishes scalars from vectors for algorithmic efficiency.
++$  apple                    ::  +$apple: ATL type
+  $?  ::  Vector number types
+      [%real p=ray]          ::  IEEE 754 float
+      [%uint p=ray]          ::  unsigned integer
+      [%int2 p=ray]          ::  2s-complement integer
+      [%cplx p=ray]          ::  BLAS-compatible packed floats
+      [%unum p=ray]          ::  unum/posit
+      [%fixp p=ray]          ::  fixed-precision
+      ::  Scalar number types
+      [%sreal p=@]           ::  IEEE 754 float
+      [%suint p=@]           ::  unsigned integer
+      [%sint2 p=@]           ::  2s-complement integer
+      [%scplx p=@]           ::  BLAS-compatible packed floats
+      [%sunum p=@]           ::  unum/posit
+      [%sfixp p=@]           ::  fixed-precision
+      ::  Compiler types
+      [%any p=*]             ::  value prior to inference
+      [%num p=*]             ::  number of some kind (Lagoon type)
+      [%arr p=*]             ::  array (scalar or vector)
+      ::  Other types
+      [%bool p=?(%true %false)]  ::  boolean
+      [%text p=@t]           ::  character string
+  ==
+::    +$leaf is a string.
++$  leaf  @t
++$  symbol-table  (map @t cultivar)
+::  Executable Nock noun (evaluated with Nock 2 .*) and type.
++$  apple-pie  vase
 ::
 +$  action
   $%  [%rise ~]
