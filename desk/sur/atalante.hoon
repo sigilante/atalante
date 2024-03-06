@@ -370,6 +370,7 @@
       [%real p=ray]          ::  IEEE 754 float
       [%uint p=ray]          ::  unsigned integer
       [%int2 p=ray]          ::  2s-complement integer
+      [%intz p=ray]          ::  ZigZag integer
       [%cplx p=ray]          ::  BLAS-compatible packed floats
       [%unum p=ray]          ::  unum/posit
       [%fixp p=ray]          ::  fixed-precision
@@ -392,7 +393,7 @@
 +$  leaf  @t
 +$  symbol-table  (map @t cultivar)
 ::  Executable Nock noun (evaluated with Nock 2 .*) and type.
-+$  apple-pie  vase
++$  tart  vase
 ::
 +$  action
   $%  [%rise ~]

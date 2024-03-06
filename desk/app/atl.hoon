@@ -1,27 +1,25 @@
-/-  atl
-/+  atllib=atalante,
-    default-agent,
-    dbug,
-    shoe,
-    sole
+/-  rpn
+/+  default-agent, dbug, lib=rpn, shoe, sole
 |%
 +$  versioned-state
   $%  state-0
   ==
-+$  state-0  %0
++$  state-0
+  $:  %0
+      stack=(list ?(@rs op:rpn))
+  ==
 +$  card  card:agent:shoe
-+$  command  @t
 --
 %-  agent:dbug
 =|  state-0
 =*  state  -
 ^-  agent:gall
-%-  (agent:shoe *)
-^-  (shoe:shoe *)
+%-  (agent:shoe command:rpn)
+^-  (shoe:shoe command:rpn)
 |_  =bowl:gall
 +*  this     .
     default  ~(. (default-agent this %|) bowl)
-    leather  ~(. (default:shoe this *) bowl)
+    leather  ~(. (default:shoe this command:rpn) bowl)
 ++  on-init   on-init:default
 ++  on-save   !>(state)
 ++  on-load
@@ -37,15 +35,19 @@
 ++  on-fail   on-fail:default
 ++  command-parser
   |=  =sole-id:shoe
-  ^+  |~(nail *(like [? *]))
-  (stag | (cook * parse:parser:atllib))
-  :: (stag | (cook tree:atl parse:parser:atllib))
+  ^+  |~(nail *(like [? command:rpn]))
+  %+  stag  |
+  (cook command:rpn ;~(pose num:lib ops:lib))
 ++  on-command
-  |=  [=sole-id:shoe tree=*]
+  |=  [=sole-id:shoe =command:rpn]
   ^-  (quip card _this)
-  ~&  >>>  tree
-  :_  this
-  ~
+  =/  old-stack  (weld stack ~[command])
+  =/  new-stack  (process:lib old-stack)
+  !:
+  :_  this(stack new-stack)
+  :~  [%shoe ~ sole+klr+~[(crip "{<stack>} →")]]
+      [%shoe ~ sole+klr+~[[[`%br ~ `%g] (crip "{<new-stack>}") ~]]]
+  ==
 ++  can-connect
   |=  =sole-id:shoe
   ^-  ?
@@ -56,4 +58,3 @@
 ++  on-disconnect  on-disconnect:leather
 ++  tab-list       tab-list:leather
 --
-
