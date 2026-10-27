@@ -1,8 +1,8 @@
-# Atalante v1
+# Atalante v0.1.0
 
-**Released 2026-10-28** from master. v1 is the dialect approved on 2026-10-27, [`docs/spec/dialect.md`](spec/dialect.md) rules D-1 to D-62, implemented in Jock as a compiler from ATL/APL to Nock, with a REPL that runs as a NockApp kernel.
+**Released 2026-10-28** from master as tag `v0.1.0`. It implements dialect v1, approved on 2026-10-27, [`docs/spec/dialect.md`](spec/dialect.md) rules D-1 to D-62, implemented in Jock as a compiler from ATL/APL to Nock, with a REPL that runs as a NockApp kernel.
 
-## What v1 is
+## What v0.1.0 is
 
 - **The dialect.** Classical flat APL: right-to-left evaluation, strands, scalar extension, `⎕IO` and `⎕PP`, the scalar functions of D-41, the structural functions of D-42, the operators of D-43 (reduce, scan, inner and outer product, each), bracket indexing and indexed assignment, tradfns with header locals, and the `)` commands of D-61.
 - **The pipeline.** Lexer, signature-driven parser, tree-walking interpreter, kind and rank inference, and a Nockasm emitter with a runtime of 19 gates. Every evaluated statement runs through both the interpreter and its emitted Nock, held equal. A tradfn compiles on its first call and the formula is cached against its signature (D-34).
@@ -47,6 +47,6 @@ The shakedown ledger in [`docs/plan.md`](plan.md) §4 records every finding. Fil
 
 Each is worked around in this tree. v1.1 drops the workarounds as the fixes land.
 
-## Removed at v1
+## Removed at v0.1.0
 
 The 2024 Hoon tree, `desk/`, a shoe agent with a glyph inventory in `desk/sur/atalante.hoon`. It stays in history at b721975 and the spec cites it there.

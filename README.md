@@ -1,10 +1,10 @@
 # ATaLante:  Golden APL
 
-**STATUS ~2026.10.28:  The project is at v1.**
+**STATUS ~2026.10.28:  The project is at v0.1, implementing dialect v1.**
 
 ![](./logo.jpg)
 
-Atalante (ATL for short) is an implementation of APL in Urbit, written in Jock.  It compiles ATL/APL source to Nock and runs as a NockApp kernel.  We call Atalante's idiosyncratic APL ATL/APL.  The dialect is [`docs/spec/dialect.md`](docs/spec/dialect.md), the order of work is [`docs/plan.md`](docs/plan.md), and the v1 release is [`docs/release-v1.md`](docs/release-v1.md).
+Atalante (ATL for short) is an implementation of APL in Urbit, written in Jock.  It compiles ATL/APL source to Nock and runs as a NockApp kernel.  We call Atalante's idiosyncratic APL ATL/APL.  The dialect is [`docs/spec/dialect.md`](docs/spec/dialect.md), the order of work is [`docs/plan.md`](docs/plan.md), and the v0.1.0 release is [`docs/release-v0.1.md`](docs/release-v0.1.md).
 
 At the apple prompt:
 

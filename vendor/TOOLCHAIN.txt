@@ -1,4 +1,4 @@
-Toolchain pins for Atalante v1 (2026-10-28): everything the build and the
+Toolchain pins for Atalante v0.1.0 (2026-10-28): everything the build and the
 tests run on, with the commit each was taken from.  vendor/JOCK.txt and
 vendor/NUMERICS.txt hold the two vendored trees' details; this file names
 all of the pins in one place.
@@ -46,4 +46,4 @@ Reproducing the v1 verification, with JOCK set to a worktree at the pin:
     tools/atlc.sh kernel          out/atl-kernel.jam, the REPL kernel
     tools/atlc.sh kernel-test     the kernel vector through arms 22 and 23
     tools/atlc.sh repl-test       the README transcript typed at the prompt
-docs/release-v1.md records the counts these gave at the release commit.
+docs/release-v0.1.md records the counts these gave at the release commit.
