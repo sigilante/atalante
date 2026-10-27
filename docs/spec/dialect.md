@@ -113,6 +113,8 @@ Dyadic: `+ − × ÷ ⌈ ⌊ ∣ ⋆ ⍟ ○ !` and `< ≤ = ≥ > ≠ ∨ ∧ �
 
 ## 9. What v2 owes
 
+Ordered as phases P8 onward in [`docs/roadmap.md`](../roadmap.md).
+
 Nested arrays or their ruled-out alternative (D-6); dfns with guards (D-32, ruled); dyadic `⍉`, axis specification `[k]`, `⍎`, `⍕` dyadic, `⌹`, `⍷`, `⍪`, `≡`; derived-function operands; an ASCII input pre-pass (D-8, deferred); `⎕TYPE`'s meaning (D-15, the name is reserved); packed Lagoon erasure and SoftBLAS jets (plan P7).
 
 ## References

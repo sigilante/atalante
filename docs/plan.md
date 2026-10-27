@@ -1,6 +1,6 @@
 # Atalante — Implementation Plan
 
-**Status: v0.1.0 released (2026-10-28; [release notes](release-v0.1.md)), implementing dialect v1.** Atalante is rebuilt in Jock as a compiler from ATL/APL to Nock. The dialect is [`docs/spec/dialect.md`](spec/dialect.md); this file fixes the toolchain, the order of work, and each phase's exit test. The 2024 Hoon tree, `desk/`, was the glyph inventory and nothing more; it was removed at v1 and stays in history at b721975.
+**Status: v0.1.1 released (2026-10-28; [release notes](release-v0.1.md)), implementing dialect v1; what comes next is [roadmap.md](roadmap.md).** Atalante is rebuilt in Jock as a compiler from ATL/APL to Nock. The dialect is [`docs/spec/dialect.md`](spec/dialect.md); this file fixes the toolchain, the order of work, and each phase's exit test. The 2024 Hoon tree, `desk/`, was the glyph inventory and nothing more; it was removed at v1 and stays in history at b721975.
 
 The project is also a shakedown of late-beta Jock. Every Jock gap it finds is recorded in §4 and filed upstream; a workaround in this tree names the gap it works around.
 
