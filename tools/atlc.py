@@ -30,7 +30,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 JOCK = os.environ.get("JOCK", os.path.expanduser("~/Code/jock"))
 GEN = os.path.join(ROOT, "tests", "gen", "corpus.jock")
 GS, RS, US = "\x1d", "\x1e", "\x1f"
-BATCH = int(os.environ.get("ATL_BATCH", "8"))   # cases per generated program (S-13)
+BATCH = int(os.environ.get("ATL_BATCH", "1000"))   # cases per generated program; one program by default (S-13 closed)
 
 
 CLASSES = {"a": 1, "m": 2, "d": 3, "b": 4, "n": 5}
@@ -177,8 +177,8 @@ def main(argv):
             f.write(generate(cases, entry))
         print(GEN)
         return 0
-    # one program per BATCH of cases:  the whole evaluation corpus in one
-    # program crashes honk-kick with no tag (S-13), while every half runs
+    # one program per BATCH of cases;  the default is one program for the
+    # whole corpus (~3 min).  ATL_BATCH splits it, which S-13 once needed
     got = {}
     for i in range(0, len(cases), BATCH):
         part = cases[i:i + BATCH]
