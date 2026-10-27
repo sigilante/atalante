@@ -171,6 +171,18 @@ def main(argv):
     if verb == "run" and len(files) != 1:
         sys.exit("atlc run: exactly one case")
     cases = [parse_case(f) for f in files]
+    if verb == "lexcheck":
+        # the session strips a prompt prefix and a `:nock`/`:noun` directive
+        # before the lexer sees a line (atl.stepLine); do the same here
+        def strip(inp):
+            for pre in ("\U0001F34E> ", "\U0001F34F> "):
+                if inp.startswith(pre):
+                    inp = inp[len(pre):]
+            for pre in (":nock ", ":noun "):
+                if inp.startswith(pre):
+                    inp = inp[len(pre):]
+            return inp
+        cases = [(n, [[strip(i), e, r] for i, e, r in st], sg) for n, st, sg in cases]
     os.makedirs(os.path.dirname(GEN), exist_ok=True)
     entry = {"lex": "lexcorpus", "lexcheck": "lexcorpus", "parse": "parsecorpus"}.get(verb, "corpus")
     if verb == "gen":

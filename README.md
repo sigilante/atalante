@@ -85,7 +85,7 @@ Every case under [`tests/atl/`](tests/atl/README.md) is a session transcript: in
 
 ```
 tools/atlc.sh corpus        # 26 cases, 260 statements
-tools/atlc.sh lexcheck      # 30 lexer vectors
+tools/atlc.sh lex           # 30 lexer vectors
 tools/atlc.sh parse         # 65 parser vectors
 tools/atlc.sh oracle        # 14 emission goldens against an independent Nockasm
 tools/atlc.sh kernel-test   # the kernel poked and peeked, 5 checks
@@ -107,11 +107,11 @@ NockVM jets integer arithmetic and nothing on floats, so real-valued work costs 
 ## What v1 holds back
 
 - Arrays are flat (D-6).  Nested arrays such as `'sing' 'goddess' 'sing'` are v2.
-- A tradfn body is straight-line (D-32): no `→`, no labels, no dfns.
+- A tradfn body is straight-line (D-32).  v2 adds dfns with guards; `→` and labels are omitted for good.
 - No axis specification; `↑` and `↓` on rank at most 1; `⊥` and `⊤` on naturals; reductions and scans on rank at most 2.
 - Held back with reasons in D-44: `⌹ ⍎ ⍕ ⍷ ⍪ ≡`, dyadic `⍉`, `⌽` with axis.
 - Input is Unicode; the ASCII spellings `- * | ~` are canonical (D-9) and nothing else is transliterated (D-8).
-- `⎕TYPE ← …` parses and is refused as `%unimplemented` (D-15, open).
+- `⎕TYPE` is a reserved name (D-15): it parses, and reading or assigning it refuses with `%unimplemented`.
 
 ## Layout
 

@@ -39,7 +39,8 @@ python3     the harnesses: tools/atlc.py, tools/goldens-oracle.py,
 
 Reproducing the v1 verification, with JOCK set to a worktree at the pin:
     tools/atlc.sh corpus          evaluation corpus, interpreter and emitted Nock
-    tools/atlc.sh lexcheck        lexer vectors
+    tools/atlc.sh lex             lexer vectors
+    tools/atlc.sh lexcheck        every corpus input line tokenizes
     tools/atlc.sh parse           parser vectors
     tools/atlc.sh oracle          emission goldens against the Python nockasm
     tools/atlc.sh kernel          out/atl-kernel.jam, the REPL kernel

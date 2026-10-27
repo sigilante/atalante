@@ -1,6 +1,6 @@
 # ATL/APL — The Dialect
 
-**Status: v1 APPROVED (2026-10-27).** The maintainer approved Draft 1 as the v1 scope on 2026-10-27; `%box` nesting and the other §9 items are revisited for v2. Rules carry flat `D-n` ids, append-only. Each rule names the corpus vectors that pin it; `⟨none — UNPINNED⟩` marks a rule that has no vector yet. A rule without a vector is not a rule. OPEN items are decisions the maintainer has not taken.
+**Status: v1 (2026-10-28).** The maintainer approved Draft 1 as the v1 scope on 2026-10-27 and ruled the last three open items on 2026-10-28 (D-8 deferred to the §9 roadmap, D-15 and D-32 ruled); `%box` nesting and the other §9 items are revisited for v2. Rules carry flat `D-n` ids, append-only. Each rule names the corpus vectors that pin it; `⟨none — UNPINNED⟩` marks a rule that has no vector yet. A rule without a vector is not a rule. No rule is OPEN; DEFERRED marks a continuation on the §9 roadmap.
 
 ATL/APL is the APL that Atalante compiles. It is Budd's compiler subset (Budd 1987, *An APL Compiler*) with the additions the README examples use, and it is specified here as a *language*, independent of its host. The host is Jock; the companion [`docs/plan.md`](../plan.md) fixes the order in which this spec is implemented.
 
@@ -28,7 +28,7 @@ ATL/APL is the APL that Atalante compiles. It is Budd's compiler subset (Budd 19
 
 **D-7 · Comments and separators.** `⍝` comments to end of line. `⋄` separates statements on one line. A newline ends a statement except inside a `∇` definition. ⟨`lex/names-glyphs`, `lex/strings-system`⟩
 
-**D-8 · OPEN · ASCII transliteration.** The 2024 tree's `ascii-map` (`desk/sur/atalante.hoon`, history b721975) is half-finished and ambiguous (`|` is both residue and part of `|^`). v1 reads Unicode only. An ASCII input layer, if any, is a lexer pre-pass with its own table and vectors, never a grammar change.
+**D-8 · DEFERRED 2026-10-28 · ASCII transliteration.** v1 reads Unicode only, with D-9's four ASCII spellings. An ASCII input layer is a possible continuation on the §9 roadmap: a lexer pre-pass with its own table and vectors, never a grammar change. The 2024 tree's `ascii-map` (`desk/sur/atalante.hoon`, history b721975) is the half-finished and ambiguous start (`|` is both residue and part of `|^`) that any such pass replaces.
 
 **D-9 · Four ASCII glyphs are canonical spellings, not transliterations.** `-` is `−`, `*` is `⋆`, `|` is `∣`, `~` is `∼`. ISO 13751 spells them in ASCII and every APL keyboard produces them; the lexer maps each to the inventory glyph and nothing else about D-8 changes. ⟨`lex/names-glyphs`⟩
 
@@ -44,7 +44,7 @@ ATL/APL is the APL that Atalante compiles. It is Budd's compiler subset (Budd 19
 
 **D-14 · `⎕IO` is 1 by default and may be set to 0 or 1.** It affects `⍳`, indexing, `⍋`, `⍒`, `⍳` (index-of), `∊`'s companion `⍸` (absent in v1), and `?`. ⟨`atl/index-origin` (assignment and the domain refusal)⟩
 
-**D-15 · OPEN · `⎕TYPE`.** The README sets `⎕TYPE ← 'UINT8'`. Whether this names a declared storage width (Lagoon `bloq`) or a default literal kind is unruled. v1 parses and stores the assignment and ignores it with a warning.
+**D-15 · RULED 2026-10-28 · `⎕TYPE` is a reserved name.** The 2024 README set `⎕TYPE ← 'UINT8'`. Whether the name declares a storage width (Lagoon `bloq`) or a default literal kind is a v2 decision, taken when the array model gains more than bloq 6. In v1 the name is reserved: it lexes and parses as a system name (D-60), and reading or assigning it refuses with `%unimplemented`. ⟨`atl/errors`⟩
 
 ## 4. Syntax and evaluation
 
@@ -66,7 +66,7 @@ ATL/APL is the APL that Atalante compiles. It is Budd's compiler subset (Budd 19
 
 **D-31 · Locals are declared in the header after `;`.** `∇ R←A F B;T;U` makes `T` and `U` local; everything else is global (dynamic scope, as in classical APL). Arguments and the result are local. ⟨`parse/statements`, `atl/caesar` (locals restored: `A` unbound after the call), `atl/readme-red`⟩
 
-**D-32 · OPEN · Branching.** `→` and labels are the classical control flow. v1 has none: a tradfn body is straight-line. The maintainer rules between `→` (Budd's subset has it) and dfns `{⍺ ⍵}` with guards (the modern form). Both are expressible on the v1 AST; neither is in it.
+**D-32 · RULED 2026-10-28 · Control flow is dfns with guards, in v2.** v1 has none: a tradfn body is straight-line. v2 adds dfns `{⍺ ⍵}` with guards `cond: expr`, the modern form; `→` and labels, Budd's classical form, are omitted for good. Guards compose with the emitter's straight-line formulas where `→` would need a label table and a loop in the generated Nock. Both were expressible on the v1 AST; dfns are what enters.
 
 **D-33 · A user function's valence is fixed by its header and checked at the call.** Calling a dyadic function monadically is a VALENCE ERROR. ⟨`parse/refusals`⟩
 
@@ -105,7 +105,7 @@ Dyadic: `+ − × ÷ ⌈ ⌊ ∣ ⋆ ⍟ ○ !` and `< ≤ = ≥ > ≠ ∨ ∧ �
 
 ## 8. The session
 
-**D-60 · System variables.** `⎕IO` (D-14), `⎕PP` (D-45), `⎕TYPE` (D-15, OPEN). Reading one is an expression; assigning one is validated (`⎕IO ← 2` is a DOMAIN ERROR). ⟨`lex/strings-system` (lexing only), `atl/index-origin`⟩
+**D-60 · System variables.** `⎕IO` (D-14), `⎕PP` (D-45), `⎕TYPE` (D-15, reserved). Reading one is an expression; assigning one is validated (`⎕IO ← 2` is a DOMAIN ERROR). ⟨`lex/strings-system` (lexing only), `atl/index-origin`⟩
 
 **D-61 · System commands.** `)GREEN`, `)RED` and `)TOGGLE` choose the prompt mode (D-54) for the lines that follow (added 2026-10-27 for the REPL). A `)` that opens a line and is followed by a name is a command token; elsewhere `)` closes a parenthesis. `)VARS` lists variables, `)FNS` lists functions, `)ERASE name`, `)OFF` ends the session. `)SAVE` is the kernel's checkpoint and needs no command; it is parsed and answers that. ⟨`lex/strings-system`, `atl/commands`, `kernel/sieve` (`)VARS` through the kernel)⟩
 
@@ -113,7 +113,7 @@ Dyadic: `+ − × ÷ ⌈ ⌊ ∣ ⋆ ⍟ ○ !` and `< ≤ = ≥ > ≠ ∨ ∧ �
 
 ## 9. What v2 owes
 
-Nested arrays or their ruled-out alternative (D-6); `→` or dfns (D-32); dyadic `⍉`, axis specification `[k]`, `⍎`, `⍕` dyadic, `⌹`, `⍷`, `⍪`, `≡`; derived-function operands; ASCII input (D-8); `⎕TYPE` (D-15); packed Lagoon erasure and SoftBLAS jets (plan P7).
+Nested arrays or their ruled-out alternative (D-6); dfns with guards (D-32, ruled); dyadic `⍉`, axis specification `[k]`, `⍎`, `⍕` dyadic, `⌹`, `⍷`, `⍪`, `≡`; derived-function operands; an ASCII input pre-pass (D-8, deferred); `⎕TYPE`'s meaning (D-15, the name is reserved); packed Lagoon erasure and SoftBLAS jets (plan P7).
 
 ## References
 

@@ -10,3 +10,7 @@ foo
 ⍝ refuse: %index-error
 1 2 3 ÷
 ⍝ refuse: %syntax-error
+⎕TYPE
+⍝ refuse: %unimplemented
+⎕TYPE ← 1
+⍝ refuse: %unimplemented

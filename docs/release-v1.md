@@ -14,7 +14,8 @@
 | lane | result |
 |---|---|
 | `tools/atlc.sh corpus` | 260 of 260 statements, 26 cases, interpreter and emitted Nock |
-| `tools/atlc.sh lexcheck` | 30 of 30 |
+| `tools/atlc.sh lex` | 30 of 30 |
+| `tools/atlc.sh lexcheck` | 260 of 260 corpus input lines tokenize |
 | `tools/atlc.sh parse` | 65 of 65 |
 | `tools/atlc.sh oracle` | 14 of 14 goldens against the Python Nockasm |
 | `tools/atlc.sh kernel-test` | 5 of 5, the sieve poked through arm 23 and the store peeked through arm 22 |
@@ -34,7 +35,7 @@
 
 ## Held back
 
-Nested arrays (D-6), branching and dfns (D-32), axis specification, `↑ ↓` past rank 1, `⊥ ⊤` past naturals, reductions past rank 2, `⎕TYPE` (D-15), ASCII transliteration past D-9 (D-8), and the primitives D-44 lists: `⌹ ⍎ ⍕ ⍷ ⍪ ≡`, dyadic `⍉`, `⌽` with axis. A Gall or `%sole` host is v2.
+Nested arrays (D-6), control flow (D-32: dfns with guards enter in v2, `→` is omitted for good), axis specification, `↑ ↓` past rank 1, `⊥ ⊤` past naturals, reductions past rank 2, `⎕TYPE` (D-15, a reserved name), an ASCII input pre-pass (D-8, deferred to the roadmap), and the primitives D-44 lists: `⌹ ⍎ ⍕ ⍷ ⍪ ≡`, dyadic `⍉`, `⌽` with axis. A Gall or `%sole` host is v2.
 
 ## Filed upstream
 
