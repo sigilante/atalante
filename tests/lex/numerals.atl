@@ -1,0 +1,10 @@
+1
+⍝ expect: nat:1
+4 5 6 7
+⍝ expect: nat:4 nat:5 nat:6 nat:7
+¯3
+⍝ expect: int:¯3
+1.5 2 ¯3.25
+⍝ expect: real:1.5 nat:2 real:¯3.25
+1E6 1.5E¯3 2e3
+⍝ expect: real:1E6 real:1.5E¯3 real:2E3

@@ -1,0 +1,10 @@
+.5
+⍝ expect: %syntax-error col:1 a numeral needs a digit before the point (D-3)
+1.
+⍝ expect: %syntax-error col:1 a numeral needs a digit after the point (D-3)
+1E
+⍝ expect: %syntax-error col:1 an exponent needs digits (D-3)
+2x
+⍝ expect: %syntax-error col:2 a numeral runs into a name; separate them (D-2)
+3 ¯ 4
+⍝ expect: %syntax-error col:3 ¯ is the negative sign of a numeral; − subtracts (D-3)

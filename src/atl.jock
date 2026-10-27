@@ -11,6 +11,8 @@
 // passing end to end) measures the harness and nothing else. P1 replaces
 // evalLine with the lexer; P2 with the parser; P3 onward with the real
 // thing.
+import lexer;
+
 func isDigits(bs: List<Byte>) -> Bool {
   match bs {
     (h, t) => if h < '0' { false } else { if h > '9' { false } else { isDigits(t) } },
@@ -28,6 +30,24 @@ func session(lines: List<String>) -> String {
     (h, t) => match t {
       (h2, t2) => evalLine(h) + "\1e" + session(t),
       _ => evalLine(h),
+    },
+    _ => "",
+  }
+};
+// the lex corpus (tests/lex): one token dump per input line
+func lexLines(lines: List<String>) -> String {
+  match lines {
+    (h, t) => match t {
+      (h2, t2) => lexer.dump(h) + "\1e" + lexLines(t),
+      _ => lexer.dump(h),
+    },
+    _ => "",
+  }
+};
+func lexcorpus(cases: List<(String, List<String>)>) -> String {
+  match cases {
+    (c, rest) => match c {
+      (name, lines) => "\1d" + name + "\1f" + lexLines(lines) + lexcorpus(rest),
     },
     _ => "",
   }

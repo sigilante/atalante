@@ -1,0 +1,16 @@
+n ← 4 5 6 7
+⍝ expect: name:n assign nat:4 nat:5 nat:6 nat:7
++/3+⍳4
+⍝ expect: glyph:+ glyph:/ nat:3 glyph:+ glyph:⍳ nat:4
+(∼R∊R∘.×R)/R←1↓⍳R
+⍝ expect: lparen glyph:∼ name:R glyph:∊ name:R glyph:∘ glyph:. glyph:× name:R rparen glyph:/ name:R assign nat:1 glyph:↓ glyph:⍳ name:R
+X[⍋X]
+⍝ expect: name:X lbrack glyph:⍋ name:X rbrack
+2*10*⍟10
+⍝ expect: nat:2 glyph:⋆ nat:10 glyph:⋆ glyph:⍟ nat:10
+7|10 ⋄ 3-5 ⋄ ~1
+⍝ expect: nat:7 glyph:∣ nat:10 diamond nat:3 glyph:− nat:5 diamond glyph:∼ nat:1
+R∈R
+⍝ expect: name:R glyph:∊ name:R
+αβγ_1 ← Δ¯2
+⍝ expect: name:αβγ_1 assign name:Δ¯2

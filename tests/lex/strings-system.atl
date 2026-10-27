@@ -1,0 +1,24 @@
+'Hello'
+⍝ expect: chr:Hello
+'it''s'
+⍝ expect: chr:it's
+''
+⍝ expect: chr:
+'abc
+⍝ expect: %syntax-error col:1 unterminated character literal (D-5)
+⎕IO ← 0
+⍝ expect: quad:IO assign nat:0
+)VARS
+⍝ expect: cmd:VARS
+  )ERASE n
+⍝ expect: cmd:ERASE name:n
+(1 2)
+⍝ expect: lparen nat:1 nat:2 rparen
+∇ R←A DIV B;T
+⍝ expect: del name:R assign name:A name:DIV name:B semi name:T
+1 2 3 ⍝ a comment
+⍝ expect: nat:1 nat:2 nat:3
+a & b
+⍝ expect: %syntax-error col:3 not an ATL glyph
+⎕ 1
+⍝ expect: %syntax-error col:1 ⎕ needs a name (D-60)

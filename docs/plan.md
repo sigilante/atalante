@@ -58,6 +58,7 @@ jonk is PENDED (ruled 2026-10-27): its author will rebase the branch; until then
 **P1 — Lexer.**
 UTF-8 decoding (Jock strings are byte-oriented; a codepoint walker is the first thing written and the first §4 note). The glyph table transcribed from `desk/sur/atalante.hoon`. Numerals with `¯`, `E`, `.`; strands; character literals; `⎕` names; `)` commands; `⍝`; `⋄`. Positions in columns of glyphs, not bytes.
 *Exit:* every corpus case tokenizes; refusal cases for D-3 and D-5 assert their tags.
+**LANDED 2026-10-27.** `src/lexer.jock` (246 lines) over the prelude's `String.chars()` UTF-8 decoder; `tests/lex/` holds 4 cases, 30 steps (numerals, numeral refusals, names and glyphs with the D-9 aliases, character literals and system tokens), all green on the first compile; `atlc.sh lexcheck` lexes all 81 evaluation-corpus lines with 0 refusals. A lex corpus run costs ~47 s (the generated program now imports two modules).
 
 **P2 — Parser.**
 AST as a Jock union: `%array` literal, `%name`, `%monad`, `%dyad`, `%op`, `%index`, `%assign`, `%strand`, `%tradfn`, `%system`. Right-to-left with D-22 valence resolution against a store signature (names → array | function with valence). Operators per D-21. `∇` capture per D-30/D-31.
@@ -92,11 +93,12 @@ What ATL asks of Jock that nothing else has, each a finding to file once hit. Ap
 | # | gap | where ATL hits it | status |
 |---|---|---|---|
 | S-1 | Float64 surface is add/sub/mul/div/compare/Show; no floor, ceiling, sqrt, exp, log, pow, trig, float↔int, or precision control | P3 (`⌊ ⌈ ⋆ ⍟ ○ !`, `⎕PP`) | open — P7 package, or prelude wrappers upstream |
-| S-2 | Strings are byte-oriented; no codepoint iteration | P1 | open — local decoder, candidate for the `Str` trait |
+| S-2 | Strings are byte-oriented; no codepoint iteration | P1 | CLOSED 2026-10-27 — the prelude already has `String.chars() -> List<UniChar>` and `utf8()` back; the lexer rides them |
 | S-3 | jonk branch stale against master (`Real`/`Float64`), no PR | P0 | open |
 | S-4 | No Float64 jets under NockVM (~0.3 ms per op) | P3, P7 | runtime finding, not a Jock bug |
 | S-5 | A sealed kernel runs jetless; an unsealed one carries the compiler and compiles at boot | P6 | known upstream (wilt arc, 1.1) |
 | S-6 | No Gall / `%sole` host; no typed bridge from a Jock func value to Hoon | v2 | open |
 | S-7 | Compile time of a several-thousand-line Jock program is unmeasured | P5 onward | measure at P2 and P5 |
+| S-10 | `jockc.sh --diag run` crashes in its own Python serializer on an atom past 4300 decimal digits (a ~1.8 KB String product): `ValueError: Exceeds the limit ... for integer string conversion` | P1 | open — `PYTHONINTMAXSTRDIGITS=0` in the child's env works around it; upstream fix is `sys.set_int_max_str_digits(0)` in jockc.sh's serializer |
 | S-9 | `jockc.sh run` renders a `String` returned by an imported module's func as a bare atom; the same literal at top level renders quoted | P0 | open — `--diag` sidesteps it |
 | S-8 | Verified 2026-10-27: hand-built Nock in a Jock program calls a Jock func in the subject via `9 2 10 [6 …] 0 ax` (`eval` probe answered 42) | P5 | closed — assumption holds |

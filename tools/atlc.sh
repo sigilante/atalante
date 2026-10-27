@@ -4,6 +4,8 @@
 #    atlc.sh corpus [CASE.atl ...]   run the corpus (tests/atl), print the table
 #    atlc.sh run CASE.atl            run one case, print the transcript
 #    atlc.sh gen [CASE.atl ...]      write tests/gen/corpus.jock only
+#    atlc.sh lex [CASE.atl ...]      run the lex corpus (tests/lex), print the table
+#    atlc.sh lexcheck                lex every eval-corpus input line; list refusals
 #    atlc.sh check                   typecheck src/ (a program that imports atl)
 #
 #  Env:  JOCK  the Jock checkout (default ~/Code/jock); its tools/jockc.sh
@@ -13,7 +15,7 @@ set -e
 ROOT="${0:A:h:h}"
 JOCK=${JOCK:-$HOME/Code/jock}
 case "$1" in
-  corpus|run|gen)  exec python3 "$ROOT/tools/atlc.py" "$@" ;;
+  corpus|run|gen|lex|lexcheck)  exec python3 "$ROOT/tools/atlc.py" "$@" ;;
   check)
     T=$(mktemp -d); trap "/bin/rm -rf $T" EXIT
     print 'import atl;\natl.session(["1"])' > "$T/check.jock"

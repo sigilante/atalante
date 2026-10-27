@@ -1,0 +1,267 @@
+// lexer.jock — ATL/APL tokens (dialect D-1..D-9).
+//
+// `tokens(line)` lexes one source line into positioned tokens or a
+// positioned refusal. Source is decoded to codepoints first (D-1):
+// String.chars() is the prelude's UTF-8 decoder, so a column counts
+// glyphs, never bytes. A `⍝` ends the line (D-7). `dump(line)` renders
+// the stream as `kind:text` words for the lex corpus (tests/lex).
+//
+// Refusals are VALUES, not crashes: a corpus run feeds many lines
+// through one program, and a crash would take the run with it. The
+// tag is always %syntax-error at this layer; the hint says which rule.
+struct Token { kind: Kind, text: String, cp: @, col: @ };
+enum Kind { nat, int, real, chr, name, quad, cmd, glyph, lparen, rparen, lbrack, rbrack, semi, assign, del, diamond };
+struct LexErr { tag: String, col: @, hint: String };
+enum Lexed { ok(List<Token>), err(LexErr) };
+
+// --- codepoints ------------------------------------------------------
+func toCps(cs: List<UniChar>) -> List<@> {
+  match cs { (h, t) => (h as! @, toCps(t)), _ => ~, }
+};
+func toUni(cs: List<@>) -> List<UniChar> {
+  match cs { (h, t) => (h as! UniChar, toUni(t)), _ => ~, }
+};
+func text(cs: List<@>) -> String { utf8(toUni(cs)) };
+func revCps(xs: List<@>, acc: List<@>) -> List<@> {
+  match xs { (h, t) => revCps(t, (h, acc)), _ => acc, }
+};
+func revToks(xs: List<Token>, acc: List<Token>) -> List<Token> {
+  match xs { (h, t) => revToks(t, (h, acc)), _ => acc, }
+};
+
+// --- character classes (D-2, D-3) -------------------------------------
+func isDigit(c: @) -> Bool { c >= 48 and c <= 57 };
+func isLetter(c: @) -> Bool {
+  (c >= 65 and c <= 90) or (c >= 97 and c <= 122) or c == 95   // A-Z a-z _
+  or c == 8710 or c == 9049                                      // ∆ ⍙
+  or (c >= 913 and c <= 937) or (c >= 945 and c <= 969)          // Greek
+  or (c >= 1040 and c <= 1103)                                   // Cyrillic
+  or (c >= 1488 and c <= 1514)                                   // Hebrew
+  or (c >= 66560 and c <= 66639)                                 // Deseret
+};
+func isNameTail(c: @) -> Bool { isLetter(c) or isDigit(c) or c == 175 };  // ¯ (D-2)
+
+// canonical codepoint of a function/operator glyph, 0 if none (D-41..D-43, D-9)
+func canon(c: @) -> @ {
+  if c == 0 { 0 }
+  else if c == 63 { 63 }  // ?
+  else if c == 8968 { 8968 }  // ⌈
+  else if c == 8970 { 8970 }  // ⌊
+  else if c == 9076 { 9076 }  // ⍴
+  else if c == 8764 { 8764 }  // ∼
+  else if c == 8739 { 8739 }  // ∣
+  else if c == 9075 { 9075 }  // ⍳
+  else if c == 8902 { 8902 }  // ⋆
+  else if c == 8722 { 8722 }  // −
+  else if c == 43 { 43 }  // +
+  else if c == 215 { 215 }  // ×
+  else if c == 247 { 247 }  // ÷
+  else if c == 44 { 44 }  // ,
+  else if c == 9017 { 9017 }  // ⌹
+  else if c == 9675 { 9675 }  // ○
+  else if c == 9055 { 9055 }  // ⍟
+  else if c == 9021 { 9021 }  // ⌽
+  else if c == 8854 { 8854 }  // ⊖
+  else if c == 9035 { 9035 }  // ⍋
+  else if c == 9042 { 9042 }  // ⍒
+  else if c == 9038 { 9038 }  // ⍎
+  else if c == 9045 { 9045 }  // ⍕
+  else if c == 9033 { 9033 }  // ⍉
+  else if c == 33 { 33 }  // !
+  else if c == 8801 { 8801 }  // ≡
+  else if c == 9066 { 9066 }  // ⍪
+  else if c == 8714 { 8714 }  // ∊
+  else if c == 9079 { 9079 }  // ⍷
+  else if c == 8593 { 8593 }  // ↑
+  else if c == 8595 { 8595 }  // ↓
+  else if c == 8869 { 8869 }  // ⊥
+  else if c == 8868 { 8868 }  // ⊤
+  else if c == 92 { 92 }  // \
+  else if c == 47 { 47 }  // /
+  else if c == 168 { 168 }  // ¨
+  else if c == 60 { 60 }  // <
+  else if c == 8804 { 8804 }  // ≤
+  else if c == 61 { 61 }  // =
+  else if c == 8805 { 8805 }  // ≥
+  else if c == 62 { 62 }  // >
+  else if c == 8800 { 8800 }  // ≠
+  else if c == 8744 { 8744 }  // ∨
+  else if c == 8743 { 8743 }  // ∧
+  else if c == 9073 { 9073 }  // ⍱
+  else if c == 9074 { 9074 }  // ⍲
+  else if c == 8867 { 8867 }  // ⊣
+  else if c == 8866 { 8866 }  // ⊢
+  else if c == 9023 { 9023 }  // ⌿
+  else if c == 9024 { 9024 }  // ⍀
+  else if c == 46 { 46 }  // .
+  else if c == 8728 { 8728 }  // ∘
+  else if c == 45 { 8722 }  // - is − (D-9)
+  else if c == 42 { 8902 }  // * is ⋆ (D-9)
+  else if c == 124 { 8739 }  // | is ∣ (D-9)
+  else if c == 126 { 8764 }  // ~ is ∼ (D-9)
+  else if c == 8712 { 8714 }  // ∈ is ∊ (D-9)
+  else { 0 }
+};
+
+// --- scanners: (lexeme codepoints in order, rest, count consumed) -------
+func scanWhile(cs: List<@>, keep: @ -> Bool, acc: List<@>, n: @) -> (List<@>, List<@>, @) {
+  match cs {
+    (c, rest) => if keep(c) { scanWhile(rest, keep, (c, acc), n + 1) } else { (revCps(acc, ~), cs, n) },
+    _ => (revCps(acc, ~), ~, n),
+  }
+};
+func scanDigits(cs: List<@>) -> (List<@>, List<@>, @) { scanWhile(cs, isDigit, ~, 0) };
+func scanName(cs: List<@>) -> (List<@>, List<@>, @) { scanWhile(cs, isNameTail, ~, 0) };
+func headIs(cs: List<@>, p: @ -> Bool) -> Bool { match cs { (c, rest) => p(c), _ => false, } };
+
+// a character literal body after the opening quote: '' is one quote (D-5)
+func scanChr(cs: List<@>, acc: List<@>, n: @) -> (Bool, List<@>, List<@>, @) {
+  match cs {
+    (c, rest) => if c == 39 {
+      match rest {
+        (c2, rest2) => if c2 == 39 { scanChr(rest2, (39, acc), n + 2) } else { (true, revCps(acc, ~), rest, n + 1) },
+        _ => (true, revCps(acc, ~), ~, n + 1),
+      }
+    } else { scanChr(rest, (c, acc), n + 1) },
+    _ => (false, revCps(acc, ~), ~, n),
+  }
+};
+
+// --- the numeral (D-3) ------------------------------------------------
+// state after the integer part: optional fraction, optional exponent,
+// then the numeral must not run into a letter.
+func numeral(cs: List<@>, col: @, neg: Bool, bol: Bool, acc: List<Token>) -> Lexed {
+  let start = if neg { match cs { (c, rest) => rest, _ => ~, } } else { cs };
+  match scanDigits(start) {
+    (d1, r1, n1) => if n1 == 0 { Lexed.err(LexErr( tag: "%syntax-error", col: col, hint: "a numeral needs a digit before the point (D-3)" )) }
+    else {
+      match fraction(r1) {
+        (d2, r2, n2, frac, bad1) => if bad1 { Lexed.err(LexErr( tag: "%syntax-error", col: col, hint: "a numeral needs a digit after the point (D-3)" )) }
+        else {
+          match exponent(r2) {
+            (d3, r3, n3, expo, bad2) => if bad2 { Lexed.err(LexErr( tag: "%syntax-error", col: col, hint: "an exponent needs digits (D-3)" )) }
+            else {
+              let width = n1 + n2 + n3 + (if neg { 1 } else { 0 });
+              if headIs(r3, isLetter) { Lexed.err(LexErr( tag: "%syntax-error", col: col + width, hint: "a numeral runs into a name; separate them (D-2)" )) }
+              else {
+                let raw = text(numeralText(neg, d1, frac, d2, expo, d3));
+                let kind = if frac or expo { Kind.real } else if neg { Kind.int } else { Kind.nat };
+                lexFrom(r3, col + width, false, (Token( kind: kind, text: raw, cp: 0, col: col ), acc))
+              }
+            },
+          }
+        },
+      }
+    },
+  }
+};
+// the optional fraction: (digits, rest, consumed, present, malformed)
+func fraction(cs: List<@>) -> (List<@>, List<@>, @, Bool, Bool) {
+  match cs {
+    (c, after) => if c == 46 {
+      match scanDigits(after) {
+        (f, r, n) => if n == 0 { (~, cs, 0, true, true) } else { (f, r, n + 1, true, false) },
+      }
+    } else { (~, cs, 0, false, false) },
+    _ => (~, ~, 0, false, false),
+  }
+};
+// the optional exponent: E or e, optional ¯, digits
+func exponent(cs: List<@>) -> (List<@>, List<@>, @, Bool, Bool) {
+  match cs {
+    (c, after) => if c == 69 or c == 101 {
+      match after {
+        (m, after2) => if m == 175 {
+          match scanDigits(after2) {
+            (x, r, n) => if n == 0 { (~, cs, 0, true, true) } else { ((175, x), r, n + 2, true, false) },
+          }
+        } else {
+          match scanDigits(after) {
+            (x, r, n) => if n == 0 { (~, cs, 0, true, true) } else { (x, r, n + 1, true, false) },
+          }
+        },
+        _ => (~, cs, 0, true, true),
+      }
+    } else { (~, cs, 0, false, false) },
+    _ => (~, ~, 0, false, false),
+  }
+};
+func numeralText(neg: Bool, d1: List<@>, frac: Bool, d2: List<@>, expo: Bool, d3: List<@>) -> List<@> {
+  let a = if neg { (175, d1) } else { d1 };
+  let b = if frac { cat(a, (46, d2)) } else { a };
+  if expo { cat(b, (69, d3)) } else { b }
+};
+func cat(a: List<@>, b: List<@>) -> List<@> { match a { (h, t) => (h, cat(t, b)), _ => b, } };
+
+// --- the line ----------------------------------------------------------
+func tok(k: Kind, s: String, cp: @, col: @) -> Token { Token( kind: k, text: s, cp: cp, col: col ) };
+func lexFrom(cs: List<@>, col: @, bol: Bool, acc: List<Token>) -> Lexed {
+  match cs {
+    (c, rest) =>
+      if c == 32 or c == 9 { lexFrom(rest, col + 1, bol, acc) }
+      else if c == 9053 { Lexed.ok(revToks(acc, ~)) }                                  // ⍝ comment (D-7)
+      else if c == 8900 { lexFrom(rest, col + 1, false, (tok(Kind.diamond, "⋄", 0, col), acc)) }   // ⋄
+      else if c == 8592 { lexFrom(rest, col + 1, false, (tok(Kind.assign, "←", 0, col), acc)) }    // ←
+      else if c == 8711 { lexFrom(rest, col + 1, false, (tok(Kind.del, "∇", 0, col), acc)) }       // ∇
+      else if c == 40 { lexFrom(rest, col + 1, false, (tok(Kind.lparen, "(", 0, col), acc)) }
+      else if c == 41 and bol and headIs(rest, isLetter) {                                        // )CMD (D-61)
+        match scanName(rest) { (nm, r, n) => lexFrom(r, col + 1 + n, false, (tok(Kind.cmd, text(nm), 0, col), acc)), }
+      }
+      else if c == 41 { lexFrom(rest, col + 1, false, (tok(Kind.rparen, ")", 0, col), acc)) }
+      else if c == 91 { lexFrom(rest, col + 1, false, (tok(Kind.lbrack, "[", 0, col), acc)) }
+      else if c == 93 { lexFrom(rest, col + 1, false, (tok(Kind.rbrack, "]", 0, col), acc)) }
+      else if c == 59 { lexFrom(rest, col + 1, false, (tok(Kind.semi, ";", 0, col), acc)) }
+      else if isDigit(c) { numeral(cs, col, false, bol, acc) }
+      else if c == 175 and headIs(rest, isDigit) { numeral(cs, col, true, bol, acc) }             // ¯n
+      else if c == 175 { Lexed.err(LexErr( tag: "%syntax-error", col: col, hint: "¯ is the negative sign of a numeral; − subtracts (D-3)" )) }
+      else if c == 46 and headIs(rest, isDigit) { Lexed.err(LexErr( tag: "%syntax-error", col: col, hint: "a numeral needs a digit before the point (D-3)" )) }
+      else if c == 39 {                                                                            // 'chars' (D-5)
+        match scanChr(rest, ~, 0) {
+          (closed, body, r, n) => if closed { lexFrom(r, col + 1 + n, false, (tok(Kind.chr, text(body), 0, col), acc)) }
+            else { Lexed.err(LexErr( tag: "%syntax-error", col: col, hint: "unterminated character literal (D-5)" )) },
+        }
+      }
+      else if isLetter(c) {                                                                        // name (D-2)
+        match scanName(cs) { (nm, r, n) => lexFrom(r, col + n, false, (tok(Kind.name, text(nm), 0, col), acc)), }
+      }
+      else if c == 9109 {                                                                          // ⎕NAME (D-60)
+        match scanName(rest) {
+          (nm, r, n) => if n == 0 { Lexed.err(LexErr( tag: "%syntax-error", col: col, hint: "⎕ needs a name (D-60)" )) }
+            else { lexFrom(r, col + 1 + n, false, (tok(Kind.quad, text(nm), 0, col), acc)) },
+        }
+      }
+      else {
+        let k = canon(c);
+        if k == 0 { Lexed.err(LexErr( tag: "%syntax-error", col: col, hint: "not an ATL glyph" )) }
+        else { lexFrom(rest, col + 1, false, (tok(Kind.glyph, text([k]), k, col), acc)) }
+      },
+    _ => Lexed.ok(revToks(acc, ~)),
+  }
+};
+func tokens(line: String) -> Lexed { lexFrom(toCps(line.chars()), 1, true, ~) };
+
+// --- rendering (the lex corpus) -------------------------------------------
+func kindName(k: Kind) -> String {
+  match k {
+    .nat => "nat", .int => "int", .real => "real", .chr => "chr", .name => "name",
+    .quad => "quad", .cmd => "cmd", .glyph => "glyph", .lparen => "lparen", .rparen => "rparen",
+    .lbrack => "lbrack", .rbrack => "rbrack", .semi => "semi", .assign => "assign", .del => "del", .diamond => "diamond",
+  }
+};
+func showTok(t: Token) -> String {
+  match t.kind {
+    .nat => "nat:" + t.text, .int => "int:" + t.text, .real => "real:" + t.text,
+    .chr => "chr:" + t.text, .name => "name:" + t.text, .quad => "quad:" + t.text,
+    .cmd => "cmd:" + t.text, .glyph => "glyph:" + t.text,
+    _ => kindName(t.kind),
+  }
+};
+func render(ts: List<Token>) -> String {
+  match ts { (h, t) => match t { (h2, t2) => showTok(h) + " " + render(t), _ => showTok(h), }, _ => "", }
+};
+func dump(line: String) -> String {
+  match tokens(line) {
+    .ok(ts) => render(ts),
+    .err(e) => e.tag + " col:{e.col} " + e.hint,
+  }
+};

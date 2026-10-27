@@ -14,23 +14,23 @@ ATL/APL is the APL that Atalante compiles. It is Budd's compiler subset (Budd 19
 
 ## 2. Lexical structure
 
-**D-1 · Source is UTF-8; glyphs are scalars, not bytes.** The lexer decodes codepoints. Every APL glyph in the inventory is one codepoint; `⎕IO`, `)VARS` and names are glyph sequences. ⟨none — UNPINNED⟩
+**D-1 · Source is UTF-8; glyphs are scalars, not bytes.** The lexer decodes codepoints. Every APL glyph in the inventory is one codepoint; `⎕IO`, `)VARS` and names are glyph sequences. ⟨`lex/names-glyphs`, `lex/strings-system`⟩
 
-**D-2 · Names are `[A-Za-z_∆⍙][A-Za-z0-9_∆⍙¯]*`, plus the letter ranges `desk/lib/atalante.hoon` lists** (Greek, Cyrillic, Hebrew, Deseret). Names are case-sensitive. A name adjacent to a name needs whitespace; a name adjacent to a glyph does not. ⟨none — UNPINNED⟩
+**D-2 · Names are `[A-Za-z_∆⍙][A-Za-z0-9_∆⍙¯]*`, plus the letter ranges `desk/lib/atalante.hoon` lists** (Greek, Cyrillic, Hebrew, Deseret). Names are case-sensitive. A name adjacent to a name needs whitespace; a name adjacent to a glyph does not. ⟨`lex/names-glyphs`, `lex/numeral-errors`⟩
 
-**D-3 · Numeric literals.** `¯` (U+00AF) is the negative sign and part of the literal; `−` is the subtraction function. Forms: `12`, `¯3`, `1.5`, `.5` is refused, `1E6`, `1.5E¯3`. A literal with `.` or `E` is Float64; a literal with `¯` and no `.`/`E` is Int; otherwise Nat (D-10). ⟨none — UNPINNED⟩
+**D-3 · Numeric literals.** `¯` (U+00AF) is the negative sign and part of the literal; `−` is the subtraction function. Forms: `12`, `¯3`, `1.5`, `.5` is refused, `1E6`, `1.5E¯3`. A literal with `.` or `E` is Float64; a literal with `¯` and no `.`/`E` is Int; otherwise Nat (D-10). ⟨`lex/numerals`, `lex/numeral-errors`⟩
 
 **D-4 · Strands.** Two or more literals separated by spaces form one vector: `4 5 6 7`. A strand of mixed numeric kinds promotes to the join (D-11). Names do not strand in v1: `a b` is a SYNTAX ERROR, not a two-element vector (this is the nested-array question, D-6). ⟨none — UNPINNED⟩
 
-**D-5 · Character literals.** `'abc'` is a character vector; `'a'` is a character scalar; `''` is the empty character vector; `''''` is one quote. Elements are codepoints. ⟨none — UNPINNED⟩
+**D-5 · Character literals.** `'abc'` is a character vector; `'a'` is a character scalar; `''` is the empty character vector; `''''` is one quote. Elements are codepoints. ⟨`lex/strings-system`⟩
 
 **D-6 · Nested arrays are v2.** RULED 2026-10-27: v1 is flat. The README's `X ← 'sing' 'goddess' 'sing'` needs a boxed element kind; v1 refuses a strand of character vectors with `%nested-unsupported`. v2 revisits a `%box` kind (APL2 nesting) against a rank-2 character matrix idiom. Nothing in v1 may preclude either. ⟨none — UNPINNED⟩
 
-**D-7 · Comments and separators.** `⍝` comments to end of line. `⋄` separates statements on one line. A newline ends a statement except inside a `∇` definition. ⟨none — UNPINNED⟩
+**D-7 · Comments and separators.** `⍝` comments to end of line. `⋄` separates statements on one line. A newline ends a statement except inside a `∇` definition. ⟨`lex/names-glyphs`, `lex/strings-system`⟩
 
 **D-8 · OPEN · ASCII transliteration.** `desk/sur/atalante.hoon`'s `ascii-map` is half-finished and ambiguous (`|` is both residue and part of `|^`). v1 reads Unicode only. An ASCII input layer, if any, is a lexer pre-pass with its own table and vectors, never a grammar change.
 
-**D-9 · Four ASCII glyphs are canonical spellings, not transliterations.** `-` is `−`, `*` is `⋆`, `|` is `∣`, `~` is `∼`. ISO 13751 spells them in ASCII and every APL keyboard produces them; the lexer maps each to the inventory glyph and nothing else about D-8 changes. ⟨none — UNPINNED⟩
+**D-9 · Four ASCII glyphs are canonical spellings, not transliterations.** `-` is `−`, `*` is `⋆`, `|` is `∣`, `~` is `∼`. ISO 13751 spells them in ASCII and every APL keyboard produces them; the lexer maps each to the inventory glyph and nothing else about D-8 changes. ⟨`lex/names-glyphs`⟩
 
 ## 3. Values
 
@@ -105,9 +105,9 @@ Dyadic: `+ − × ÷ ⌈ ⌊ ∣ ⋆ ⍟ ○ !` and `< ≤ = ≥ > ≠ ∨ ∧ �
 
 ## 8. The session
 
-**D-60 · System variables.** `⎕IO` (D-14), `⎕PP` (D-45), `⎕TYPE` (D-15, OPEN). Reading one is an expression; assigning one is validated (`⎕IO ← 2` is a DOMAIN ERROR). ⟨none — UNPINNED⟩
+**D-60 · System variables.** `⎕IO` (D-14), `⎕PP` (D-45), `⎕TYPE` (D-15, OPEN). Reading one is an expression; assigning one is validated (`⎕IO ← 2` is a DOMAIN ERROR). ⟨`lex/strings-system` (lexing only), `atl/index-origin`⟩
 
-**D-61 · System commands.** `)VARS` lists variables, `)FNS` lists functions, `)ERASE name`, `)OFF` ends the session. `)SAVE` is the kernel's checkpoint and needs no command; it is parsed and answers that. ⟨none — UNPINNED⟩
+**D-61 · System commands.** A `)` that opens a line and is followed by a name is a command token; elsewhere `)` closes a parenthesis. `)VARS` lists variables, `)FNS` lists functions, `)ERASE name`, `)OFF` ends the session. `)SAVE` is the kernel's checkpoint and needs no command; it is parsed and answers that. ⟨`lex/strings-system` (lexing only)⟩
 
 **D-62 · A `∇` line puts the session in definition mode** until a line that is exactly `∇`. Definition-mode lines are stored, not evaluated; a syntax error in a body is reported at the closing `∇` with the body line number. ⟨none — UNPINNED⟩
 
