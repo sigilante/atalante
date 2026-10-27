@@ -1,0 +1,6 @@
+jock pin: sigilante/jock @ 47838d9 (2026-10-27, branch sigilante/spec-recomposition at the time) --- the Jock
+compiler tree Atalante builds against.  Point JOCK at a worktree of this commit:
+    git -C ~/Code/jock worktree add <dir> 47838d9
+    JOCK=<dir> tools/atlc.sh corpus
+The live ~/Code/jock checkout is the maintainer's working tree and may not compile mid-edit
+(2026-10-27 evening: lib/parse.hoon refused under honk with uncommitted changes present).

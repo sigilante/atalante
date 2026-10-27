@@ -921,9 +921,37 @@ func runStmt(a: parse.Ast, env: Env) -> (String, Env) {
     .empty => ("", env),
     .fnend => ("", env),
     .stmts(ss) => runAll(ss, env, ""),
+    .cmd(c) => command(c, env),
     _ => finish(a, evalAst(a, env), env),
   }
 };
+// --- system commands (D-61) ----------------------------------------------------------------------
+func command(c: parse.Cmd, env: Env) -> (String, Env) {
+  if c.nm == "VARS" { (array.joinS(sortS(storeNames(env.store, ~)), " "), env) }
+  else if c.nm == "FNS" { (array.joinS(sortS(fnNames(env.fns, ~)), " "), env) }
+  else if c.nm == "ERASE" { (eraseAll(c.args, env, ""), eraseEnv(c.args, env)) }
+  else if c.nm == "OFF" { ("bye", env) }
+  else { ("%syntax-error unknown command )" + c.nm, env) }
+};
+func storeNames(st: List<(String, array.Arr)>, acc: List<String>) -> List<String> { match st { ((n, v), t) => storeNames(t, (n, acc)), _ => acc, } };
+func fnNames(fs: List<(String, Fndef)>, acc: List<String>) -> List<String> { match fs { ((n, d), t) => fnNames(t, (n, acc)), _ => acc, } };
+func eraseEnv(names: List<String>, env: Env) -> Env {
+  match names { (n, rest) => eraseEnv(rest, setFns(setStore(env, delStore(env.store, n)), delFn(env.fns, n))), _ => env, }
+};
+func eraseAll(names: List<String>, env: Env, acc: String) -> String {
+  match names {
+    (n, rest) => match lookup(env.store, n) { (had, v) => match lookupFn(env.fns, n) { (hadf, d) => eraseAll(rest, env, if had or hadf { acc } else if acc == "" { "%value-error " + n + " is not defined" } else { acc }), }, },
+    _ => acc,
+  }
+};
+func delFn(fs: List<(String, Fndef)>, nm: String) -> List<(String, Fndef)> { match fs { ((n, d), t) => if n == nm { t } else { ((n, d), delFn(t, nm)) }, _ => ~, } };
+// byte-wise lexicographic order on names, insertion sort
+func strLt(a: String, b: String) -> Bool { bytesLt(a.bytes(), b.bytes()) };
+func bytesLt(xs: List<Byte>, ys: List<Byte>) -> Bool {
+  match xs { (x, xt) => match ys { (y, yt) => if x < y { true } else if y < x { false } else { bytesLt(xt, yt) }, _ => false, }, _ => match ys { (y, yt) => true, _ => false, }, }
+};
+func insS(x: String, xs: List<String>) -> List<String> { match xs { (h, t) => if strLt(x, h) { (x, xs) } else { (h, insS(x, t)) }, _ => [x], } };
+func sortS(xs: List<String>) -> List<String> { match xs { (h, t) => insS(h, sortS(t)), _ => ~, } };
 // what one statement prints, from its result (D-24, D-45), draining the body-output buffer
 func finish(a: parse.Ast, ev: Ev, env: Env) -> (String, Env) {
   match ev {

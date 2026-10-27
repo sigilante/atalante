@@ -9,3 +9,6 @@ tests/gen/
 
 # built packages (tools/pkg.sh)
 pkgs/
+
+# built kernels (tools/atlc.sh kernel)
+out/

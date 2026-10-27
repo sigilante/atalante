@@ -16,7 +16,7 @@ import interp;
 // signature; an assignment binds its name as an array and a ∇ header
 // binds its function by valence (D-52). The green prompt `🍏>` prints
 // the tree (D-54); the red prompt `🍎>`, or no prompt, evaluates.
-struct Sess { sig: List<(String, @)>, defn: Bool, env: interp.Env };
+struct Sess { sig: List<(String, @)>, defn: Bool, env: interp.Env, green: Bool };
 
 func bind(sig: List<(String, @)>, nm: String, c: @) -> List<(String, @)> {
   match sig {
@@ -54,29 +54,33 @@ func stripPrompt(line: String) -> String { utf8(dropN(line.chars(), 2)).trim() }
 
 // one line: (what it prints, the session after it)
 func stepLine(line: String, s: Sess) -> (String, Sess) {
-  let green = line.starts-with("🍏>");
+  let green = line.starts-with("🍏>") or (s.green and not line.starts-with("🍎>"));
   let red = line.starts-with("🍎>");
-  let src0 = if green or red { stripPrompt(line) } else { line };
+  let src0 = if line.starts-with("🍏>") or red { stripPrompt(line) } else { line };
   let nock = green and src0.starts-with(":nock ");
   let noun = green and src0.starts-with(":noun ");
   let src = if nock or noun { utf8(dropN(src0.chars(), 6)).trim() } else { src0 };
   if s.defn {
     match lexer.tokens(src) {
-      .ok(ts) => if isLoneDel(ts) { ("", Sess( sig: s.sig, defn: false, env: interp.defineEnd(s.env) )) }
-        else { ("", Sess( sig: s.sig, defn: true, env: interp.defineLine(src, s.env) )) },
-      .err(e) => ("", Sess( sig: s.sig, defn: true, env: interp.defineLine(src, s.env) )),
+      .ok(ts) => if isLoneDel(ts) { ("", Sess( sig: s.sig, defn: false, env: interp.defineEnd(s.env), green: s.green )) }
+        else { ("", Sess( sig: s.sig, defn: true, env: interp.defineLine(src, s.env), green: s.green )) },
+      .err(e) => ("", Sess( sig: s.sig, defn: true, env: interp.defineLine(src, s.env), green: s.green )),
     }
   } else {
     match parse.parseLine(src, s.sig) {
       .err(e) => (e.tag + " col:{e.col} " + e.hint, s),
       .ok(a) => match a {
-        .header(h) => (if green { parse.showAst(a) } else { "" }, Sess( sig: binds(a, s.sig), defn: true, env: interp.defineStart(h, s.env) )),
-        _ => if green { (if nock { interp.render(a).trim() } else if noun { interp.lowerText(a) } else { parse.showAst(a) }, Sess( sig: binds(a, s.sig), defn: false, env: s.env )) }
+        .header(h) => (if green { parse.showAst(a) } else { "" }, Sess( sig: binds(a, s.sig), defn: true, env: interp.defineStart(h, s.env), green: s.green )),
+        .cmd(c) => if c.nm == "GREEN" { ("🍏", Sess( sig: s.sig, defn: false, env: s.env, green: true )) }
+          else if c.nm == "RED" { ("🍎", Sess( sig: s.sig, defn: false, env: s.env, green: false )) }
+          else if c.nm == "TOGGLE" { (if s.green { "🍎" } else { "🍏" }, Sess( sig: s.sig, defn: false, env: s.env, green: not s.green )) }
+          else { match interp.runStmt(a, s.env) { (out, env2) => (out, Sess( sig: sigOf(env2), defn: false, env: env2, green: s.green )), } },
+        _ => if green { (if nock { interp.render(a).trim() } else if noun { interp.lowerText(a) } else { parse.showAst(a) }, Sess( sig: binds(a, s.sig), defn: false, env: s.env, green: s.green )) }
           else {
             match interp.runStmt(a, s.env) {
               (out, env2) => match emitted(a, s.env) {
-                (out2, env3) => if out == out2 and env2 == env3 { (out, Sess( sig: binds(a, s.sig), defn: false, env: env2 )) }
-                  else { ("%emit-mismatch interpreter: " + out + " | emitter: " + out2, Sess( sig: binds(a, s.sig), defn: false, env: env2 )) },
+                (out2, env3) => if out == out2 and env2 == env3 { (out, Sess( sig: binds(a, s.sig), defn: false, env: env2, green: s.green )) }
+                  else { ("%emit-mismatch interpreter: " + out + " | emitter: " + out2, Sess( sig: binds(a, s.sig), defn: false, env: env2, green: s.green )) },
               },
             }
           },
@@ -112,7 +116,10 @@ func sessionFrom(lines: List<String>, s: Sess) -> String {
     _ => "",
   }
 };
-func session(lines: List<String>) -> String { sessionFrom(lines, Sess( sig: ~, defn: false, env: interp.initial() )) };
+func initialSess() -> Sess { Sess( sig: ~, defn: false, env: interp.initial(), green: false ) };
+// the parser's signature from the environment (after )ERASE the two must agree)
+func sigOf(env: interp.Env) -> List<(String, @)> { interp.sigOf(env) };
+func session(lines: List<String>) -> String { sessionFrom(lines, initialSess()) };
 
 // the lex corpus (tests/lex): one token dump per input line
 func lexLines(lines: List<String>) -> String {

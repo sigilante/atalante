@@ -1,0 +1,35 @@
+)VARS
+⍝ expect:
+n ← 1
+x ← 2
+a ← 3
+)VARS
+⍝ expect: a n x
+∇ Z←F B
+Z←B
+∇
+)FNS
+⍝ expect: F
+)ERASE n
+)VARS
+⍝ expect: a x
+n
+⍝ refuse: %value-error
+)ERASE zz
+⍝ refuse: %value-error
+)GREEN
+⍝ expect: 🍏
+1+1
+⍝ expect: +(1, 1)
+🍎> 1+1
+⍝ expect: 2
+)TOGGLE
+⍝ expect: 🍎
+1+1
+⍝ expect: 2
+)RED
+⍝ expect: 🍎
+)FOO
+⍝ refuse: %syntax-error
+)OFF
+⍝ expect: bye
