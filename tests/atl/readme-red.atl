@@ -20,3 +20,19 @@
 ⍝ expect: 1 2 3
 ⍝ expect: 4 5 6
 ⍝ expect: 7 8 9
+🍎> ∇ R← A DIV B
+R←A÷B
+∇
+🍎> 5 DIV 6
+⍝ expect: 0.8333333333
+🍎> ⎕IO ← 1                 ⍝ index origin at one
+🍎> ⍝
+🍎> ∇ EncryptedText ← key CaesarCipher PlainText;Alphabet;ShiftedAlphabet
+	Alphabet ← 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+	ShiftedAlphabet ← (key ⌽ Alphabet), Alphabet
+	EncryptedText ← ShiftedAlphabet[Alphabet ⍳ PlainText]
+	∇
+🍎> 3 CaesarCipher 'HELLO'
+⍝ expect: KHOOR
+🍎> Alphabet
+⍝ refuse: %value-error

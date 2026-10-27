@@ -62,15 +62,15 @@ ATL/APL is the APL that Atalante compiles. It is Budd's compiler subset (Budd 19
 
 ## 5. Functions
 
-**D-30 · Tradfns.** `∇ R←A F B` opens a definition; a lone `∇` closes it. Headers: `∇F`, `∇F B`, `∇A F B`, each with optional `R←`. Lines between are statements. The REPL reads the body until the closing `∇` (D-62). ⟨`parse/readme`, `parse/statements`, `parse/refusals` (header only)⟩
+**D-30 · Tradfns.** `∇ R←A F B` opens a definition; a lone `∇` closes it. Headers: `∇F`, `∇F B`, `∇A F B`, each with optional `R←`. Lines between are statements. The REPL reads the body until the closing `∇` (D-62). ⟨`parse/readme`, `parse/statements`, `parse/refusals`, `atl/tradfn-div`, `atl/caesar`, `atl/readme-red`⟩
 
-**D-31 · Locals are declared in the header after `;`.** `∇ R←A F B;T;U` makes `T` and `U` local; everything else is global (dynamic scope, as in classical APL). Arguments and the result are local. ⟨`parse/statements` (header only)⟩
+**D-31 · Locals are declared in the header after `;`.** `∇ R←A F B;T;U` makes `T` and `U` local; everything else is global (dynamic scope, as in classical APL). Arguments and the result are local. ⟨`parse/statements`, `atl/caesar` (locals restored: `A` unbound after the call), `atl/readme-red`⟩
 
 **D-32 · OPEN · Branching.** `→` and labels are the classical control flow. v1 has none: a tradfn body is straight-line. The maintainer rules between `→` (Budd's subset has it) and dfns `{⍺ ⍵}` with guards (the modern form). Both are expressible on the v1 AST; neither is in it.
 
 **D-33 · A user function's valence is fixed by its header and checked at the call.** Calling a dyadic function monadically is a VALENCE ERROR. ⟨`parse/refusals`⟩
 
-**D-34 · A tradfn body is compiled on first call, not at the closing `∇`.** The definition stores the header and the body as token lines. The first call parses and emits the body against the store's signature at that moment and caches the formula keyed by that signature; a later change of class for any name the body reads (array to function, a new valence, unbound to bound) invalidates the cache and the next call recompiles. A body may therefore name a function defined after it, as in classical APL, and every executed line is still compiled Nock. A name unbound at the time of the call is a VALUE ERROR at that call. ⟨`atl/readme-green` (bodies captured unparsed; compile-on-call is P6)⟩
+**D-34 · A tradfn body is compiled on first call, not at the closing `∇`.** The definition stores the header and the body as token lines. The first call parses and emits the body against the store's signature at that moment and caches the formula keyed by that signature; a later change of class for any name the body reads (array to function, a new valence, unbound to bound) invalidates the cache and the next call recompiles. A body may therefore name a function defined after it, as in classical APL, and every executed line is still compiled Nock. A name unbound at the time of the call is a VALUE ERROR at that call. ⟨`atl/readme-green` (bodies captured unparsed), `atl/tradfn-div`, `atl/caesar` (compiled on call)⟩
 
 ## 6. Primitive inventory
 

@@ -24,9 +24,7 @@ func bind(sig: List<(String, @)>, nm: String, c: @) -> List<(String, @)> {
     _ => [(nm, c)],
   }
 };
-func headerClass(h: parse.Header) -> @ {
-  if h.lft == "" { if h.rgt == "" { 5 } else { 2 } } else { 3 }
-};
+func headerClass(h: parse.Header) -> @ { interp.headerClass(h) };
 func bindsAll(xs: List<parse.Ast>, sig: List<(String, @)>) -> List<(String, @)> {
   match xs { (h, t) => bindsAll(t, binds(h, sig)), _ => sig, }
 };
@@ -45,6 +43,10 @@ func binds(a: parse.Ast, sig: List<(String, @)>) -> List<(String, @)> {
 };
 func isHeader(a: parse.Ast) -> Bool { match a { .header(h) => true, _ => false, } };
 func isFnend(a: parse.Ast) -> Bool { match a { .fnend => true, _ => false, } };
+// a body line that is exactly ∇ closes the definition (D-62)
+func isLoneDel(ts: List<lexer.Token>) -> Bool {
+  match ts { (t, rest) => match rest { (t2, r2) => false, _ => match t.kind { .del => true, _ => false, }, }, _ => false, }
+};
 func dropN(cs: List<UniChar>, n: @) -> List<UniChar> {
   if n == 0 { cs } else { match cs { (h, t) => dropN(t, n - 1), _ => ~, } }
 };
@@ -56,19 +58,23 @@ func stepLine(line: String, s: Sess) -> (String, Sess) {
   let red = line.starts-with("🍎>");
   let src = if green or red { stripPrompt(line) } else { line };
   if s.defn {
-    match parse.parseLine(src, s.sig) {
-      .ok(a) => if isFnend(a) { ("", Sess( sig: s.sig, defn: false, env: s.env )) } else { ("", s) },
-      .err(e) => ("", s),
+    match lexer.tokens(src) {
+      .ok(ts) => if isLoneDel(ts) { ("", Sess( sig: s.sig, defn: false, env: interp.defineEnd(s.env) )) }
+        else { ("", Sess( sig: s.sig, defn: true, env: interp.defineLine(src, s.env) )) },
+      .err(e) => ("", Sess( sig: s.sig, defn: true, env: interp.defineLine(src, s.env) )),
     }
   } else {
     match parse.parseLine(src, s.sig) {
       .err(e) => (e.tag + " col:{e.col} " + e.hint, s),
-      .ok(a) => if green { (parse.showAst(a), Sess( sig: binds(a, s.sig), defn: isHeader(a), env: s.env )) }
-        else {
-          match interp.runStmt(a, s.env) {
-            (out, env2) => (out, Sess( sig: binds(a, s.sig), defn: isHeader(a), env: env2 )),
-          }
-        },
+      .ok(a) => match a {
+        .header(h) => (if green { parse.showAst(a) } else { "" }, Sess( sig: binds(a, s.sig), defn: true, env: interp.defineStart(h, s.env) )),
+        _ => if green { (parse.showAst(a), Sess( sig: binds(a, s.sig), defn: false, env: s.env )) }
+          else {
+            match interp.runStmt(a, s.env) {
+              (out, env2) => (out, Sess( sig: binds(a, s.sig), defn: false, env: env2 )),
+            }
+          },
+      },
     }
   }
 };
