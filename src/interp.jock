@@ -12,13 +12,14 @@
 import lagoon;
 import array;
 import parse;
+import nasm;
 
 // a tradfn: its header, its body lines kept as SOURCE, and the compile
 // cache (D-34): the trees of the last compilation and the signature they
 // were compiled against. A call whose entry signature equals the key runs
 // the trees; any other signature re-parses, which is what invalidates the
 // cache when a name the body reads changes class.
-struct Fndef { h: parse.Header, body: List<String>, cached: Bool, ckey: List<(String, @)>, cast: List<parse.Ast> };
+struct Fndef { h: parse.Header, body: List<String>, cached: Bool, ckey: List<(String, @)>, cast: List<parse.Ast>, cfor: List<List<*>> };
 struct Env {
   store: List<(String, array.Arr)>,    // arrays by name
   io: @, pp: @,                        // ⎕IO, ⎕PP
@@ -30,8 +31,12 @@ struct Env {
 struct EErr { tag: String, hint: String };
 enum Ev { err(EErr), ok((array.Arr, Env)) };
 enum EnvR { err(EErr), ok(Env) };
-enum BodyR { err(EErr), ok((List<parse.Ast>, Env)) };
+enum BodyR { err(EErr), ok((List<parse.Ast>, List<List<*>>, Env)) };
 enum Part { elide, ev(Ev) };
+// `let` is a Jock keyword, so the #let node is spelled `bind` here and the
+// nasm package rewrites the tag to %let before lowering (structurally)
+enum Nasm { atom(@), axis(String), cell(List<Nasm>), op((String, List<Nasm>)), bind((String, Nasm, Nasm)), nock(*) };
+enum Sema { leaf(String), pair((Sema, Sema)) };
 enum Evs { err(EErr), ok((List<array.Arr>, Env)) };
 enum Parts { err(EErr), ok((List<List<@>>, List<@>, Env)) };
 
@@ -939,14 +944,14 @@ func headerClass(h: parse.Header) -> @ { if h.lft == "" { if h.rgt == "" { 5 } e
 func defineStart(h: parse.Header, env: Env) -> Env { setPending(env, h, ~) };
 func defineLine(line: String, env: Env) -> Env { setPending(env, env.phdr, (line, env.pend)) };
 func defineEnd(env: Env) -> Env {
-  let d = Fndef( h: env.phdr, body: revS(env.pend, ~), cached: false, ckey: ~, cast: ~ );
+  let d = Fndef( h: env.phdr, body: revS(env.pend, ~), cached: false, ckey: ~, cast: ~, cfor: ~ );
   setPending(setFns(env, putFn(env.fns, env.phdr.nm, d)), noHeader(), ~)
 };
 func putFn(fs: List<(String, Fndef)>, nm: String, d: Fndef) -> List<(String, Fndef)> {
   match fs { ((n, w), t) => if n == nm { ((nm, d), t) } else { ((n, w), putFn(t, nm, d)) }, _ => [(nm, d)], }
 };
 func lookupFn(fs: List<(String, Fndef)>, nm: String) -> (Bool, Fndef) {
-  match fs { ((n, d), t) => if n == nm { (true, d) } else { lookupFn(t, nm) }, _ => (false, Fndef( h: noHeader(), body: ~, cached: false, ckey: ~, cast: ~ )), }
+  match fs { ((n, d), t) => if n == nm { (true, d) } else { lookupFn(t, nm) }, _ => (false, Fndef( h: noHeader(), body: ~, cached: false, ckey: ~, cast: ~, cfor: ~ )), }
 };
 // the parser's signature for the environment as it stands (D-52)
 func sigOf(env: Env) -> List<(String, @)> { sigFns(env.fns, sigStore(env.store, ~)) };
@@ -986,12 +991,12 @@ func callUser(nm: String, dyadic: Bool, monadic: Bool, a: array.Arr, b: array.Ar
       let entry = setStore(env, st2);
       let key = sigOf(entry);
       let hit = d.cached and d.ckey == key;
-      let ran = if hit { runAsts(d.cast, entry, ~) } else { runBodyCollect(d.body, entry, ~) };
+      let ran = if hit { runCached(d.cast, d.cfor, entry, ~, ~) } else { runBodyCollect(d.body, entry, ~, ~) };
       match ran {
         .err(e) => Ev.err(e),
-        .ok(r) => match r { (asts, env2) => match lookup(env2.store, h.res) {
+        .ok(r) => match r { (asts, fors, env2) => match lookup(env2.store, h.res) {
           (hasRes, res) => {
-            let fresh = Fndef( h: h, body: d.body, cached: true, ckey: key, cast: asts );
+            let fresh = Fndef( h: h, body: d.body, cached: true, ckey: key, cast: asts, cfor: fors );
             let env3 = setFns(setStore(env2, restoreLocals(saved, env2.store, localNames(h))), if hit { env2.fns } else { putFn(env2.fns, nm, fresh) });
             if h.res == "" { fail("%value-error", nm + " returns no result") }
             else if not hasRes { fail("%value-error", nm + " did not set its result " + h.res) }
@@ -1006,38 +1011,67 @@ func unbindAll(st: List<(String, array.Arr)>, names: List<String>) -> List<(Stri
   match names { (n, rest) => unbindAll(delStore(st, n), rest), _ => st, }
 };
 // the body, one line at a time, each parsed against the signature as it
-// stands (D-34);  the trees come back for the cache, in order
-func runBodyCollect(lines: List<String>, env: Env, acc: List<parse.Ast>) -> BodyR {
+// stands and EMITTED (D-34); the trees and the lowered formulas come back
+// for the cache, in order
+func runBodyCollect(lines: List<String>, env: Env, acc: List<parse.Ast>, facc: List<List<*>>) -> BodyR {
   match lines {
     (line, rest) => match parse.parseLine(line, sigOf(env)) {
       .err(e) => BodyR.err(EErr( tag: e.tag, hint: e.hint )),
-      .ok(a) => match runBodyStmt(a, env) { .err(e) => BodyR.err(e), .ok(env2) => runBodyCollect(rest, env2, (a, acc)), },
+      .ok(a) => {
+        let fs = formulasOf(flatStmts(a));
+        match runLine(flatStmts(a), fs, env) { .err(e) => BodyR.err(e), .ok(env2) => runBodyCollect(rest, env2, (a, acc), (fs, facc)), }
+      },
     },
-    _ => BodyR.ok((revAsts(acc, ~), env)),
+    _ => BodyR.ok((revAsts(acc, ~), revFors(facc, ~), env)),
   }
 };
-// a cached body:  the trees, no parsing
-func runAsts(asts: List<parse.Ast>, env: Env, acc: List<parse.Ast>) -> BodyR {
+// a cached body:  the trees and formulas, no parsing and no emitting
+func runCached(asts: List<parse.Ast>, fors: List<List<*>>, env: Env, acc: List<parse.Ast>, facc: List<List<*>>) -> BodyR {
   match asts {
-    (a, rest) => match runBodyStmt(a, env) { .err(e) => BodyR.err(e), .ok(env2) => runAsts(rest, env2, (a, acc)), },
-    _ => BodyR.ok((revAsts(acc, ~), env)),
+    (a, rest) => match fors {
+      (fs, frest) => match runLine(flatStmts(a), fs, env) { .err(e) => BodyR.err(e), .ok(env2) => runCached(rest, frest, env2, (a, acc), (fs, facc)), },
+      _ => BodyR.err(EErr( tag: "%emit-mismatch", hint: "cache shape" )),
+    },
+    _ => BodyR.ok((revAsts(acc, ~), revFors(facc, ~), env)),
   }
 };
 func revAsts(xs: List<parse.Ast>, acc: List<parse.Ast>) -> List<parse.Ast> { match xs { (h, t) => revAsts(t, (h, acc)), _ => acc, } };
-func runBodyStmt(a: parse.Ast, env: Env) -> EnvR {
+func revFors(xs: List<List<*>>, acc: List<List<*>>) -> List<List<*>> { match xs { (h, t) => revFors(t, (h, acc)), _ => acc, } };
+// a line's statements, flat (a ⋄ line is several)
+func flatStmts(a: parse.Ast) -> List<parse.Ast> { match a { .stmts(ss) => ss, _ => [a], } };
+// the lowered formula of each emittable statement (0 for one that is not emitted)
+func formulasOf(ss: List<parse.Ast>) -> List<*> {
+  match ss { (st, rest) => (if emittable(st) { lower(st) } else { 0 }, formulasOf(rest)), _ => ~, }
+};
+// one line: each statement through the interpreter and, when emitted, through
+// its formula, the two results held equal
+func runLine(ss: List<parse.Ast>, fs: List<*>, env: Env) -> EnvR {
+  match ss {
+    (st, rest) => match fs {
+      (f, frest) => match runBodyStmt(st, f, env) { .err(e) => EnvR.err(e), .ok(env2) => runLine(rest, frest, env2), },
+      _ => EnvR.err(EErr( tag: "%emit-mismatch", hint: "formula count" )),
+    },
+    _ => EnvR.ok(env),
+  }
+};
+// the statement's result: the tree evaluation, and the formula's agreement with it
+func bodyEv(a: parse.Ast, f: *, env: Env) -> Ev {
+  let e1 = evalAst(a, env);
+  if emittable(a) {
+    let e2 = eval((runtime(), env), f) as! Ev;
+    if e1 == e2 { e1 } else { fail("%emit-mismatch", "a tradfn body statement differs between the interpreter and its formula") }
+  } else { e1 }
+};
+func runBodyStmt(a: parse.Ast, f: *, env: Env) -> EnvR {
   match a {
     .empty => EnvR.ok(env),
     .fnend => EnvR.ok(env),
-    .stmts(ss) => runBodyAll(ss, env),
     .header(h) => EnvR.err(EErr( tag: "%syntax-error", hint: "∇ inside a function body" )),
-    _ => match evalAst(a, env) {
+    _ => match bodyEv(a, f, env) {
       .err(e) => EnvR.err(e),
       .ok(r) => match r { (v, env2) => EnvR.ok(if isAssign(a) { env2 } else { pushOut(env2, array.format(v, env2.pp)) }), },
     },
   }
-};
-func runBodyAll(ss: List<parse.Ast>, env: Env) -> EnvR {
-  match ss { (st, rest) => match runBodyStmt(st, env) { .err(e) => EnvR.err(e), .ok(env2) => runBodyAll(rest, env2), }, _ => EnvR.ok(env), }
 };
 
 func runAll(ss: List<parse.Ast>, env: Env, acc: String) -> (String, Env) {
@@ -1113,3 +1147,122 @@ func partsOf(parts: List<Part>, x: array.Arr, env: Env, acc: List<List<@>>, shp:
   }
 };
 func initial() -> Env { Env( store: ~, io: 1, pp: 10, fns: ~, phdr: noHeader(), pend: ~, out: ~ ) };
+
+// --- the emitter (P5): a statement to a Nockasm program over [rt env] ---------------------------
+// (moved from emit.jock so that a tradfn body can be emitted and run from
+// inside callUser, D-34; the import graph allows it nowhere else)
+// --- builders ------------------------------------------------------------------------------
+func ax(nm: String) -> Nasm { Nasm.axis(nm) };
+func konst(n: *) -> Nasm { Nasm.op(("const", [Nasm.nock(n)])) };
+func cel(xs: List<Nasm>) -> Nasm { Nasm.cell(xs) };
+func lett(nm: String, v: Nasm, body: Nasm) -> Nasm { Nasm.bind((nm, v, body)) };
+// slam the gate at the named leg with a sample:  9 2 on the gate with 6 edited (D-51)
+func callG(g: String, sample: Nasm) -> Nasm {
+  Nasm.op(("call", [Nasm.atom(2), Nasm.op(("edit", [Nasm.atom(6), sample, ax(g)]))]))
+};
+func tmp(n: @) -> String { "t{n}" };
+
+// --- the subject schema --------------------------------------------------------------------
+func rtSchema(names: List<String>) -> Sema {
+  match names { (h, t) => match t { (h2, t2) => Sema.pair((Sema.leaf(h), rtSchema(t))), _ => Sema.leaf(h), }, _ => Sema.leaf("rt"), }
+};
+func schema() -> Sema { Sema.pair((rtSchema(gateNames()), Sema.leaf("env"))) };
+
+// --- the emitter ------------------------------------------------------------------------------
+// em(a, e, n): the program for a against environment name e, with n the
+// next free temporary;  answers (program, next free temporary)
+func em(a: parse.Ast, e: String, n: @) -> (Nasm, @) {
+  match a {
+    .lit(l) => (callG("g-lit", cel([konst(l), ax(e)])), n),
+    .name(nm) => (callG("g-name", cel([konst(nm), ax(e)])), n),
+    .nilad(nm) => (callG("g-nilad", cel([konst(nm), ax(e)])), n),
+    .sysvar(nm) => (callG("g-sys", cel([konst(nm), ax(e)])), n),
+    .monad(m) => match em(m.r, e, n) {
+      (r, n1) => (lett(tmp(n1), r, callG("g-monad", cel([konst(m.f), ax(tmp(n1))]))), n1 + 1),
+    },
+    .dyad(d) => match em(d.r, e, n) {
+      (r, n1) => {
+        let rn = tmp(n1);
+        let en = tmp(n1 + 1);
+        match em(d.l, en, n1 + 2) {
+          (l, n2) => {
+            let ln = tmp(n2);
+            (lett(rn, r, lett(en, callG("g-env", cel([ax(rn), ax(e)])), lett(ln, l, callG("g-dyad", cel([konst(d.f), ax(ln), ax(rn)]))))), n2 + 1)
+          },
+        }
+      },
+    },
+    .assign(s) => match em(s.v, e, n) {
+      (v, n1) => (lett(tmp(n1), v, callG("g-assign", cel([konst(s.nm), ax(tmp(n1))]))), n1 + 1),
+    },
+    .sysassign(s) => match em(s.v, e, n) {
+      (v, n1) => (lett(tmp(n1), v, callG("g-sysassign", cel([konst(s.nm), ax(tmp(n1))]))), n1 + 1),
+    },
+    .index(ix) => match em(ix.a, e, n) {
+      (x, n1) => {
+        let xn = tmp(n1);
+        let en = tmp(n1 + 1);
+        match emParts(ix.ix, en, n1 + 2, ~) {
+          (parts, binds, n2) => (lett(xn, x, lett(en, callG("g-env", cel([ax(xn), ax(e)])), wrap(binds, callG("g-index", cel([ax(xn), listOf(parts)]))))), n2),
+        }
+      },
+    },
+    .iassign(s) => match em(s.v, e, n) {
+      (v, n1) => {
+        let vn = tmp(n1);
+        let en = tmp(n1 + 1);
+        match emParts(s.ix, en, n1 + 2, ~) {
+          (parts, binds, n2) => (lett(vn, v, lett(en, callG("g-env", cel([ax(vn), ax(e)])), wrap(binds, callG("g-iassign", cel([konst(s.nm), listOf(parts), ax(vn)]))))), n2),
+        }
+      },
+    },
+    _ => (konst(Ev.err(EErr( tag: "%unimplemented", hint: "not an emitted form" ))), n),
+  }
+};
+// index parts in order, each against the environment the previous one left:
+// answers (the Part expressions, the (name, program) bindings to wrap, next temporary)
+func emParts(ixs: List<parse.Ast>, e: String, n: @, acc: List<(String, Nasm)>) -> (List<Nasm>, List<(String, Nasm)>, @) {
+  match ixs {
+    (ix, rest) => match ix {
+      .elide => match emParts(rest, e, n, acc) { (ps, bs, n2) => ((konst(Part.elide), ps), bs, n2), },
+      _ => match em(ix, e, n) {
+        (p, n1) => {
+          let pn = tmp(n1);
+          let en = tmp(n1 + 1);
+          match emParts(rest, en, n1 + 2, ((en, callG("g-env", cel([ax(pn), ax(e)]))), ((pn, p), acc))) {
+            (ps, bs, n2) => ((cel([konst(%ev), ax(pn)]), ps), bs, n2),
+          }
+        },
+      },
+    },
+    _ => (~, acc, n),
+  }
+};
+// bindings accumulate newest-first; wrap applies them outermost-first
+func wrap(binds: List<(String, Nasm)>, body: Nasm) -> Nasm {
+  match binds { ((nm, v), rest) => wrap(rest, lett(nm, v, body)), _ => body, }
+};
+// a null-terminated list of the part expressions
+func listOf(ps: List<Nasm>) -> Nasm { cel(snocN(ps, konst(0))) };   // a FORMULA for the null: a raw atom would land in formula position
+func snocN(xs: List<Nasm>, x: Nasm) -> List<Nasm> { match xs { (h, t) => (h, snocN(t, x)), _ => [x], } };
+
+func emittable(a: parse.Ast) -> Bool {
+  match a {
+    .lit(l) => true, .name(nm) => true, .nilad(nm) => true, .sysvar(nm) => true, .monad(m) => true, .dyad(d) => true,
+    .assign(s) => true, .sysassign(s) => true, .index(ix) => true, .iassign(s) => true,
+    _ => false,
+  }
+};
+func compile(a: parse.Ast) -> Nasm { match em(a, "env", 0) { (prog, n) => prog, } };
+func lower(a: parse.Ast) -> * { nasm.lower((0, schema()), compile(a)) };
+func render(a: parse.Ast) -> String { nasm.render((0, schema()), compile(a)) };
+// the lowered formula as a noun, for the emission goldens: `[a b c]` right-nested, atoms decimal
+func showNoun(n: *) -> String { if hoon.iscell(n) { "[" + showCell(n) + "]" } else { "{n as! @}" } };
+func showCell(n: *) -> String {
+  match n { (h, t) => if hoon.iscell(t) { showNoun(h) + " " + showCell(t) } else { showNoun(h) + " " + showNoun(t) }, _ => "", }
+};
+func lowerText(a: parse.Ast) -> String { showNoun(lower(a)) };
+// run one statement's program over [rt env]
+func run(a: parse.Ast, env: Env) -> Ev {
+  eval((runtime(), env), lower(a)) as! Ev
+};

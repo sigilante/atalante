@@ -9,7 +9,6 @@
 import lexer;
 import parse;
 import interp;
-import emit;
 
 // --- the session ----------------------------------------------------------------
 // A session threads a SIGNATURE (name -> class, parse.jock's convention)
@@ -72,7 +71,7 @@ func stepLine(line: String, s: Sess) -> (String, Sess) {
       .err(e) => (e.tag + " col:{e.col} " + e.hint, s),
       .ok(a) => match a {
         .header(h) => (if green { parse.showAst(a) } else { "" }, Sess( sig: binds(a, s.sig), defn: true, env: interp.defineStart(h, s.env) )),
-        _ => if green { (if nock { emit.render(a).trim() } else if noun { emit.lowerText(a) } else { parse.showAst(a) }, Sess( sig: binds(a, s.sig), defn: false, env: s.env )) }
+        _ => if green { (if nock { interp.render(a).trim() } else if noun { interp.lowerText(a) } else { parse.showAst(a) }, Sess( sig: binds(a, s.sig), defn: false, env: s.env )) }
           else {
             match interp.runStmt(a, s.env) {
               (out, env2) => match emitted(a, s.env) {
@@ -91,7 +90,7 @@ func stepLine(line: String, s: Sess) -> (String, Sess) {
 func emitted(a: parse.Ast, env: interp.Env) -> (String, interp.Env) {
   match a {
     .stmts(ss) => emittedAll(ss, env, ""),
-    _ => if emit.emittable(a) { interp.finish(a, emit.run(a, env), env) } else { interp.runStmt(a, env) },
+    _ => if interp.emittable(a) { interp.finish(a, interp.run(a, env), env) } else { interp.runStmt(a, env) },
   }
 };
 func emittedAll(ss: List<parse.Ast>, env: interp.Env, acc: String) -> (String, interp.Env) {

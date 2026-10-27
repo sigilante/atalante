@@ -8,7 +8,8 @@
 #    atlc.sh lexcheck                lex every eval-corpus input line; list refusals
 #    atlc.sh parse [CASE.atl ...]    run the parse corpus (tests/parse), print the table
 #    atlc.sh check                   typecheck src/ (a program that imports atl)
-#    atlc.sh pkg                     rebuild pkgs/lagoon.jam from pkg/ and vendor/
+#    atlc.sh pkg                     rebuild the packages from pkg/ and vendor/
+#    atlc.sh oracle                  check the emission goldens against the Python Nockasm expander
 #
 #  Env:  JOCK  the Jock checkout (default ~/Code/jock); its tools/jockc.sh
 #        is the compiler (honk-codex + honk-kick under NockVM, the
@@ -23,5 +24,6 @@ case "$1" in
     print 'import atl;\natl.session(["1"])' > "$T/check.jock"
     exec zsh "$JOCK/tools/jockc.sh" --data-dir "$ROOT/src" --data-dir "$ROOT/pkgs" check "$T/check.jock" ;;
   pkg)  exec zsh "$ROOT/tools/pkg.sh" ;;
+  oracle)  exec python3 "$ROOT/tools/goldens-oracle.py" ;;
   *)  sed -n '2,12p' "$0" | sed 's/^#  \{0,1\}//'; exit 2 ;;
 esac
