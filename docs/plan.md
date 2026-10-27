@@ -1,6 +1,6 @@
 # Atalante — Implementation Plan
 
-**Status: working plan (2026-10-27).** Atalante is rebuilt in Jock as a compiler from ATL/APL to Nock. The dialect is [`docs/spec/dialect.md`](spec/dialect.md); this file fixes the toolchain, the order of work, and each phase's exit test. The 2024 Hoon tree under `desk/` is the glyph inventory and nothing more; it is not built on.
+**Status: v1 released (2026-10-28; [release notes](release-v1.md)).** Atalante is rebuilt in Jock as a compiler from ATL/APL to Nock. The dialect is [`docs/spec/dialect.md`](spec/dialect.md); this file fixes the toolchain, the order of work, and each phase's exit test. The 2024 Hoon tree, `desk/`, was the glyph inventory and nothing more; it was removed at v1 and stays in history at b721975.
 
 The project is also a shakedown of late-beta Jock. Every Jock gap it finds is recorded in §4 and filed upstream; a workaround in this tree names the gap it works around.
 
@@ -21,7 +21,7 @@ Three lanes, slowest is the authority.
 
 **NockVM** has no float jets (`crates/nockvm/.../jets/hot.rs` jets integer math and bit ops only). A jetless Float64 add costs ~0.3 ms there. The REPL is usable on vectors of thousands; matrix work waits for P7.
 
-**No Gall or `%sole` path in v1.** Jock kernels are NockApp-shaped. The Urbit shoe agent in `desk/app/atalante.hoon` is kept as the v2 host: it would hold the Jock-compiled compiler as a noun and fire it with raw Nock. That bridge is untyped and unbuilt; it is a §4 item.
+**No Gall or `%sole` path in v1.** Jock kernels are NockApp-shaped. The 2024 Hoon tree (`desk/`, a shoe agent) was removed at v1 and stays in history at b721975. A v2 Gall host would hold the Jock-compiled compiler as a noun and fire it with raw Nock. That bridge is untyped and unbuilt; it is a §4 item.
 
 ### 1.1 Lagoon via FFI — the strategy (ruled 2026-10-27)
 
@@ -50,7 +50,6 @@ tests/
   run.jock         the corpus runner: interpreter and emitter on every case, differential
 tools/
   atlc.sh          jonk or jockc.sh behind one verb (run | check | kernel | corpus)
-desk/              the 2024 Hoon tree, frozen as inventory (sur/atalante.hoon)
 docs/
 ```
 
@@ -66,7 +65,7 @@ jonk is PENDED (ruled 2026-10-27): its author will rebase the branch; until then
 **LANDED 2026-10-27** on the honk lane alone: 17 cases, 81 steps in `tests/atl/`, one generated program per run (`tests/gen/corpus.jock`, ~28 s), `trivial` 1/1 and every other case 0/n against the stub in `src/atl.jock`. The product travels through `jockc.sh --diag` as an atom and is decoded as a cord: the prose renderer prints a String reached through an import as a bare number (S-9).
 
 **P1 — Lexer.**
-UTF-8 decoding (Jock strings are byte-oriented; a codepoint walker is the first thing written and the first §4 note). The glyph table transcribed from `desk/sur/atalante.hoon`. Numerals with `¯`, `E`, `.`; strands; character literals; `⎕` names; `)` commands; `⍝`; `⋄`. Positions in columns of glyphs, not bytes.
+UTF-8 decoding (Jock strings are byte-oriented; a codepoint walker is the first thing written and the first §4 note). The glyph table transcribed from `desk/sur/atalante.hoon` (history, b721975). Numerals with `¯`, `E`, `.`; strands; character literals; `⎕` names; `)` commands; `⍝`; `⋄`. Positions in columns of glyphs, not bytes.
 *Exit:* every corpus case tokenizes; refusal cases for D-3 and D-5 assert their tags.
 **LANDED 2026-10-27.** `src/lexer.jock` (246 lines) over the prelude's `String.chars()` UTF-8 decoder; `tests/lex/` holds 4 cases, 30 steps (numerals, numeral refusals, names and glyphs with the D-9 aliases, character literals and system tokens), all green on the first compile; `atlc.sh lexcheck` lexes all 81 evaluation-corpus lines with 0 refusals. A lex corpus run costs ~47 s (the generated program now imports two modules).
 

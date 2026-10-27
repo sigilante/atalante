@@ -1,0 +1,48 @@
+Toolchain pins for Atalante v1 (2026-10-28): everything the build and the
+tests run on, with the commit each was taken from.  vendor/JOCK.txt and
+vendor/NUMERICS.txt hold the two vendored trees' details; this file names
+all of the pins in one place.
+
+jock        github.com/sigilante/jock @ 47838d9 (2026-10-27)
+            The Jock compiler tree; tools/*.sh take a checkout of it as
+            $JOCK.  Its tools/jockc.sh is the compiler lane (honk-codex
+            + honk-kick under NockVM) and its vendor/hoon-138.hoon is the
+            prelude every package build passes to honk.  vendor/JOCK.txt
+            says how to make a worktree at the pin.
+
+honk, kick  github.com/sigilante/nockchain @ 8ff5367c (2026-10-22, branch
+            sigilante/honk-kick: master 9bcc26c6 merged into the kick
+            branch).  Built with cargo and installed as ~/.cargo/bin/
+            honk-codex and honk-kick; tools/pkg.sh and tools/kernel-test.sh
+            take them as $HONK and $KICK.  This is Jock's own pin (its
+            vendor/TOOLCHAIN.txt).  honk at this commit carries the
+            float-literal sign bug (ledger S-12): the vendored numerics are
+            rewritten around it, and docs/upstream/hatch-mul-sign.patch is
+            the fix, verified against 9bcc26c6.
+
+nockvm      the NockVM that honk-kick and jojo run on, in-tree in both of
+            the pins above (crates/nockvm).  Integer and bit jets only; no
+            float jets (S-4), which is why reals cost ~0.3 ms an operation.
+
+jojo        github.com/sigilante/jojo @ a44d84d (2026-09-26), release build
+            (cargo build --release); tools/atl-repl.sh takes the checkout
+            as $JOJO.  It carries its own nockapp and nockvm crates
+            in-tree, so it pins its runtime by itself.
+
+numerics    the numerics monorepo (lagoon, libmath) @ 4727063e, vendored
+            into vendor/numerics by tools/vendor-numerics.py with three
+            patches.  vendor/NUMERICS.txt records the files and the rules.
+
+tmux 3.5a   the REPL driver (tools/atl-repl.sh) and the transcript harness.
+python3     the harnesses: tools/atlc.py, tools/goldens-oracle.py,
+            tools/kernel-test.py, tools/repl-test.py, tools/vendor-numerics.py.
+
+Reproducing the v1 verification, with JOCK set to a worktree at the pin:
+    tools/atlc.sh corpus          evaluation corpus, interpreter and emitted Nock
+    tools/atlc.sh lexcheck        lexer vectors
+    tools/atlc.sh parse           parser vectors
+    tools/atlc.sh oracle          emission goldens against the Python nockasm
+    tools/atlc.sh kernel          out/atl-kernel.jam, the REPL kernel
+    tools/atlc.sh kernel-test     the kernel vector through arms 22 and 23
+    tools/atlc.sh repl-test       the README transcript typed at the prompt
+docs/release-v1.md records the counts these gave at the release commit.

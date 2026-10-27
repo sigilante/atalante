@@ -8,7 +8,7 @@ ATL/APL is the APL that Atalante compiles. It is Budd's compiler subset (Budd 19
 
 1. **Classical APL where it costs nothing.** Right-to-left evaluation, strand notation, scalar extension, `⎕IO`. A programmer who knows APL2 or Dyalog types ATL without looking anything up until they reach nested arrays.
 2. **Flat, typed arrays.** An ATL array has a shape and one element kind. Nested arrays are v2 (D-6). This is what makes Budd's rank and type inference possible, and what makes the array layout Lagoon-compatible.
-3. **Every primitive has a vector.** The symbol inventory in `desk/sur/atalante.hoon` is the checklist; a glyph enters the implemented language only with a positive vector, a negative vector and an error-class vector.
+3. **Every primitive has a vector.** The symbol inventory in the 2024 tree's `desk/sur/atalante.hoon` (history, b721975) is the checklist; a glyph enters the implemented language only with a positive vector, a negative vector and an error-class vector.
 4. **Errors are tagged, positioned and classical.** APL's five error classes are the tags (D-40). A refusal renders like a Jock refusal: tag, column, the line with a caret.
 5. **Compiled, not interpreted.** A statement becomes a Nock formula before it runs (D-50). The interpreter that exists during development is the oracle for the compiler, never the product.
 
@@ -16,7 +16,7 @@ ATL/APL is the APL that Atalante compiles. It is Budd's compiler subset (Budd 19
 
 **D-1 · Source is UTF-8; glyphs are scalars, not bytes.** The lexer decodes codepoints. Every APL glyph in the inventory is one codepoint; `⎕IO`, `)VARS` and names are glyph sequences. ⟨`lex/names-glyphs`, `lex/strings-system`⟩
 
-**D-2 · Names are `[A-Za-z_∆⍙][A-Za-z0-9_∆⍙¯]*`, plus the letter ranges `desk/lib/atalante.hoon` lists** (Greek, Cyrillic, Hebrew, Deseret). Names are case-sensitive. A name adjacent to a name needs whitespace; a name adjacent to a glyph does not. ⟨`lex/names-glyphs`, `lex/numeral-errors`⟩
+**D-2 · Names are `[A-Za-z_∆⍙][A-Za-z0-9_∆⍙¯]*`, plus the letter ranges the 2024 tree's `desk/lib/atalante.hoon` lists (history, b721975)** (Greek, Cyrillic, Hebrew, Deseret). Names are case-sensitive. A name adjacent to a name needs whitespace; a name adjacent to a glyph does not. ⟨`lex/names-glyphs`, `lex/numeral-errors`⟩
 
 **D-3 · Numeric literals.** `¯` (U+00AF) is the negative sign and part of the literal; `−` is the subtraction function. Forms: `12`, `¯3`, `1.5`, `.5` is refused, `1E6`, `1.5E¯3`. A literal with `.` or `E` is Float64; a literal with `¯` and no `.`/`E` is Int; otherwise Nat (D-10). ⟨`lex/numerals`, `lex/numeral-errors`⟩
 
@@ -28,7 +28,7 @@ ATL/APL is the APL that Atalante compiles. It is Budd's compiler subset (Budd 19
 
 **D-7 · Comments and separators.** `⍝` comments to end of line. `⋄` separates statements on one line. A newline ends a statement except inside a `∇` definition. ⟨`lex/names-glyphs`, `lex/strings-system`⟩
 
-**D-8 · OPEN · ASCII transliteration.** `desk/sur/atalante.hoon`'s `ascii-map` is half-finished and ambiguous (`|` is both residue and part of `|^`). v1 reads Unicode only. An ASCII input layer, if any, is a lexer pre-pass with its own table and vectors, never a grammar change.
+**D-8 · OPEN · ASCII transliteration.** The 2024 tree's `ascii-map` (`desk/sur/atalante.hoon`, history b721975) is half-finished and ambiguous (`|` is both residue and part of `|^`). v1 reads Unicode only. An ASCII input layer, if any, is a lexer pre-pass with its own table and vectors, never a grammar change.
 
 **D-9 · Four ASCII glyphs are canonical spellings, not transliterations.** `-` is `−`, `*` is `⋆`, `|` is `∣`, `~` is `∼`. ISO 13751 spells them in ASCII and every APL keyboard produces them; the lexer maps each to the inventory glyph and nothing else about D-8 changes. ⟨`lex/names-glyphs`⟩
 
@@ -74,9 +74,9 @@ ATL/APL is the APL that Atalante compiles. It is Budd's compiler subset (Budd 19
 
 ## 6. Primitive inventory
 
-The glyph list is `desk/sur/atalante.hoon`'s `+$cultivar`. This section fixes what each v1 primitive is held to and names the ones held back.
+The glyph list is `+$cultivar` in the 2024 tree's `desk/sur/atalante.hoon` (history, b721975). This section fixes what each v1 primitive is held to and names the ones held back.
 
-**D-40 · Error classes.** `%syntax-error`, `%value-error` (unbound name), `%valence-error`, `%rank-error`, `%length-error`, `%domain-error`, `%index-error`, `%limit-error`. A refusal carries the tag, the statement's column, and a hint. Vectors for refusals assert the tag. ⟨none — UNPINNED⟩
+**D-40 · Error classes.** `%syntax-error`, `%value-error` (unbound name), `%valence-error`, `%rank-error`, `%length-error`, `%domain-error`, `%index-error`, `%limit-error`. A refusal carries the tag, the statement's column, and a hint. Vectors for refusals assert the tag. ⟨`atl/errors` (six classes asserted by `⍝ refuse:`), `lex/numeral-errors`, `parse/refusals`⟩
 
 **D-41 · Scalar functions (v1, pervasive, scalar-extended).**
 Monadic: `+` conjugate (identity), `−` negate, `×` signum, `÷` reciprocal, `⌈` ceiling, `⌊` floor, `∣` magnitude, `⋆` exponential, `⍟` natural log, `○` pi times, `!` factorial, `∼` not (Boolean domain), `?` roll.
@@ -117,7 +117,7 @@ Nested arrays or their ruled-out alternative (D-6); `→` or dfns (D-32); dyadic
 
 ## References
 
-- Budd, T. *An APL Compiler*. Springer, 1988 (the 1987 technical report is the citation in `desk/lib/atalante.hoon`).
+- Budd, T. *An APL Compiler*. Springer, 1988 (the 1987 technical report is the citation in the 2024 tree's `desk/lib/atalante.hoon`).
 - ISO/IEC 13751:2001, Extended APL (the error classes and the scalar-function tables).
-- `desk/sur/atalante.hoon` — the glyph inventory this spec implements.
+- `desk/sur/atalante.hoon` at b721975 — the glyph inventory this spec implements; the 2024 tree was removed at v1.
 - `ast.md`, `README.md` — the examples every vector set must cover.
