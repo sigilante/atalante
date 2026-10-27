@@ -176,6 +176,9 @@ def main(argv):
             for ok, inp, exp, act in res:
                 mark = "ok  " if ok else "FAIL"
                 print(f"{mark}  {inp}")
+                if ok and act != "":
+                    for ln in act.split("\n"):
+                        print(f"      {ln}")
                 if not ok:
                     print(f"      expected: {exp!r}")
                     print(f"      actual:   {act!r}")

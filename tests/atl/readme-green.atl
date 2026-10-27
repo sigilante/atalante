@@ -30,6 +30,12 @@ R←A÷B
 ⍝ refuse: %valence-error
 🍏> A
 ⍝ refuse: %value-error
+🍏> A ← 5
+⍝ expect: ←(A, 5)
+🍏> B ← 6
+⍝ expect: ←(B, 6)
+🍏> R←A÷B
+⍝ expect: ←(R, ÷(A, B))
 🍏> ∇ E←K CAESAR P;A;S
 ⍝ expect: ∇ E←K CAESAR P;A;S
 A←'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
@@ -38,3 +44,27 @@ E←S[A⍳P]
 ∇
 🍏> 3 CAESAR 'HELLO'
 ⍝ expect: CAESAR(3, 'HELLO')
+🍏> ⎕IO ← 1                 ⍝ index origin at one
+⍝ expect: ←(⎕IO, 1)
+🍏> ⍝
+⍝ expect:
+🍏> ∇ EncryptedText ← key CaesarCipher PlainText;Alphabet;ShiftedAlphabet
+⍝ expect: ∇ EncryptedText←key CaesarCipher PlainText;Alphabet;ShiftedAlphabet
+	Alphabet ← 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+	ShiftedAlphabet ← (key ⌽ Alphabet), Alphabet
+	EncryptedText ← ShiftedAlphabet[Alphabet ⍳ PlainText]
+	∇
+🍏> 3 CaesarCipher 'HELLO'
+⍝ expect: CaesarCipher(3, 'HELLO')
+🍏> key ← 3
+⍝ expect: ←(key, 3)
+🍏> PlainText ← 'HELLO'
+⍝ expect: ←(PlainText, 'HELLO')
+🍏> Alphabet ← 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+⍝ expect: ←(Alphabet, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ')
+🍏> ShiftedAlphabet ← (key ⌽ Alphabet), Alphabet
+⍝ expect: ←(ShiftedAlphabet, ,(⌽(key, Alphabet), Alphabet))
+🍏> EncryptedText ← ShiftedAlphabet[Alphabet ⍳ PlainText]
+⍝ expect: ←(EncryptedText, ShiftedAlphabet[⍳(Alphabet, PlainText)])
+🍏> matrix ← 3 3 ⍴ 1 2 3 4 5 6 7 8 9
+⍝ expect: ←(matrix, ⍴(3 3, 1 2 3 4 5 6 7 8 9))
