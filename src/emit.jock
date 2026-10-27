@@ -128,6 +128,12 @@ func emittable(a: parse.Ast) -> Bool {
 func compile(a: parse.Ast) -> Nasm { match em(a, "env", 0) { (prog, n) => prog, } };
 func lower(a: parse.Ast) -> * { nasm.lower((0, schema()), compile(a)) };
 func render(a: parse.Ast) -> String { nasm.render((0, schema()), compile(a)) };
+// the lowered formula as a noun, for the emission goldens: `[a b c]` right-nested, atoms decimal
+func showNoun(n: *) -> String { if hoon.iscell(n) { "[" + showCell(n) + "]" } else { "{n as! @}" } };
+func showCell(n: *) -> String {
+  match n { (h, t) => if hoon.iscell(t) { showNoun(h) + " " + showCell(t) } else { showNoun(h) + " " + showNoun(t) }, _ => "", }
+};
+func lowerText(a: parse.Ast) -> String { showNoun(lower(a)) };
 // run one statement's program over [rt env]
 func run(a: parse.Ast, env: interp.Env) -> interp.Ev {
   eval((interp.runtime(), env), lower(a)) as! interp.Ev

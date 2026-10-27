@@ -59,7 +59,8 @@ func stepLine(line: String, s: Sess) -> (String, Sess) {
   let red = line.starts-with("🍎>");
   let src0 = if green or red { stripPrompt(line) } else { line };
   let nock = green and src0.starts-with(":nock ");
-  let src = if nock { utf8(dropN(src0.chars(), 6)).trim() } else { src0 };
+  let noun = green and src0.starts-with(":noun ");
+  let src = if nock or noun { utf8(dropN(src0.chars(), 6)).trim() } else { src0 };
   if s.defn {
     match lexer.tokens(src) {
       .ok(ts) => if isLoneDel(ts) { ("", Sess( sig: s.sig, defn: false, env: interp.defineEnd(s.env) )) }
@@ -71,7 +72,7 @@ func stepLine(line: String, s: Sess) -> (String, Sess) {
       .err(e) => (e.tag + " col:{e.col} " + e.hint, s),
       .ok(a) => match a {
         .header(h) => (if green { parse.showAst(a) } else { "" }, Sess( sig: binds(a, s.sig), defn: true, env: interp.defineStart(h, s.env) )),
-        _ => if green { (if nock { emit.render(a).trim() } else { parse.showAst(a) }, Sess( sig: binds(a, s.sig), defn: false, env: s.env )) }
+        _ => if green { (if nock { emit.render(a).trim() } else if noun { emit.lowerText(a) } else { parse.showAst(a) }, Sess( sig: binds(a, s.sig), defn: false, env: s.env )) }
           else {
             match interp.runStmt(a, s.env) {
               (out, env2) => match emitted(a, s.env) {
