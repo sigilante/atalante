@@ -24,8 +24,8 @@ nockvm      the NockVM that honk-kick and jojo run on, in-tree in both of
             the pins above (crates/nockvm).  Integer and bit jets only; no
             float jets (S-4), which is why reals cost ~0.3 ms an operation.
 
-jojo        github.com/sigilante/jojo @ 1e063cb (2026-10-28, branch apple-prompts,
-            PR #12 to main), release build (cargo build --release);
+jojo        github.com/sigilante/jojo @ 1e063cb (2026-10-28, PR #12, merged to main
+            at dba1406), release build (cargo build --release);
             tools/atl-repl.sh takes the checkout as $JOJO.  It carries its
             own nockapp and nockvm crates in-tree, so it pins its runtime
             by itself.  This commit adds --prompt and the [%prompt cord]
