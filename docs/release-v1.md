@@ -30,7 +30,7 @@
 
 ## The toolchain
 
-[`vendor/TOOLCHAIN.txt`](../vendor/TOOLCHAIN.txt) pins every piece: Jock at 47838d9, honk and kick at nockchain 8ff5367c, jojo at a44d84d, numerics at 4727063e. The release carries the built kernel, `atl-kernel.jam`, so the REPL needs jojo and nothing else.
+[`vendor/TOOLCHAIN.txt`](../vendor/TOOLCHAIN.txt) pins every piece: Jock at 47838d9, honk and kick at nockchain 8ff5367c, jojo at a44d84d, numerics at 4727063e. The release is source only. A kernel jam is not attached: an unsealed Jock kernel embeds the Jock compiler, the Hoon prelude and every module source and compiles at boot, and a sealed one runs jetless (ledger S-5), so the jam is built locally from the pins.
 
 ## Held back
 

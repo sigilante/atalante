@@ -68,7 +68,7 @@ The green prompt `🍏>` prints a line's tree instead of evaluating it, and `:no
 The REPL is a NockApp kernel hosted by jojo and driven from tmux.  [`docs/repl.md`](docs/repl.md) is the guide.
 
 ```
-tools/atlc.sh kernel        # build out/atl-kernel.jam (~3.5 min), or take the jam from the release
+tools/atlc.sh kernel        # build out/atl-kernel.jam (~3.5 min)
 tools/atl-repl.sh start     # boot it under jojo in tmux session `atl` (~75 s)
 tmux attach -t atl          # type at the prompt; F5 toggles the apple prompts
 ```

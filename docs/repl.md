@@ -10,7 +10,7 @@ tools/atl-repl.sh start     # boot it under jojo in tmux session `atl` (~75 s)
 tmux attach -t atl          # type at the jojo> prompt
 ```
 
-The v1 release carries the built `atl-kernel.jam`; put it at `out/atl-kernel.jam` and skip the `kernel` step. `JOCK` names the Jock checkout to build with (`vendor/JOCK.txt` records the pin); `JOJO` the jojo checkout with a release build. `tools/atl-repl.sh send LINE`, `show` and `stop` drive the session from a script.
+The jam is built locally and never shipped: unsealed, it embeds the Jock compiler and the sources (ledger S-5). `JOCK` names the Jock checkout to build with (`vendor/JOCK.txt` records the pin); `JOJO` the jojo checkout with a release build. `tools/atl-repl.sh send LINE`, `show` and `stop` drive the session from a script.
 
 ## The prompts
 
