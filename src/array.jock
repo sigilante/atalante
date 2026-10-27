@@ -98,7 +98,7 @@ func pow10(n: @) -> @ { if n == 0 { 1 } else { 10 * pow10(n - 1) } };
 // --- promotion (D-11) ------------------------------------------------------------
 func toReal(a: Arr) -> Arr {
   match a.kind {
-    1 => mapArr(a, 3, natToReal),
+    1 => if rank(a) == 0 or size(shape(a)) == 0 { mapArr(a, 3, natToReal) } else { Arr( kind: 3, ray: lagoon.change(a.ray, %i754, 6) ) },   // +change: linear, +sun:rd's rounding; it crashes on a rank-0 ray (S-23)
     2 => mapArr(a, 3, intToReal),
     _ => a,
   }

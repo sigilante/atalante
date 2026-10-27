@@ -23,7 +23,8 @@ A line is evaluated (the red prompt) unless the session is in green mode, where 
 | `)TOGGLE` | switch; answers the new mode |
 | `:nock EXPR` at the green prompt | the Nockasm program for EXPR |
 | `:noun EXPR` at the green prompt | its lowered Nock formula |
-| `)VARS` `)FNS` `)ERASE n…` `)OFF` | D-61 |
+| `)VARS` `)FNS` `)ERASE n…` | D-61 |
+| `)OFF` | answers `bye` with an exit effect; jojo exits on the effect before rendering the text, so the session simply ends |
 
 In the tmux session **F5** sends `)TOGGLE`, **F6** `)GREEN`, **F7** `)RED`, so one key switches between the apple prompts.
 
@@ -34,4 +35,4 @@ Every evaluated line runs through the interpreter and through its emitted Nock, 
 ## The two lanes that pin it
 
 - `tools/atlc.sh kernel-test` — the kernel VECTOR: builds the kernel with `+kernel:jock` as `kern.sh` does, pokes the README's sieve through arm 23 as `[%command line]` events, and peeks the store through arm 22, decoding the peeked array (plan P6 exit test).
-- `tools/atlc.sh repl-test` — the README transcript typed into the running kernel, every printed line held to `tests/atl/readme-red.atl`.
+- `tools/atlc.sh repl-test [CASE]` — a case typed into the running kernel, every printed line held to its expectations: the README transcript 25/25; `tests/atl/commands.atl` into a FRESH instance 20/21, the one being `)OFF` as above.

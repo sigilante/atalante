@@ -26,32 +26,25 @@
 =/  wfrom    |=([m=meta:lagoon v=(list @)] ^-(ray:lagoon (spac:la [m (rep bloq.m v)])))
 =/  wravel   |=(a=ray:lagoon ^-((list @) (ravel:la a)))
 =/  wgetitem  |=([a=ray:lagoon d=(list @)] ^-(@ (get-item:la a d)))
-=/  wsetitem  |=([a=ray:lagoon d=(list @) x=@] ^-(ray:lagoon (set-item:la a d x)))
-::  --- rays:  elementwise, same meta both sides (Lagoon asserts it)
+::  --- rays:  elementwise, same meta both sides (Lagoon asserts it).  The
+::  comparisons are not exported:  +bin-op walks the ravel with +snag
+::  (quadratic, S-22), and a Jock zip over the ravel is exact and linear.
 =/  wadd     |=([a=ray:lagoon b=ray:lagoon] ^-(ray:lagoon (add:la a b)))
 =/  wsub     |=([a=ray:lagoon b=ray:lagoon] ^-(ray:lagoon (sub:la a b)))
 =/  wmul     |=([a=ray:lagoon b=ray:lagoon] ^-(ray:lagoon (mul:la a b)))
-=/  wdiv     |=([a=ray:lagoon b=ray:lagoon] ^-(ray:lagoon (div:la a b)))
-=/  wmod     |=([a=ray:lagoon b=ray:lagoon] ^-(ray:lagoon (mod:la a b)))
-=/  wgth     |=([a=ray:lagoon b=ray:lagoon] ^-(ray:lagoon (gth:la a b)))
-=/  wgte     |=([a=ray:lagoon b=ray:lagoon] ^-(ray:lagoon (gte:la a b)))
-=/  wlth     |=([a=ray:lagoon b=ray:lagoon] ^-(ray:lagoon (lth:la a b)))
-=/  wlte     |=([a=ray:lagoon b=ray:lagoon] ^-(ray:lagoon (lte:la a b)))
-=/  wequ     |=([a=ray:lagoon b=ray:lagoon] ^-(ray:lagoon (equ:la a b)))
-=/  wneq     |=([a=ray:lagoon b=ray:lagoon] ^-(ray:lagoon (neq:la a b)))
 =/  wabs     |=(a=ray:lagoon ^-(ray:lagoon (abs:la a)))
-=/  wpown    |=([a=ray:lagoon n=@] ^-(ray:lagoon (pow-n:la a n)))
 =/  wchange  |=([a=ray:lagoon k=kind:lagoon b=@] ^-(ray:lagoon (change:la a k b)))
-::  --- rays:  structure and reductions (P4 reaches these)
+::  --- rays:  structure (P7's specialised gates reach these).  The reductions
+::  (cumsum, max, min) and dot/mmul are not exported:  measured at ~1.6 ms per
+::  element through +reel under NockVM against ~10 µs for a Jock fold with
+::  jetted arithmetic (S-22), and set-item is a rebuild per element.
+::  Not exported, because no ATL path can use them bit-exactly:  div (APL's
+::  0÷0), mod (APL's sign rule), pow-n (repeated multiplication rounds
+::  differently from exp(b·log a)), prod (its fold starts from the integer
+::  1, which as @rd bits is a denormal --- wrong for floats; S-21).
 =/  wiota    |=(m=meta:lagoon ^-(ray:lagoon (iota:la m)))
 =/  wreshape  |=([a=ray:lagoon s=(list @)] ^-(ray:lagoon (reshape:la a s)))
 =/  wtranspose  |=(a=ray:lagoon ^-(ray:lagoon (transpose:la a)))
-=/  wdot     |=([a=ray:lagoon b=ray:lagoon] ^-(ray:lagoon (dot:la a b)))
-=/  wmmul    |=([a=ray:lagoon b=ray:lagoon] ^-(ray:lagoon (mmul:la a b)))
-=/  wcumsum  |=(a=ray:lagoon ^-(ray:lagoon (cumsum:la a)))
-=/  wmax     |=(a=ray:lagoon ^-(ray:lagoon (max:la a)))
-=/  wmin     |=(a=ray:lagoon ^-(ray:lagoon (min:la a)))
-=/  wprod    |=(a=ray:lagoon ^-(ray:lagoon (prod:la a)))
 ::  --- scalars:  the hoon-138 rd door, rounding %n
 =/  wrsun    |=(a=@ ^-(@rd (~(sun rd %n) a)))
 =/  wrsan    |=(a=@s ^-(@rd (~(san rd %n) a)))
@@ -108,17 +101,12 @@
       ['from' [~ (g2 tmeta tlist tray)]]
       ['ravel' [~ (g1 tray tlist)]]
       ['getitem' [~ (g2 tray tlist tatom)]]
-      ['setitem' [~ (g3 tray tlist tatom tray)]]
-      ['add' [~ rr]]  ['sub' [~ rr]]  ['mul' [~ rr]]  ['div' [~ rr]]  ['mod' [~ rr]]
-      ['gth' [~ rr]]  ['gte' [~ rr]]  ['lth' [~ rr]]  ['lte' [~ rr]]  ['equ' [~ rr]]  ['neq' [~ rr]]
+      ['add' [~ rr]]  ['sub' [~ rr]]  ['mul' [~ rr]]
       ['abs' [~ r1]]
-      ['pown' [~ (g2 tray tatom tray)]]
       ['change' [~ (g3 tray ttas tatom tray)]]
       ['iota' [~ (g1 tmeta tray)]]
       ['reshape' [~ (g2 tray tlist tray)]]
       ['transpose' [~ r1]]
-      ['dot' [~ rr]]  ['mmul' [~ rr]]
-      ['cumsum' [~ r1]]  ['max' [~ r1]]  ['min' [~ r1]]  ['prod' [~ r1]]
       ['rsun' [~ (g1 tatom tre)]]
       ['rsan' [~ (g1 tatom tre)]]
       ['rtoi' [~ (g1 tre tosi)]]
@@ -148,12 +136,10 @@
     :-  %noun
     %-  habi:jck
     ^-  (list *)
-    :~  wfill  wfrom  wravel  wgetitem  wsetitem
-        wadd  wsub  wmul  wdiv  wmod
-        wgth  wgte  wlth  wlte  wequ  wneq
-        wabs  wpown  wchange
-        wiota  wreshape  wtranspose  wdot  wmmul
-        wcumsum  wmax  wmin  wprod
+    :~  wfill  wfrom  wravel  wgetitem
+        wadd  wsub  wmul
+        wabs  wchange
+        wiota  wreshape  wtranspose
         wrsun  wrsan  wrtoi  wrsqt  wrdrg
         wrexp  wrlog  wrpow  wrsin  wrcos  wrtan  wrasin  wracos  wratan  wrpi  wrfact
         wtneg  wtabs  wtmsb

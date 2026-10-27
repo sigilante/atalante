@@ -13,6 +13,7 @@
 #    atlc.sh kernel [--sealed]       build the REPL kernel jam, out/atl-kernel.jam (app/kernel.jock)
 #    atlc.sh kernel-test             the kernel vector: poke the sieve through arm 23, peek the store through arm 22
 #    atlc.sh repl-test [CASE.atl]    type a case into the running kernel (tools/atl-repl.sh start) and check every line
+#    atlc.sh bench N generic|emitted [STMT]  the P7 benchmark: STMT over v ← ⍳N through one path
 #
 #  Env:  JOCK  the Jock checkout (default ~/Code/jock); its tools/jockc.sh
 #        is the compiler (honk-codex + honk-kick under NockVM, the
@@ -30,6 +31,7 @@ case "$1" in
   oracle)  exec python3 "$ROOT/tools/goldens-oracle.py" ;;
   kernel-test)  exec zsh "$ROOT/tools/kernel-test.sh" ;;
   repl-test)  shift; exec python3 "$ROOT/tools/repl-test.py" "$@" ;;
+  bench)  shift; exec zsh "$ROOT/tools/bench.sh" "$@" ;;
   kernel)
     shift
     python3 "$ROOT/tools/atlc.py" gen >/dev/null   # builds the packages when stale

@@ -99,7 +99,7 @@ Dyadic: `+ − × ÷ ⌈ ⌊ ∣ ⋆ ⍟ ○ !` and `< ≤ = ≥ > ≠ ∨ ∧ �
 
 **D-52 · Names resolve at compile time against the store's shape, not its values.** A name's kind (array or function, valence) decides parsing (D-22); its value is read at run time. An unbound name in a top-level statement is a VALUE ERROR at compile time; inside a tradfn body the check is deferred to the first call (D-34). ⟨`parse/refusals`⟩
 
-**D-53 · Inference is an optimisation, never a semantics.** Budd's rank, shape and kind propagation chooses a specialised primitive (`%add-real-vector`) over the generic one. A program's value does not depend on whether inference ran. The differential vector `generic == specialised` pins this on every example. ⟨none — UNPINNED⟩
+**D-53 · Inference is an optimisation, never a semantics.** Budd's rank, shape and kind propagation chooses a specialised primitive (`%add-real-vector`) over the generic one. A program's value does not depend on whether inference ran. The differential vector `generic == specialised` pins this on every example. ⟨the evaluation corpus, every red statement both ways; `atl/goldens` (`+/n` chooses `g-reduce`, `n[2]` chooses `g-index1`)⟩
 
 **D-54 · The green prompt shows, the red prompt runs.** `🍏>` prints the AST (and with `:nock`, the emitted formula) without evaluating; `🍎>` evaluates. Both are the same compiler up to the last stage. ⟨`atl/readme-green` (the tree), `atl/nock` (`:nock`, the Nockasm program), `atl/goldens` (`:noun`), `atl/commands` (the modes)⟩
 

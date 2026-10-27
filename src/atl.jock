@@ -9,6 +9,7 @@
 import lexer;
 import parse;
 import interp;
+import array;
 
 // --- the session ----------------------------------------------------------------
 // A session threads a SIGNATURE (name -> class, parse.jock's convention)
@@ -75,7 +76,7 @@ func stepLine(line: String, s: Sess) -> (String, Sess) {
           else if c.nm == "RED" { ("🍎", Sess( sig: s.sig, defn: false, env: s.env, green: false )) }
           else if c.nm == "TOGGLE" { (if s.green { "🍎" } else { "🍏" }, Sess( sig: s.sig, defn: false, env: s.env, green: not s.green )) }
           else { match interp.runStmt(a, s.env) { (out, env2) => (out, Sess( sig: sigOf(env2), defn: false, env: env2, green: s.green )), } },
-        _ => if green { (if nock { interp.render(a).trim() } else if noun { interp.lowerText(a) } else { parse.showAst(a) }, Sess( sig: binds(a, s.sig), defn: false, env: s.env, green: s.green )) }
+        _ => if green { (if nock { interp.render(a, s.env).trim() } else if noun { interp.lowerText(a, s.env) } else { parse.showAst(a) }, Sess( sig: binds(a, s.sig), defn: false, env: s.env, green: s.green )) }
           else {
             match interp.runStmt(a, s.env) {
               (out, env2) => match emitted(a, s.env) {
@@ -120,6 +121,20 @@ func initialSess() -> Sess { Sess( sig: ~, defn: false, env: interp.initial(), g
 // the parser's signature from the environment (after )ERASE the two must agree)
 func sigOf(env: interp.Env) -> List<(String, @)> { interp.sigOf(env) };
 func session(lines: List<String>) -> String { sessionFrom(lines, initialSess()) };
+
+// bench (plan P7): a statement over v ← ⍳n, through the generic interpreter or through the
+// emitted formula alone --- no differential, so one path's cost is measured; an empty
+// statement is the BASELINE (the setup alone: building v costs ~40 s at 1e5 under NockVM)
+func bench(n: @, emitted: Bool, stmt: String) -> String {
+  let v = array.make(1, [n], array.iotaL(n, 1));
+  let env = interp.setStore(interp.initial(), interp.put(~, "v", v));
+  if stmt == "" { "setup" } else {
+    match parse.parseLine(stmt, [("v", 1)]) {
+      .ok(a) => match (if emitted { interp.finish(a, interp.run(a, env), env) } else { interp.runStmt(a, env) }) { (out, env2) => out, },
+      .err(e) => e.tag,
+    }
+  }
+};
 
 // the lex corpus (tests/lex): one token dump per input line
 func lexLines(lines: List<String>) -> String {
