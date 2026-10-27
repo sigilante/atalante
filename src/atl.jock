@@ -9,6 +9,7 @@
 import lexer;
 import parse;
 import interp;
+import emit;
 
 // --- the session ----------------------------------------------------------------
 // A session threads a SIGNATURE (name -> class, parse.jock's convention)
@@ -56,7 +57,9 @@ func stripPrompt(line: String) -> String { utf8(dropN(line.chars(), 2)).trim() }
 func stepLine(line: String, s: Sess) -> (String, Sess) {
   let green = line.starts-with("🍏>");
   let red = line.starts-with("🍎>");
-  let src = if green or red { stripPrompt(line) } else { line };
+  let src0 = if green or red { stripPrompt(line) } else { line };
+  let nock = green and src0.starts-with(":nock ");
+  let src = if nock { utf8(dropN(src0.chars(), 6)).trim() } else { src0 };
   if s.defn {
     match lexer.tokens(src) {
       .ok(ts) => if isLoneDel(ts) { ("", Sess( sig: s.sig, defn: false, env: interp.defineEnd(s.env) )) }
@@ -68,14 +71,34 @@ func stepLine(line: String, s: Sess) -> (String, Sess) {
       .err(e) => (e.tag + " col:{e.col} " + e.hint, s),
       .ok(a) => match a {
         .header(h) => (if green { parse.showAst(a) } else { "" }, Sess( sig: binds(a, s.sig), defn: true, env: interp.defineStart(h, s.env) )),
-        _ => if green { (parse.showAst(a), Sess( sig: binds(a, s.sig), defn: false, env: s.env )) }
+        _ => if green { (if nock { emit.render(a).trim() } else { parse.showAst(a) }, Sess( sig: binds(a, s.sig), defn: false, env: s.env )) }
           else {
             match interp.runStmt(a, s.env) {
-              (out, env2) => (out, Sess( sig: binds(a, s.sig), defn: false, env: env2 )),
+              (out, env2) => match emitted(a, s.env) {
+                (out2, env3) => if out == out2 and env2 == env3 { (out, Sess( sig: binds(a, s.sig), defn: false, env: env2 )) }
+                  else { ("%emit-mismatch interpreter: " + out + " | emitter: " + out2, Sess( sig: binds(a, s.sig), defn: false, env: env2 )) },
+              },
             }
           },
       },
     }
+  }
+};
+// the same statement through the emitter: compiled, lowered, run, then
+// finished by the interpreter's own printing rule;  a ⋄ line statement by
+// statement;  forms the emitter does not cover reuse the interpreter
+func emitted(a: parse.Ast, env: interp.Env) -> (String, interp.Env) {
+  match a {
+    .stmts(ss) => emittedAll(ss, env, ""),
+    _ => if emit.emittable(a) { interp.finish(a, emit.run(a, env), env) } else { interp.runStmt(a, env) },
+  }
+};
+func emittedAll(ss: List<parse.Ast>, env: interp.Env, acc: String) -> (String, interp.Env) {
+  match ss {
+    (st, rest) => match emitted(st, env) {
+      (out, env2) => emittedAll(rest, env2, if out == "" { acc } else if acc == "" { out } else { acc + "\n" + out }),
+    },
+    _ => (acc, env),
   }
 };
 func sessionFrom(lines: List<String>, s: Sess) -> String {

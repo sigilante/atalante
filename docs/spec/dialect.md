@@ -93,15 +93,15 @@ Dyadic: `+ − × ÷ ⌈ ⌊ ∣ ⋆ ⍟ ○ !` and `< ≤ = ≥ > ≠ ∨ ∧ �
 
 ## 7. Compilation model
 
-**D-50 · A statement compiles to a Nock formula over the subject `[rt store]`.** `rt` is the runtime core: the primitives as Jock function values. `store` is the variable store, a `Map<String -> Array>` plus user function definitions. The formula's product is `[value store']`. The REPL evaluates it with `eval`, prints `value` per D-45, and keeps `store'`. ⟨none — UNPINNED⟩
+**D-50 · A statement compiles to a Nock formula over the subject `[rt env]`.** `rt` is the runtime core: the primitives as Jock function values. `env` is the session environment: the variable store, the system variables, and the user function definitions. The formula's product is the evaluation result, value and environment or a refusal. The REPL evaluates it with `eval`, prints the value per D-45, and keeps the environment. AMENDED 2026-10-27 before P5 landed: the product carries a refusal too, so the formula needs no branch; the formula is emitted as Nockasm and lowered by the reference expander. ⟨every red-prompt case, through the session differential; `atl/nock`⟩
 
-**D-51 · Primitives are called by axis, never by name, in emitted Nock.** The emitter knows the runtime core's layout; a primitive call is `9 2 10 [6 args] 0 axis` against the subject (verified 2026-10-27 against Jock `eval`). Changing the runtime core's layout re-blesses every emission vector. ⟨none — UNPINNED⟩
+**D-51 · Primitives are called by axis, never by name, in emitted Nock.** The emitter knows the runtime core's layout; a primitive call is `9 2 10 [6 args] 0 axis` against the subject (verified 2026-10-27 against Jock `eval`). Changing the runtime core's layout re-blesses every emission vector. ⟨`atl/nock` (`%call 2 (%edit 6 … .g-x)` by name), the P5 probe of 2026-10-27⟩
 
 **D-52 · Names resolve at compile time against the store's shape, not its values.** A name's kind (array or function, valence) decides parsing (D-22); its value is read at run time. An unbound name in a top-level statement is a VALUE ERROR at compile time; inside a tradfn body the check is deferred to the first call (D-34). ⟨`parse/refusals`⟩
 
 **D-53 · Inference is an optimisation, never a semantics.** Budd's rank, shape and kind propagation chooses a specialised primitive (`%add-real-vector`) over the generic one. A program's value does not depend on whether inference ran. The differential vector `generic == specialised` pins this on every example. ⟨none — UNPINNED⟩
 
-**D-54 · The green prompt shows, the red prompt runs.** `🍏>` prints the AST (and with `:nock`, the emitted formula) without evaluating; `🍎>` evaluates. Both are the same compiler up to the last stage. ⟨`atl/readme-green` (green half; `:nock` is P5)⟩
+**D-54 · The green prompt shows, the red prompt runs.** `🍏>` prints the AST (and with `:nock`, the emitted formula) without evaluating; `🍎>` evaluates. Both are the same compiler up to the last stage. ⟨`atl/readme-green` (the tree), `atl/nock` (`:nock`, the Nockasm program)⟩
 
 ## 8. The session
 

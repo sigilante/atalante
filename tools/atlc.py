@@ -28,7 +28,7 @@ sys.set_int_max_str_digits(0)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 JOCK = os.environ.get("JOCK", os.path.expanduser("~/Code/jock"))
-GEN = os.path.join(ROOT, "tests", "gen", "corpus.jock")
+GEN = os.path.join(ROOT, "tests", "gen", f"corpus-{os.getpid()}.jock")   # per process: runs may be parallel
 GS, RS, US = "\x1d", "\x1e", "\x1f"
 BATCH = int(os.environ.get("ATL_BATCH", "1000"))   # cases per generated program; one program by default (S-13 closed)
 
@@ -91,22 +91,23 @@ PKGS = os.path.join(ROOT, "pkgs")
 
 
 def ensure_pkg():
-    """Build pkgs/lagoon.jam with tools/pkg.sh when missing or stale."""
+    """Build each package jam with tools/pkg.sh when missing or stale."""
     import hashlib
-    jam = os.path.join(PKGS, "lagoon.jam")
-    inputs = [os.path.join(ROOT, "pkg", "lagoon-core.hoon")] + sorted(
-        glob.glob(os.path.join(ROOT, "vendor", "numerics", "*", "*.hoon")))
-    h = hashlib.sha256()
-    for f in inputs:
-        h.update(open(f, "rb").read())
-    want = h.hexdigest()
-    have = open(jam + ".sha").read().strip() if os.path.exists(jam + ".sha") else ""
-    if not os.path.exists(jam) or have != want:
-        sys.stderr.write("atlc: building the lagoon package\n")
-        p = subprocess.run(["zsh", os.path.join(ROOT, "tools", "pkg.sh"), jam], capture_output=True, text=True)
-        if p.returncode != 0:
-            sys.stderr.write(p.stdout + p.stderr)
-            sys.exit("atlc: package build failed")
+    numerics = sorted(glob.glob(os.path.join(ROOT, "vendor", "numerics", "*", "*.hoon")))
+    for name in ("lagoon", "nasm"):
+        jam = os.path.join(PKGS, name + ".jam")
+        inputs = [os.path.join(ROOT, "pkg", name + "-core.hoon")] + numerics
+        h = hashlib.sha256()
+        for f in inputs:
+            h.update(open(f, "rb").read())
+        want = h.hexdigest()
+        have = open(jam + ".sha").read().strip() if os.path.exists(jam + ".sha") else ""
+        if not os.path.exists(jam) or have != want:
+            sys.stderr.write(f"atlc: building the {name} package\n")
+            p = subprocess.run(["zsh", os.path.join(ROOT, "tools", "pkg.sh"), name], capture_output=True, text=True)
+            if p.returncode != 0:
+                sys.stderr.write(p.stdout + p.stderr)
+                sys.exit("atlc: package build failed")
 
 
 def run_jock(gen_path):
@@ -173,9 +174,10 @@ def main(argv):
     os.makedirs(os.path.dirname(GEN), exist_ok=True)
     entry = {"lex": "lexcorpus", "lexcheck": "lexcorpus", "parse": "parsecorpus"}.get(verb, "corpus")
     if verb == "gen":
-        with open(GEN, "w", encoding="utf-8") as f:
+        gen = os.path.join(ROOT, "tests", "gen", "corpus.jock")
+        with open(gen, "w", encoding="utf-8") as f:
             f.write(generate(cases, entry))
-        print(GEN)
+        print(gen)
         return 0
     # one program per BATCH of cases;  the default is one program for the
     # whole corpus (~3 min).  ATL_BATCH splits it, which S-13 once needed
@@ -185,6 +187,10 @@ def main(argv):
         with open(GEN, "w", encoding="utf-8") as f:
             f.write(generate(part, entry))
         got.update(split_product(run_jock(GEN)))
+    try:
+        os.remove(GEN)
+    except OSError:
+        pass
     if verb == "lexcheck":
         bad = 0
         for name, steps, _sig in cases:

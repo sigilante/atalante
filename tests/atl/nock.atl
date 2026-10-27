@@ -1,0 +1,23 @@
+🍏> :nock 1
+⍝ expect: :subject {{.g-lit .g-name .g-nilad .g-sys .g-monad .g-dyad .g-assign .g-sysassign .g-index .g-iassign .g-env} .env}
+⍝ expect: (%call 2 (%edit 6 [(%const (%nock [1 49 0])) .env] .g-lit))
+🍏> :nock 2+3
+⍝ expect: :subject {{.g-lit .g-name .g-nilad .g-sys .g-monad .g-dyad .g-assign .g-sysassign .g-index .g-iassign .g-env} .env}
+⍝ expect: #let .t0 = (%call 2 (%edit 6 [(%const (%nock [1 51 0])) .env] .g-lit)) in
+⍝ expect: #let .t1 = (%call 2 (%edit 6 [.t0 .env] .g-env)) in
+⍝ expect: #let .t2 = (%call 2 (%edit 6 [(%const (%nock [1 50 0])) .t1] .g-lit)) in
+⍝ expect: (%call 2 (%edit 6 [(%const (%nock ['prim' 43])) .t2 .t0] .g-dyad))
+🍏> :nock n ← 4 5
+⍝ expect: :subject {{.g-lit .g-name .g-nilad .g-sys .g-monad .g-dyad .g-assign .g-sysassign .g-index .g-iassign .g-env} .env}
+⍝ expect: #let .t0 = (%call 2 (%edit 6 [(%const (%nock [1 52 53 0])) .env] .g-lit)) in
+⍝ expect: (%call 2 (%edit 6 [(%const (%nock 110)) .t0] .g-assign))
+🍎> n ← 4 5
+🍏> :nock n[2]
+⍝ expect: :subject {{.g-lit .g-name .g-nilad .g-sys .g-monad .g-dyad .g-assign .g-sysassign .g-index .g-iassign .g-env} .env}
+⍝ expect: #let .t0 = (%call 2 (%edit 6 [(%const (%nock 110)) .env] .g-name)) in
+⍝ expect: #let .t1 = (%call 2 (%edit 6 [.t0 .env] .g-env)) in
+⍝ expect: #let .t2 = (%call 2 (%edit 6 [(%const (%nock [1 50 0])) .t1] .g-lit)) in
+⍝ expect: #let .t3 = (%call 2 (%edit 6 [.t2 .t1] .g-env)) in
+⍝ expect: (%call
+⍝ expect:   2
+⍝ expect:   (%edit 6 [.t0 [[(%const (%nock 'ev')) .t2] (%const (%nock 0))]] .g-index))

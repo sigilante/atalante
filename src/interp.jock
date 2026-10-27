@@ -31,6 +31,7 @@ struct EErr { tag: String, hint: String };
 enum Ev { err(EErr), ok((array.Arr, Env)) };
 enum EnvR { err(EErr), ok(Env) };
 enum BodyR { err(EErr), ok((List<parse.Ast>, Env)) };
+enum Part { elide, ev(Ev) };
 enum Evs { err(EErr), ok((List<array.Arr>, Env)) };
 enum Parts { err(EErr), ok((List<List<@>>, List<@>, Env)) };
 
@@ -915,10 +916,14 @@ func runStmt(a: parse.Ast, env: Env) -> (String, Env) {
     .empty => ("", env),
     .fnend => ("", env),
     .stmts(ss) => runAll(ss, env, ""),
-    _ => match evalAst(a, env) {
-      .err(e) => (joinOut(env.out, e.tag + " " + e.hint), setOut(env, ~)),
-      .ok(r) => match r { (v, env2) => (joinOut(env2.out, if isAssign(a) { "" } else { array.format(v, env2.pp) }), setOut(env2, ~)), },
-    },
+    _ => finish(a, evalAst(a, env), env),
+  }
+};
+// what one statement prints, from its result (D-24, D-45), draining the body-output buffer
+func finish(a: parse.Ast, ev: Ev, env: Env) -> (String, Env) {
+  match ev {
+    .err(e) => (joinOut(env.out, e.tag + " " + e.hint), setOut(env, ~)),
+    .ok(r) => match r { (v, env2) => (joinOut(env2.out, if isAssign(a) { "" } else { array.format(v, env2.pp) }), setOut(env2, ~)), },
   }
 };
 // what body lines printed before this statement's own output
@@ -1041,6 +1046,70 @@ func runAll(ss: List<parse.Ast>, env: Env, acc: String) -> (String, Env) {
       (out, env2) => runAll(rest, env2, if out == "" { acc } else if acc == "" { out } else { acc + "\n" + out }),
     },
     _ => (acc, env),
+  }
+};
+
+// --- the runtime core (P5) ------------------------------------------------------------------------
+// The emitter's formula runs over the subject [rt env], where rt is this
+// tuple of gates in gateNames order; a call is `9 2` on the gate with its
+// sample edited in (D-51). Every gate is TOTAL over Ev inputs: an error
+// flows through unchanged, so the formula needs no branching.
+func gateNames() -> List<String> {
+  ["g-lit", "g-name", "g-nilad", "g-sys", "g-monad", "g-dyad", "g-assign", "g-sysassign", "g-index", "g-iassign", "g-env"]
+};
+func runtime() -> * { (gLit, gName, gNilad, gSys, gMonad, gDyad, gAssign, gSysassign, gIndex, gIassign, gEnv) };
+func gLit(l: parse.Lit, env: Env) -> Ev { okv(litArr(l), env) };
+func gName(nm: String, env: Env) -> Ev { evalAst(parse.Ast.name(nm), env) };
+func gNilad(nm: String, env: Env) -> Ev { callUser(nm, false, false, array.scalar(1, 0), array.scalar(1, 0), env) };
+func gSys(nm: String, env: Env) -> Ev { evalAst(parse.Ast.sysvar(nm), env) };
+func gEnv(e: Ev, env: Env) -> Env { match e { .ok(r) => match r { (v, env2) => env2, }, .err(x) => env, } };
+func gMonad(f: parse.Fn, r: Ev) -> Ev { match r { .err(e) => r, .ok(p) => match p { (rv, env) => applyMonad(f, rv, env), }, } };
+// r was evaluated first, l against r's environment; l's environment is the latest
+func gDyad(f: parse.Fn, l: Ev, r: Ev) -> Ev {
+  match r { .err(e) => r, .ok(p) => match p { (rv, env1) => match l { .err(e2) => l, .ok(q) => match q { (lv, env2) => applyDyad(f, lv, rv, env2), }, }, }, }
+};
+func gAssign(nm: String, v: Ev) -> Ev { match v { .err(e) => v, .ok(p) => match p { (val, env) => okv(val, setStore(env, put(env.store, nm, val))), }, } };
+func gSysassign(nm: String, v: Ev) -> Ev { match v { .err(e) => v, .ok(p) => match p { (val, env) => sysSet(nm, val, env), }, } };
+// parts arrive evaluated, in order; the environment is the last part's (or x's)
+func gIndex(x: Ev, parts: List<Part>) -> Ev {
+  match x { .err(e) => x, .ok(p) => match p { (xv, env0) => match partsOf(parts, xv, lastEnv(parts, env0), ~, ~) {
+    .err(e) => Ev.err(e),
+    .ok(pr) => match pr { (pos, rshp, env) => indexed(xv, pos, rshp, env), },
+  }, }, }
+};
+func gIassign(nm: String, parts: List<Part>, v: Ev) -> Ev {
+  match v { .err(e) => v, .ok(p) => match p { (val, env0) => {
+    let env1 = lastEnv(parts, env0);
+    match lookup(env1.store, nm) {
+      (found, x0) => if not found { fail("%value-error", nm + " is not defined") }
+      else { match partsOf(parts, x0, env1, ~, ~) {
+        .err(e) => Ev.err(e),
+        .ok(pr) => match pr { (pos, rshp, env2) => match assignAt(x0, pos, val, env2) {
+          .err(e) => Ev.err(e),
+          .ok(r2) => match r2 { (x2, env3) => okv(val, setStore(env3, put(env3.store, nm, x2))), },
+        }, },
+      } },
+    }
+  }, }, }
+};
+func lastEnv(parts: List<Part>, env: Env) -> Env {
+  match parts { (p, rest) => lastEnv(rest, match p { .ev(e) => gEnv(e, env), .elide => env, }), _ => env, }
+};
+// the evaluated parts as positions and a result shape (the same rules as evalParts)
+func partsOf(parts: List<Part>, x: array.Arr, env: Env, acc: List<List<@>>, shp: List<@>) -> Parts {
+  match parts {
+    (p, rest) => match p {
+      .elide => {
+        let n = array.nth(array.shape(x), array.countLL(acc));
+        partsOf(rest, x, env, (array.iotaL(n, 0), acc), array.catL(shp, [n]))
+      },
+      .ev(e) => match e {
+        .err(x2) => Parts.err(x2),
+        .ok(r) => match r { (iv, env2) => if iv.kind != 1 { Parts.err(EErr( tag: "%domain-error", hint: "indices are non-negative integers" )) }
+          else { partsOf(rest, x, env, (shiftIo(array.vals(iv), env.io), acc), array.catL(shp, array.shape(iv))) }, },
+      },
+    },
+    _ => Parts.ok((revLL(acc, ~), shp, env)),
   }
 };
 func initial() -> Env { Env( store: ~, io: 1, pp: 10, fns: ~, phdr: noHeader(), pend: ~, out: ~ ) };
