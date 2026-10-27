@@ -30,6 +30,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 JOCK = os.environ.get("JOCK", os.path.expanduser("~/Code/jock"))
 GEN = os.path.join(ROOT, "tests", "gen", "corpus.jock")
 GS, RS, US = "\x1d", "\x1e", "\x1f"
+BATCH = int(os.environ.get("ATL_BATCH", "8"))   # cases per generated program (S-13)
 
 
 CLASSES = {"a": 1, "m": 2, "d": 3, "b": 4, "n": 5}
@@ -83,6 +84,28 @@ def generate(cases, entry="corpus"):
             f"atl.{entry}([\n{body}\n])\n")
 
 
+PKGS = os.path.join(ROOT, "pkgs")
+
+
+def ensure_pkg():
+    """Build pkgs/lagoon.jam with tools/pkg.sh when missing or stale."""
+    import hashlib
+    jam = os.path.join(PKGS, "lagoon.jam")
+    inputs = [os.path.join(ROOT, "pkg", "lagoon-core.hoon")] + sorted(
+        glob.glob(os.path.join(ROOT, "vendor", "numerics", "*", "*.hoon")))
+    h = hashlib.sha256()
+    for f in inputs:
+        h.update(open(f, "rb").read())
+    want = h.hexdigest()
+    have = open(jam + ".sha").read().strip() if os.path.exists(jam + ".sha") else ""
+    if not os.path.exists(jam) or have != want:
+        sys.stderr.write("atlc: building the lagoon package\n")
+        p = subprocess.run(["zsh", os.path.join(ROOT, "tools", "pkg.sh"), jam], capture_output=True, text=True)
+        if p.returncode != 0:
+            sys.stderr.write(p.stdout + p.stderr)
+            sys.exit("atlc: package build failed")
+
+
 def run_jock(gen_path):
     """Compile and run the generated program; -> the product String.
 
@@ -91,8 +114,9 @@ def run_jock(gen_path):
     is its little-endian bytes. This sidesteps the prose renderer, which
     renders a String reached through an import as a bare number."""
     import json
+    ensure_pkg()
     cmd = ["zsh", os.path.join(JOCK, "tools", "jockc.sh"), "--diag",
-           "--data-dir", os.path.join(ROOT, "src"), "run", gen_path]
+           "--data-dir", os.path.join(ROOT, "src"), "--data-dir", PKGS, "run", gen_path]
     env = dict(os.environ, PYTHONINTMAXSTRDIGITS="0")
     p = subprocess.run(cmd, capture_output=True, text=True, env=env)
     try:
@@ -144,13 +168,20 @@ def main(argv):
         sys.exit("atlc run: exactly one case")
     cases = [parse_case(f) for f in files]
     os.makedirs(os.path.dirname(GEN), exist_ok=True)
-    with open(GEN, "w", encoding="utf-8") as f:
-        entry = {"lex": "lexcorpus", "lexcheck": "lexcorpus", "parse": "parsecorpus"}.get(verb, "corpus")
-        f.write(generate(cases, entry))
+    entry = {"lex": "lexcorpus", "lexcheck": "lexcorpus", "parse": "parsecorpus"}.get(verb, "corpus")
     if verb == "gen":
+        with open(GEN, "w", encoding="utf-8") as f:
+            f.write(generate(cases, entry))
         print(GEN)
         return 0
-    got = split_product(run_jock(GEN))
+    # one program per BATCH of cases:  the whole evaluation corpus in one
+    # program crashes honk-kick with no tag (S-13), while every half runs
+    got = {}
+    for i in range(0, len(cases), BATCH):
+        part = cases[i:i + BATCH]
+        with open(GEN, "w", encoding="utf-8") as f:
+            f.write(generate(part, entry))
+        got.update(split_product(run_jock(GEN)))
     if verb == "lexcheck":
         bad = 0
         for name, steps, _sig in cases:

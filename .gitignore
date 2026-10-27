@@ -6,3 +6,6 @@ piers/
 
 # generated corpus programs
 tests/gen/
+
+# built packages (tools/pkg.sh)
+pkgs/

@@ -1,0 +1,343 @@
+// interp.jock — the reference evaluator (plan P3): literals, names,
+// assignment, system variables, and the scalar functions of D-41 over
+// the array model, with scalar extension (D-25), the kind lattice
+// (D-11) and the fixed result kinds (D-12). It is the ORACLE for the
+// emitter (P5), never the product; everything structural (D-42, D-43)
+// answers %unimplemented until P4.
+//
+// Arithmetic on two same-kind rays goes through Lagoon's own arms
+// (+ − ×); everything with a per-element decision (division by zero,
+// residue's sign rule, the transcendental and comparison functions)
+// walks the ravel in Jock and calls the package's scalar doors.
+import lagoon;
+import array;
+import parse;
+
+struct Env { store: List<(String, array.Arr)>, io: @, pp: @ };
+struct EErr { tag: String, hint: String };
+enum Ev { err(EErr), ok((array.Arr, Env)) };
+
+func fail(tag: String, hint: String) -> Ev { Ev.err(EErr( tag: tag, hint: hint )) };
+func dom(hint: String) -> Ev { fail("%domain-error", hint) };
+func nyi(what: String) -> Ev { fail("%unimplemented", what) };
+
+// --- the store ------------------------------------------------------------------
+func lookup(st: List<(String, array.Arr)>, nm: String) -> (Bool, array.Arr) {
+  match st { ((n, v), t) => if n == nm { (true, v) } else { lookup(t, nm) }, _ => (false, array.scalar(1, 0)), }
+};
+func put(st: List<(String, array.Arr)>, nm: String, v: array.Arr) -> List<(String, array.Arr)> {
+  match st { ((n, w), t) => if n == nm { ((nm, v), t) } else { ((n, w), put(t, nm, v)) }, _ => [(nm, v)], }
+};
+
+// --- literals (D-3, D-5) ------------------------------------------------------------
+func digitsNat(cs: List<@>, acc: @) -> @ { match cs { (c, t) => if c >= 48 and c <= 57 { digitsNat(t, acc * 10 + (c - 48)) } else { acc }, _ => acc, } };
+func cps(s: String) -> List<@> { array.toCps(s.chars()) };
+func natOf(s: String) -> @ { digitsNat(cps(s), 0) };
+func intOf(s: String) -> @ { match cps(s) { (c, t) => if c == 175 { lagoon.tneg(digitsNat(t, 0)) } else { digitsNat(cps(s), 0) }, _ => 0, } };
+// mantissa digits m, fraction length k, exponent (eneg, emag):  m × 10^(e−k)
+func realOf(s: String) -> @ {
+  match cps(s) {
+    (c, t) => {
+      let neg = c == 175;
+      let body = if neg { t } else { cps(s) };
+      match scanMant(body, 0, 0, false) {
+        (m, k, rest) => match scanExp(rest) {
+          (eneg, emag) => {
+            let f = lagoon.rsun(m);
+            let up = (not eneg) and emag >= k;
+            let shift = if up { emag - k } else { if eneg { emag + k } else { k - emag } };
+            let scale = lagoon.rsun(array.pow10(shift));
+            let v = if up { hoon.rmul(f, scale) } else { hoon.rdiv(f, scale) };
+            array.fbits(if neg { hoon.rsub(0.0, v) } else { v })
+          },
+        },
+      }
+    },
+    _ => 0,
+  }
+};
+func scanMant(cs: List<@>, m: @, k: @, frac: Bool) -> (@, @, List<@>) {
+  match cs {
+    (c, t) => if c >= 48 and c <= 57 { scanMant(t, m * 10 + (c - 48), if frac { k + 1 } else { k }, frac) }
+      else if c == 46 { scanMant(t, m, k, true) }
+      else { (m, k, cs) },
+    _ => (m, k, ~),
+  }
+};
+func scanExp(cs: List<@>) -> (Bool, @) {
+  match cs {
+    (e, t) => match t { (c, t2) => if c == 175 { (true, digitsNat(t2, 0)) } else { (false, digitsNat(t, 0)) }, _ => (false, 0), },
+    _ => (false, 0),
+  }
+};
+func litVals(k: @, items: List<String>) -> List<@> {
+  match items { (h, t) => (match k { 2 => intOf(h), 3 => realOf(h), _ => natOf(h), }, litVals(k, t)), _ => ~, }
+};
+func litArr(l: parse.Lit) -> array.Arr {
+  if l.kind == 4 {
+    match l.vals {
+      (s, t) => {
+        let cs = cps(s);
+        let n = array.count(cs);
+        if n == 1 { array.make(4, ~, cs) } else { array.make(4, [n], cs) }
+      },
+      _ => array.make(4, [0], ~),
+    }
+  } else {
+    let vs = litVals(l.kind, l.vals);
+    let n = array.count(vs);
+    if n == 1 { array.make(l.kind, ~, vs) } else { array.make(l.kind, [n], vs) }
+  }
+};
+
+// --- scalar helpers over bits -------------------------------------------------------
+func isZero(x: @) -> Bool { x == 0 };
+func realZero(x: @) -> Bool { hoon.radd(array.freal(x), 0.0) == 0.0 };        // +0 and −0
+func b2n(b: Bool) -> @ { if b { 1 } else { 0 } };
+// int2 compare:  x > y
+func intGt(x: @, y: @) -> Bool {
+  let nx = array.isNeg(x);
+  let ny = array.isNeg(y);
+  if nx and (not ny) { false } else if ny and (not nx) { true }
+  else if nx { lagoon.tabs(x) < lagoon.tabs(y) } else { x > y }
+};
+func gtK(k: @, x: @, y: @) -> Bool { match k { 2 => intGt(x, y), 3 => hoon.rgth(array.freal(x), array.freal(y)), _ => x > y, } };
+func eqK(k: @, x: @, y: @) -> Bool { match k { 3 => (hoon.rlte(array.freal(x), array.freal(y)) and hoon.rgte(array.freal(x), array.freal(y))), _ => x == y, } };
+// APL residue (D-41):  B − A×⌊B÷A, zero left answers the right
+func resNat(a: @, b: @) -> @ { if a == 0 { b } else { b % a } };
+func resInt(a: @, b: @) -> @ {
+  if a == 0 { b } else {
+    let na = array.isNeg(a);
+    let nb = array.isNeg(b);
+    let ma = lagoon.tabs(a);
+    let mb = lagoon.tabs(b);
+    let m = mb % ma;
+    if na == nb { if na { lagoon.tneg(m) } else { m } }
+    else if m == 0 { 0 }
+    else if na { lagoon.tneg(ma - m) } else { ma - m }
+  }
+};
+func floorReal(x: Float64) -> Float64 { lagoon.rsan(lagoon.rflo(x) ?? 0) };
+func ceilReal(x: Float64) -> Float64 { lagoon.rsan(lagoon.rcei(x) ?? 0) };
+func resReal(a: @, b: @) -> @ {
+  if realZero(a) { b } else {
+    let fa = array.freal(a);
+    let fb = array.freal(b);
+    array.fbits(hoon.rsub(fb, hoon.rmul(fa, floorReal(hoon.rdiv(fb, fa)))))
+  }
+};
+func factNat(n: @) -> @ { if n == 0 { 1 } else { n * factNat(n - 1) } };
+func circle(a: @, x: @) -> @ {
+  let f = array.freal(x);
+  let code = array.freal(a);
+  if code == 1.0 { array.fbits(lagoon.rsin(f)) }
+  else if code == 2.0 { array.fbits(lagoon.rcos(f)) }
+  else if code == 3.0 { array.fbits(lagoon.rtan(f)) }
+  else if code == 0.0 { array.fbits(lagoon.rsqt(hoon.rsub(1.0, hoon.rmul(f, f)))) }
+  else if code == 4.0 { array.fbits(lagoon.rsqt(hoon.radd(1.0, hoon.rmul(f, f)))) }
+  else if hoon.radd(code, 1.0) == 0.0 { array.fbits(lagoon.rasin(f)) }
+  else if hoon.radd(code, 2.0) == 0.0 { array.fbits(lagoon.racos(f)) }
+  else if hoon.radd(code, 3.0) == 0.0 { array.fbits(lagoon.ratan(f)) }
+  else if hoon.radd(code, 4.0) == 0.0 { array.fbits(lagoon.rsqt(hoon.rsub(hoon.rmul(f, f), 1.0))) }
+  else { 0 }
+};
+func isBool(x: @) -> Bool { x == 0 or x == 1 };
+func isCircleCode(x: @) -> Bool {
+  let c = array.freal(x);
+  (hoon.rgte(c, 0.0) and hoon.rlte(c, 4.0) and hoon.rgte(hoon.rsub(c, floorReal(c)), 0.0) and (hoon.rsub(c, floorReal(c)) == 0.0))
+  or (hoon.rlte(c, 0.0) and hoon.rgte(c, hoon.rsub(0.0, 4.0)) and (hoon.rsub(c, floorReal(c)) == 0.0))
+};
+
+// --- named scalar helpers:  a lambda body cannot reach an imported module
+// (Jock reads `lagoon.x` inside a lambda as a field of *, S-11), so every
+// module call a lambda would make is a named func, and lambdas call these.
+func powB(x: @, y: @) -> @ { array.fbits(lagoon.rpow(array.freal(x), array.freal(y))) };
+func logB(x: @, y: @) -> @ { array.fbits(hoon.rdiv(lagoon.rlog(array.freal(y)), lagoon.rlog(array.freal(x)))) };
+func divB(x: @, y: @) -> @ { if realZero(y) { array.fbits(1.0) } else { array.fbits(hoon.rdiv(array.freal(x), array.freal(y))) } };
+func binomR(x: @, y: @) -> @ {
+  let fx = array.freal(x);
+  let fy = array.freal(y);
+  array.fbits(hoon.rdiv(lagoon.rfact(fy), hoon.rmul(lagoon.rfact(fx), lagoon.rfact(hoon.rsub(fy, fx)))))
+};
+func negR(x: @) -> @ { array.fbits(hoon.rsub(0.0, array.freal(x))) };
+func negI(x: @) -> @ { lagoon.tneg(x) };
+func absI(x: @) -> @ { lagoon.tabs(x) };
+func absR(x: @) -> @ { if array.realIsNeg(x) { negR(x) } else { x } };
+func sgnI(x: @) -> @ { if array.isNeg(x) { lagoon.tneg(1) } else { b2n(x > 0) } };
+func sgnR(x: @) -> @ { if array.realIsNeg(x) { lagoon.tneg(1) } else { b2n(not realZero(x)) } };
+func recipR(x: @) -> @ { array.fbits(hoon.rdiv(1.0, array.freal(x))) };
+func ceilI(x: @) -> @ { array.sToInt(lagoon.rcei(array.freal(x)) ?? 0) };
+func floorI(x: @) -> @ { array.sToInt(lagoon.rflo(array.freal(x)) ?? 0) };
+func expR(x: @) -> @ { array.fbits(lagoon.rexp(array.freal(x))) };
+func lnR(x: @) -> @ { array.fbits(lagoon.rlog(array.freal(x))) };
+func piR(x: @) -> @ { array.fbits(hoon.rmul(lagoon.rpi(0), array.freal(x))) };
+func factR(x: @) -> @ { array.fbits(lagoon.rfact(array.freal(x))) };
+
+// --- dyadic scalar functions (D-41) ---------------------------------------------------
+func isScalarFn(cp: @) -> Bool {
+  cp == 43 or cp == 8722 or cp == 215 or cp == 247 or cp == 8968 or cp == 8970 or cp == 8739 or cp == 8902
+  or cp == 9055 or cp == 9675 or cp == 33 or cp == 60 or cp == 8804 or cp == 61 or cp == 8805 or cp == 62
+  or cp == 8800 or cp == 8744 or cp == 8743 or cp == 9073 or cp == 9074
+};
+func dyadPrim(cp: @, a0: array.Arr, b0: array.Arr, env: Env) -> Ev {
+  if not isScalarFn(cp) { nyi("dyadic " + lexerText(cp)) }
+  else if (a0.kind == 4 or b0.kind == 4) and cp != 61 and cp != 8800 { dom("characters take only = and ≠") }
+  else {
+    match array.extend(a0, b0) {
+      (a, b, tag) => if tag != "" { fail(tag, "shapes " + shp(a0) + " and " + shp(b0)) }
+      else {
+        let k = array.maxk(a.kind, b.kind);
+        match cp {
+          43   => okv(lagAdd(array.promote(a, k), array.promote(b, k), k), env),                      // +
+          8722 => { let j = array.maxk(k, 2); okv(array.Arr( kind: j, ray: lagoon.sub(array.promote(a, j).ray, array.promote(b, j).ray) ), env) },   // −
+          215  => okv(array.Arr( kind: k, ray: lagoon.mul(array.promote(a, k).ray, array.promote(b, k).ray) ), env),   // ×
+          247  => divide(array.toReal(a), array.toReal(b), env),                                       // ÷
+          8968 => okv(array.zipArr(array.promote(a, k), array.promote(b, k), k, lambda (x: @, y: @) -> @ { if gtK(k, x, y) { x } else { y } }), env),  // ⌈
+          8970 => okv(array.zipArr(array.promote(a, k), array.promote(b, k), k, lambda (x: @, y: @) -> @ { if gtK(k, x, y) { y } else { x } }), env),  // ⌊
+          8739 => residue(array.promote(a, k), array.promote(b, k), k, env),                           // ∣
+          8902 => okv(array.zipArr(array.toReal(a), array.toReal(b), 3, powB), env),   // ⋆
+          9055 => okv(array.zipArr(array.toReal(a), array.toReal(b), 3, logB), env),   // ⍟
+          9675 => circleD(array.toReal(a), array.toReal(b), env),                                       // ○
+          33   => binomial(a, b, k, env),                                                               // !
+          60   => cmp(a, b, k, lambda (x: @, y: @) -> Bool { gtK(k, y, x) }, env),                      // <
+          8804 => cmp(a, b, k, lambda (x: @, y: @) -> Bool { not gtK(k, x, y) }, env),                  // ≤
+          61   => equal(a, b, k, true, env),                                                            // =
+          8805 => cmp(a, b, k, lambda (x: @, y: @) -> Bool { not gtK(k, y, x) }, env),                  // ≥
+          62   => cmp(a, b, k, lambda (x: @, y: @) -> Bool { gtK(k, x, y) }, env),                      // >
+          8800 => equal(a, b, k, false, env),                                                           // ≠
+          8744 => boolean(a, b, lambda (x: @, y: @) -> @ { if x == 1 or y == 1 { 1 } else { 0 } }, env),     // ∨
+          8743 => boolean(a, b, lambda (x: @, y: @) -> @ { if x == 1 and y == 1 { 1 } else { 0 } }, env),    // ∧
+          9073 => boolean(a, b, lambda (x: @, y: @) -> @ { if x == 0 and y == 0 { 1 } else { 0 } }, env),    // ⍱
+          9074 => boolean(a, b, lambda (x: @, y: @) -> @ { if x == 1 and y == 1 { 0 } else { 1 } }, env),    // ⍲
+          _    => nyi("dyadic " + lexerText(cp)),
+        }
+      },
+    }
+  }
+};
+func lexerText(cp: @) -> String { utf8([cp as! UniChar]) };
+func shp(a: array.Arr) -> String { array.joinS(array.fmtAll(1, array.shape(a), 10), " ") };
+func okv(v: array.Arr, env: Env) -> Ev { Ev.ok((v, env)) };
+func lagAdd(a: array.Arr, b: array.Arr, k: @) -> array.Arr { array.Arr( kind: k, ray: lagoon.add(a.ray, b.ray) ) };
+func divide(a: array.Arr, b: array.Arr, env: Env) -> Ev {
+  if array.anyZip(array.vals(a), array.vals(b), lambda (x: @, y: @) -> Bool { realZero(y) and (not realZero(x)) }) { dom("division by zero") }
+  else { okv(array.zipArr(a, b, 3, divB), env) }
+};
+func residue(a: array.Arr, b: array.Arr, k: @, env: Env) -> Ev {
+  match k {
+    2 => okv(array.zipArr(a, b, 2, resInt), env),
+    3 => okv(array.zipArr(a, b, 3, resReal), env),
+    _ => okv(array.zipArr(a, b, 1, resNat), env),
+  }
+};
+func circleD(a: array.Arr, b: array.Arr, env: Env) -> Ev {
+  if array.allL(array.vals(a), isCircleCode) { okv(array.zipArr(a, b, 3, circle), env) } else { dom("○ takes a code in ¯4..4 on the left") }
+};
+func binomial(a: array.Arr, b: array.Arr, k: @, env: Env) -> Ev {
+  match k {
+    1 => if array.anyZip(array.vals(a), array.vals(b), lambda (x: @, y: @) -> Bool { x > y }) { okv(array.zipArr(a, b, 1, lambda (x: @, y: @) -> @ { if x > y { 0 } else { factNat(y) / (factNat(x) * factNat(y - x)) } }), env) }
+         else { okv(array.zipArr(a, b, 1, lambda (x: @, y: @) -> @ { factNat(y) / (factNat(x) * factNat(y - x)) }), env) },
+    _ => okv(array.zipArr(array.toReal(a), array.toReal(b), 3, binomR), env),
+  }
+};
+func cmp(a: array.Arr, b: array.Arr, k: @, p: (@, @) -> Bool, env: Env) -> Ev {
+  okv(array.zipArr(array.promote(a, k), array.promote(b, k), 1, lambda (x: @, y: @) -> @ { b2n(p(x, y)) }), env)
+};
+func equal(a: array.Arr, b: array.Arr, k: @, want: Bool, env: Env) -> Ev {
+  if (a.kind == 4) != (b.kind == 4) { okv(array.mapArr(a, 1, lambda (x: @) -> @ { b2n(not want) }), env) }
+  else { okv(array.zipArr(array.promote(a, k), array.promote(b, k), 1, lambda (x: @, y: @) -> @ { b2n(eqK(k, x, y) == want) }), env) }
+};
+func boolean(a: array.Arr, b: array.Arr, f: (@, @) -> @, env: Env) -> Ev {
+  if a.kind != 1 or b.kind != 1 or (not array.allL(array.vals(a), isBool)) or (not array.allL(array.vals(b), isBool)) { dom("Boolean functions take 0 and 1") }
+  else { okv(array.zipArr(a, b, 1, f), env) }
+};
+
+// --- monadic scalar functions (D-41) ------------------------------------------------------
+func monadPrim(cp: @, a: array.Arr, env: Env) -> Ev {
+  if a.kind == 4 { dom("characters take no arithmetic") }
+  else {
+    match cp {
+      43   => okv(a, env),                                                                                   // + conjugate
+      8722 => match a.kind { 3 => okv(array.mapArr(a, 3, negR), env),
+                             _ => okv(array.mapArr(a, 2, negI), env), },                               // − negate
+      215  => match a.kind { 1 => okv(array.mapArr(a, 1, lambda (x: @) -> @ { b2n(x > 0) }), env),
+                             2 => okv(array.mapArr(a, 2, sgnI), env),
+                             _ => okv(array.mapArr(a, 2, sgnR), env), },   // × signum
+      247  => if array.anyL(array.vals(array.toReal(a)), realZero) { dom("division by zero") }
+              else { okv(array.mapArr(array.toReal(a), 3, recipR), env) },   // ÷ reciprocal
+      8968 => match a.kind { 3 => okv(array.mapArr(a, 2, ceilI), env), _ => okv(a, env), },   // ⌈
+      8970 => match a.kind { 3 => okv(array.mapArr(a, 2, floorI), env), _ => okv(a, env), },   // ⌊
+      8739 => match a.kind { 2 => okv(array.mapArr(a, 2, absI), env),
+                             3 => okv(array.mapArr(a, 3, absR), env),
+                             _ => okv(a, env), },                                                            // ∣ magnitude
+      8902 => okv(array.mapArr(array.toReal(a), 3, expR), env),         // ⋆ exp
+      9055 => okv(array.mapArr(array.toReal(a), 3, lnR), env),         // ⍟ ln
+      9675 => okv(array.mapArr(array.toReal(a), 3, piR), env),   // ○ pi times
+      33   => match a.kind { 1 => okv(array.mapArr(a, 1, factNat), env),
+                             3 => okv(array.mapArr(a, 3, factR), env),
+                             _ => dom("! of a negative") },                                                  // ! factorial
+      8764 => if a.kind == 1 and array.allL(array.vals(a), isBool) { okv(array.mapArr(a, 1, lambda (x: @) -> @ { 1 - x }), env) } else { dom("∼ takes 0 and 1") },   // ∼ not
+      _    => nyi("monadic " + lexerText(cp)),
+    }
+  }
+};
+
+// --- the tree -------------------------------------------------------------------------------
+func evalAst(a: parse.Ast, env: Env) -> Ev {
+  match a {
+    .lit(l) => okv(litArr(l), env),
+    .name(nm) => match lookup(env.store, nm) { (found, v) => if found { okv(v, env) } else { fail("%value-error", nm + " is not defined") }, },
+    .sysvar(nm) => if nm == "IO" { okv(array.scalar(1, env.io), env) } else if nm == "PP" { okv(array.scalar(1, env.pp), env) } else { nyi("⎕" + nm) },
+    .monad(m) => match evalAst(m.r, env) {
+      .err(e) => Ev.err(e),
+      .ok(r) => match r { (rv, env2) => match m.f { .prim(cp) => monadPrim(cp, rv, env2), _ => nyi("operators and user functions"), }, },
+    },
+    .dyad(d) => match evalAst(d.r, env) {
+      .err(e) => Ev.err(e),
+      .ok(r) => match r { (rv, env2) => match evalAst(d.l, env2) {
+        .err(e) => Ev.err(e),
+        .ok(l) => match l { (lv, env3) => match d.f { .prim(cp) => dyadPrim(cp, lv, rv, env3), _ => nyi("operators and user functions"), }, },
+      }, },
+    },
+    .assign(s) => match evalAst(s.v, env) {
+      .err(e) => Ev.err(e),
+      .ok(r) => match r { (v, env2) => okv(v, Env( store: put(env2.store, s.nm, v), io: env2.io, pp: env2.pp )), },
+    },
+    .sysassign(s) => match evalAst(s.v, env) {
+      .err(e) => Ev.err(e),
+      .ok(r) => match r { (v, env2) => sysSet(s.nm, v, env2), },
+    },
+    _ => nyi("this form"),
+  }
+};
+func sysSet(nm: String, v: array.Arr, env: Env) -> Ev {
+  if array.rank(v) != 0 or v.kind != 1 { dom("⎕" + nm + " takes a scalar") }
+  else {
+    let x = array.first(v);
+    if nm == "IO" { if isBool(x) { okv(v, Env( store: env.store, io: x, pp: env.pp )) } else { dom("⎕IO is 0 or 1") } }
+    else if nm == "PP" { if x >= 1 and x <= 17 { okv(v, Env( store: env.store, io: env.io, pp: x )) } else { dom("⎕PP is 1..17") } }
+    else { nyi("⎕" + nm) }
+  }
+};
+func isAssign(a: parse.Ast) -> Bool { match a { .assign(s) => true, .sysassign(s) => true, _ => false, } };
+// one statement: what it prints (D-24) and the environment after it
+func runStmt(a: parse.Ast, env: Env) -> (String, Env) {
+  match a {
+    .empty => ("", env),
+    .fnend => ("", env),
+    .stmts(ss) => runAll(ss, env, ""),
+    _ => match evalAst(a, env) {
+      .err(e) => (e.tag + " " + e.hint, env),
+      .ok(r) => match r { (v, env2) => if isAssign(a) { ("", env2) } else { (array.format(v, env2.pp), env2) }, },
+    },
+  }
+};
+func runAll(ss: List<parse.Ast>, env: Env, acc: String) -> (String, Env) {
+  match ss {
+    (s, rest) => match runStmt(s, env) {
+      (out, env2) => runAll(rest, env2, if out == "" { acc } else if acc == "" { out } else { acc + "\n" + out }),
+    },
+    _ => (acc, env),
+  }
+};
+func initial() -> Env { Env( store: ~, io: 1, pp: 10 ) };

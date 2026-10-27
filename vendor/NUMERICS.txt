@@ -1,0 +1,21 @@
+numerics pin: the numerics checkout at 4727063e319c508dab9813c5c179ef3f275628b3 (vendored by tools/vendor-numerics.py)
+files:
+  sur/lagoon.hoon  <- lagoon/desk/sur/lagoon.hoon
+  lib/lagoon.hoon  <- lagoon/desk/lib/lagoon.hoon
+  lib/twoc.hoon  <- libmath/desk/lib/twoc.hoon
+  lib/unum.hoon  <- libmath/desk/lib/unum.hoon
+  lib/complex.hoon  <- libmath/desk/lib/complex.hoon
+  lib/fixed.hoon  <- libmath/desk/lib/fixed.hoon
+  lib/math.hoon  <- libmath/desk/lib/math.hoon
+patches, applied by the script (so a re-vendor re-applies them):
+  1. trailing '::' comments stripped from /+ /- /= import lines --- honk's import
+     parser reads the whole line as the import.
+  2. '..part' -> '+' in the ~% jet-registration parents --- hoon-138 has no +part.
+     This changes the jet label PARENT; SoftBLAS jets on the vere fork would need
+     the original spelling (NockVM has no float jets either way).
+  3. every @r literal (1504 of them) rewritten as a plain decimal with a fractional
+     part and no exponent. honk sets the SIGN BIT of a positive @r literal whose
+     decimal exponent is >= 0: .~1 -> -1.0, .1 -> -1.0, .~~1 -> -1.0, .~1.5e2 ->
+     -150.0, while .~0.5 and .~1.0e-10 parse right and the Urbit dojo parses all of
+     them right (checked on ~nec, 2026-10-27). The rewrite is value-preserving:
+     .~1 -> .~1.0, .~1.5e2 -> .~150.0. Filed as S-12 in docs/plan.md.

@@ -1,0 +1,189 @@
+// array.jock — the ATL array model over Lagoon rays (D-10..D-13, D-25, D-45).
+//
+// An ATL array is a Lagoon ray plus ATL's own kind tag: 1 nat, 2 int,
+// 3 real, 4 char (D-10). The ray's kind carries the storage class
+// (%uint, %int2, %i754 --- chars are %uint codepoints) and every ray is
+// bloq 6, so promotion between kinds (D-11) never changes the width.
+// Lagoon is reached through the `lagoon` package (pkg/lagoon-core.hoon):
+// construction, reading back, and the same-shape elementwise arms;
+// scalar extension (D-25), the kind lattice and display (D-45) are
+// ATL's and live here.
+import lagoon;
+
+struct Arr { kind: @, ray: lagoon.Ray };
+
+// --- construction and reading --------------------------------------------------
+func lagKind(k: @) -> Term { match k { 2 => %int2, 3 => %i754, _ => %uint, } };
+func metaOf(k: @, shp: List<@>) -> lagoon.Meta { lagoon.Meta( shape: shp, bloq: 6, kind: lagKind(k), tail: 0 ) };
+func make(k: @, shp: List<@>, vs: List<@>) -> Arr { Arr( kind: k, ray: lagoon.from(metaOf(k, shp), vs) ) };
+func scalar(k: @, v: @) -> Arr { make(k, ~, [v]) };
+func shape(a: Arr) -> List<@> { a.ray.meta.shape };
+func vals(a: Arr) -> List<@> { lagoon.ravel(a.ray) };
+func count(xs: List<@>) -> @ { match xs { (h, t) => 1 + count(t), _ => 0, } };
+func size(shp: List<@>) -> @ { match shp { (h, t) => h * size(t), _ => 1, } };
+func rank(a: Arr) -> @ { count(shape(a)) };
+func first(a: Arr) -> @ { match vals(a) { (h, t) => h, _ => 0, } };
+func relabel(r: lagoon.Ray, k: Term) -> lagoon.Ray {
+  lagoon.Ray( meta: lagoon.Meta( shape: r.meta.shape, bloq: r.meta.bloq, kind: k, tail: r.meta.tail ), data: r.data )
+};
+
+func toCps(cs: List<UniChar>) -> List<@> { match cs { (h, t) => (h as! @, toCps(t)), _ => ~, } };
+
+// --- list helpers --------------------------------------------------------------
+func turnL(xs: List<@>, f: @ -> @) -> List<@> { match xs { (h, t) => (f(h), turnL(t, f)), _ => ~, } };
+func zipL(xs: List<@>, ys: List<@>, f: (@, @) -> @) -> List<@> {
+  match xs { (h, t) => match ys { (h2, t2) => (f(h, h2), zipL(t, t2, f)), _ => ~, }, _ => ~, }
+};
+func anyL(xs: List<@>, p: @ -> Bool) -> Bool { match xs { (h, t) => if p(h) { true } else { anyL(t, p) }, _ => false, } };
+func allL(xs: List<@>, p: @ -> Bool) -> Bool { match xs { (h, t) => if p(h) { allL(t, p) } else { false }, _ => true, } };
+func anyZip(xs: List<@>, ys: List<@>, p: (@, @) -> Bool) -> Bool {
+  match xs { (h, t) => match ys { (h2, t2) => if p(h, h2) { true } else { anyZip(t, t2, p) }, _ => false, }, _ => false, }
+};
+func mapArr(a: Arr, k: @, f: @ -> @) -> Arr { make(k, shape(a), turnL(vals(a), f)) };
+func zipArr(a: Arr, b: Arr, k: @, f: (@, @) -> @) -> Arr { make(k, shape(a), zipL(vals(a), vals(b), f)) };
+
+// --- scalars of each kind ------------------------------------------------------
+func isNeg(x: @) -> Bool { lagoon.tmsb(x) == 1 };                       // int2 sign
+func fbits(f: Float64) -> @ { f as! @ };
+func freal(x: @) -> Float64 { x as! Float64 };
+func natToReal(x: @) -> @ { fbits(lagoon.rsun(x)) };
+func intToReal(x: @) -> @ { if isNeg(x) { fbits(hoon.rsub(0.0, lagoon.rsun(lagoon.tabs(x)))) } else { natToReal(x) } };
+// a ZigZag @s (crossing as bare bits) -> int2 bits
+func sToInt(z: @) -> @ { lagoon.ts2t(z) };
+func realIsNeg(x: @) -> Bool { hoon.rlth(freal(x), 0.0) };
+func pow10(n: @) -> @ { if n == 0 { 1 } else { 10 * pow10(n - 1) } };
+
+// --- promotion (D-11) ------------------------------------------------------------
+func toReal(a: Arr) -> Arr {
+  match a.kind {
+    1 => mapArr(a, 3, natToReal),
+    2 => mapArr(a, 3, intToReal),
+    _ => a,
+  }
+};
+func toInt(a: Arr) -> Arr { match a.kind { 1 => Arr( kind: 2, ray: relabel(a.ray, %int2) ), _ => a, } };
+func promote(a: Arr, k: @) -> Arr { match k { 3 => toReal(a), 2 => toInt(a), _ => a, } };
+func maxk(a: @, b: @) -> @ { if a > b { a } else { b } };
+
+// --- scalar extension (D-25):  (a', b', tag);  tag "" when the shapes agree
+func spread(a: Arr, shp: List<@>) -> Arr { Arr( kind: a.kind, ray: lagoon.fill(metaOf(a.kind, shp), first(a)) ) };
+func extend(a: Arr, b: Arr) -> (Arr, Arr, String) {
+  if shape(a) == shape(b) { (a, b, "") }
+  else if size(shape(a)) == 1 { (spread(a, shape(b)), b, "") }
+  else if size(shape(b)) == 1 { (a, spread(b, shape(a)), "") }
+  else if rank(a) == rank(b) { (a, b, "%length-error") }
+  else { (a, b, "%rank-error") }
+};
+
+// --- display (D-45) ----------------------------------------------------------------
+func strLen(s: String) -> @ { s.len() };
+func takeB(bs: List<Byte>, n: @) -> List<Byte> { if n == 0 { ~ } else { match bs { (h, t) => (h, takeB(t, n - 1)), _ => ~, } } };
+func dropB(bs: List<Byte>, n: @) -> List<Byte> { if n == 0 { bs } else { match bs { (h, t) => dropB(t, n - 1), _ => ~, } } };
+func zeros(n: @) -> String { if n == 0 { "" } else { "0" + zeros(n - 1) } };
+func spaces(n: @) -> String { if n == 0 { "" } else { " " + spaces(n - 1) } };
+func ndigits(a: @) -> @ { if a < 10 { 1 } else { 1 + ndigits(a / 10) } };
+func stripZeros(a: @) -> @ { if a == 0 { 0 } else if (a % 10) == 0 { stripZeros(a / 10) } else { a } };
+func fmtNat(x: @) -> String { "{x}" };
+func fmtInt(x: @) -> String { if isNeg(x) { "¯" + fmtNat(lagoon.tabs(x)) } else { fmtNat(x) } };
+// a signed exponent for the E form:  p - 1, from (pneg, pmag) of p
+func fmtExp(pneg: Bool, pmag: @) -> String {
+  if pneg { "¯" + fmtNat(pmag + 1) } else if pmag == 0 { "¯1" } else { fmtNat(pmag - 1) }
+};
+// the significand digits D (as the nat a, L digits) placed at position p:
+// value = 0.D × 10^p;  p arrives as (pneg, pmag)
+func placeDigits(a: @, pneg: Bool, pmag: @, pp: @) -> String {
+  let d = fmtNat(a);
+  let l = strLen(d);
+  let bs = d.bytes();
+  if (not pneg) and pmag > 0 and pmag <= pp {
+    if pmag >= l { d + zeros(pmag - l) }
+    else { hoon.crip(takeB(bs, pmag)) + "." + hoon.crip(dropB(bs, pmag)) }
+  } else if (pneg and pmag <= 5) or ((not pneg) and pmag == 0) {
+    "0." + zeros(pmag) + d
+  } else {
+    let mant = if l == 1 { d } else { hoon.crip(takeB(bs, 1)) + "." + hoon.crip(dropB(bs, 1)) };
+    mant + "E" + fmtExp(pneg, pmag)
+  }
+};
+func fmtReal(x: @, pp: @) -> String {
+  match lagoon.rdrg(freal(x)) {
+    (s, e, a) => if a == 0 { "0" } else {
+      // e is a ZigZag @s as bare bits;  p = e + L signed, as (pneg, pmag)
+      let l = ndigits(a);
+      let eneg = (e % 2) == 1;
+      let emag = if eneg { (e + 1) / 2 } else { e / 2 };
+      let pneg = eneg and emag > l;
+      let pmag = if eneg { if emag > l { emag - l } else { l - emag } } else { emag + l };
+      // round to pp significant digits;  a carry bumps p by one
+      let over = if l > pp { l - pp } else { 0 };
+      let div = pow10(over);
+      let r0 = if over == 0 { a } else { (a + (div / 2)) / div };
+      let carried = ndigits(r0) > pp and over > 0;
+      let r1 = if carried { r0 / 10 } else { r0 };
+      let p2neg = if carried and pneg and pmag == 1 { false } else { pneg };
+      let p2mag = if carried { if pneg { pmag - 1 } else { pmag + 1 } } else { pmag };
+      let body = placeDigits(stripZeros(r1), p2neg, p2mag, pp);
+      if s { body } else { "¯" + body }
+    },
+  }
+};
+func fmtElem(k: @, x: @, pp: @) -> String {
+  match k { 2 => fmtInt(x), 3 => fmtReal(x, pp), 4 => utf8([x as! UniChar]), _ => fmtNat(x), }
+};
+func fmtAll(k: @, xs: List<@>, pp: @) -> List<String> {
+  match xs { (h, t) => (fmtElem(k, h, pp), fmtAll(k, t, pp)), _ => ~, }
+};
+func joinS(xs: List<String>, sep: String) -> String {
+  match xs { (h, t) => match t { (h2, t2) => h + sep + joinS(t, sep), _ => h, }, _ => "", }
+};
+func takeS(xs: List<String>, n: @) -> List<String> { if n == 0 { ~ } else { match xs { (h, t) => (h, takeS(t, n - 1)), _ => ~, } } };
+func dropS(xs: List<String>, n: @) -> List<String> { if n == 0 { xs } else { match xs { (h, t) => dropS(t, n - 1), _ => ~, } } };
+func chunk(xs: List<String>, n: @) -> List<List<String>> {
+  match xs { (h, t) => (takeS(xs, n), chunk(dropS(xs, n), n)), _ => ~, }
+};
+func widths(rows: List<List<String>>, acc: List<@>) -> List<@> {
+  match rows { (r, rest) => widths(rest, zipMax(acc, r)), _ => acc, }
+};
+func zipMax(ws: List<@>, cells: List<String>) -> List<@> {
+  match cells {
+    (c, ct) => match ws { (w, wt) => (maxk(w, strLen(c)), zipMax(wt, ct)), _ => (strLen(c), zipMax(~, ct)), },
+    _ => ws,
+  }
+};
+func padRow(ws: List<@>, cells: List<String>) -> List<String> {
+  match cells {
+    (c, ct) => match ws { (w, wt) => (spaces(w - strLen(c)) + c, padRow(wt, ct)), _ => (c, padRow(~, ct)), },
+    _ => ~,
+  }
+};
+func fmtRows(rows: List<List<String>>, ws: List<@>, sep: String) -> List<String> {
+  match rows { (r, rest) => (joinS(padRow(ws, r), sep), fmtRows(rest, ws, sep)), _ => ~, }
+};
+// a rank-2 block: rows of `cols` cells;  chars abut, numbers right-align per column
+func fmtMatrix(k: @, cells: List<String>, cols: @) -> String {
+  let rows = chunk(cells, cols);
+  if k == 4 { joinS(fmtRows(rows, ~, ""), "\n") }
+  else { joinS(fmtRows(rows, widths(rows, ~), " "), "\n") }
+};
+func last2(shp: List<@>) -> (@, @) {
+  match shp { (a, t) => match t { (b, t2) => match t2 { (c, t3) => last2(t), _ => (a, b), }, _ => (a, a), }, _ => (1, 1), }
+};
+func fmtPlanes(k: @, cells: List<String>, rows: @, cols: @) -> String {
+  match cells {
+    (h, t) => {
+      let n = rows * cols;
+      let here = fmtMatrix(k, takeS(cells, n), cols);
+      match dropS(cells, n) { (h2, t2) => here + "\n\n" + fmtPlanes(k, dropS(cells, n), rows, cols), _ => here, }
+    },
+    _ => "",
+  }
+};
+func format(a: Arr, pp: @) -> String {
+  let cells = fmtAll(a.kind, vals(a), pp);
+  let r = rank(a);
+  if r == 0 { joinS(cells, "") }
+  else if r == 1 { if a.kind == 4 { joinS(cells, "") } else { joinS(cells, " ") } }
+  else {
+    match last2(shape(a)) { (rows, cols) => if r == 2 { fmtMatrix(a.kind, cells, cols) } else { fmtPlanes(a.kind, cells, rows, cols) }, }
+  }
+};

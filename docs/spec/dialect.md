@@ -34,15 +34,15 @@ ATL/APL is the APL that Atalante compiles. It is Budd's compiler subset (Budd 19
 
 ## 3. Values
 
-**D-10 · Four element kinds, one Bool convention.** `%nat` (Jock `@`), `%int` (Jock `Int`, ZigZag), `%real` (Float64), `%char` (codepoint). Booleans are `%nat` 0 and 1, as in APL; there is no separate Bool kind. ⟨none — UNPINNED⟩
+**D-10 · Four element kinds, one Bool convention.** `%nat` (Jock `@`), `%int` (Jock `Int`, ZigZag), `%real` (Float64), `%char` (codepoint). Booleans are `%nat` 0 and 1, as in APL; there is no separate Bool kind. ⟨`atl/vector-add`, `atl/residue-sign`, `atl/power-log`, `atl/display`⟩
 
-**D-11 · The kind lattice is `%nat ⊂ %int ⊂ %real`; `%char` is apart.** A dyadic scalar function on two numeric kinds computes in the join. `%char` meets a numeric only at `=` and `≠`, and at `⍳` (index-of), `∊`, `⍋`, `⍒`. Anything else is a DOMAIN ERROR. ⟨none — UNPINNED⟩
+**D-11 · The kind lattice is `%nat ⊂ %int ⊂ %real`; `%char` is apart.** A dyadic scalar function on two numeric kinds computes in the join. `%char` meets a numeric only at `=` and `≠`, and at `⍳` (index-of), `∊`, `⍋`, `⍒`. Anything else is a DOMAIN ERROR. ⟨`atl/residue-sign`, `atl/power-log`, `atl/errors`⟩
 
-**D-12 · Result kinds are fixed per function, not inferred from values.** `÷`, `⍟`, `○`, `⋆` with a non-`%nat` exponent, and monadic `÷` answer `%real`. `⌊` and `⌈` on `%real` answer `%int`. Comparisons and the Booleans answer `%nat`. `−` on two `%nat` answers `%int` (never a crash on `3−5`). Everything else answers the join. This rule is what lets the inferencer type a statement without running it. ⟨none — UNPINNED⟩
+**D-12 · Result kinds are fixed per function, not inferred from values.** `÷`, `⍟`, `○`, `⋆` with a non-`%nat` exponent, and monadic `÷` answer `%real`. `⌊` and `⌈` on `%real` answer `%int`. Comparisons and the Booleans answer `%nat`. `−` on two `%nat` answers `%int` (never a crash on `3−5`). Everything else answers the join. This rule is what lets the inferencer type a statement without running it. ⟨`atl/power-log` (`2⋆10` → 1024), `atl/residue-sign` (`3−5` → ¯2), `atl/tradfn-div`⟩
 
-**D-13 · An array is shape plus elements, row-major.** Shape is a list of naturals; rank is its length; a scalar has shape `~`. The abstract layout mirrors Lagoon's `$ray` field names (`shape`, `kind`, data) so that a packed erasure can replace the list-backed one without touching the primitives' contracts (plan P7). ⟨none — UNPINNED⟩
+**D-13 · An array is shape plus elements, row-major.** Shape is a list of naturals; rank is its length; a scalar has shape `~`. The abstract layout mirrors Lagoon's `$ray` field names (`shape`, `kind`, data) so that a packed erasure can replace the list-backed one without touching the primitives' contracts (plan P7). ⟨`atl/vector-add` (the layout is Lagoon's; plan section 1.1)⟩
 
-**D-14 · `⎕IO` is 1 by default and may be set to 0 or 1.** It affects `⍳`, indexing, `⍋`, `⍒`, `⍳` (index-of), `∊`'s companion `⍸` (absent in v1), and `?`. ⟨none — UNPINNED⟩
+**D-14 · `⎕IO` is 1 by default and may be set to 0 or 1.** It affects `⍳`, indexing, `⍋`, `⍒`, `⍳` (index-of), `∊`'s companion `⍸` (absent in v1), and `?`. ⟨`atl/index-origin` (assignment and the domain refusal)⟩
 
 **D-15 · OPEN · `⎕TYPE`.** The README sets `⎕TYPE ← 'UINT8'`. Whether this names a declared storage width (Lagoon `bloq`) or a default literal kind is unruled. v1 parses and stores the assignment and ignores it with a warning.
 
@@ -58,7 +58,7 @@ ATL/APL is the APL that Atalante compiles. It is Budd's compiler subset (Budd 19
 
 **D-24 · Assignment `←` is an expression whose value is its right side.** At the top level a statement whose last act is an assignment prints nothing. Variables are global unless localised in a `∇` header (D-31). ⟨`parse/readme`, `parse/statements` (parsing only)⟩
 
-**D-25 · Scalar extension.** A scalar or one-element vector extends to the other argument's shape. Otherwise shapes must match exactly; a rank mismatch is a RANK ERROR, a length mismatch a LENGTH ERROR. ⟨none — UNPINNED⟩
+**D-25 · Scalar extension.** A scalar or one-element vector extends to the other argument's shape. Otherwise shapes must match exactly; a rank mismatch is a RANK ERROR, a length mismatch a LENGTH ERROR. ⟨`atl/vector-add`, `atl/errors`⟩
 
 ## 5. Functions
 
@@ -80,7 +80,7 @@ The glyph list is `desk/sur/atalante.hoon`'s `+$cultivar`. This section fixes wh
 
 **D-41 · Scalar functions (v1, pervasive, scalar-extended).**
 Monadic: `+` conjugate (identity), `−` negate, `×` signum, `÷` reciprocal, `⌈` ceiling, `⌊` floor, `∣` magnitude, `⋆` exponential, `⍟` natural log, `○` pi times, `!` factorial, `∼` not (Boolean domain), `?` roll.
-Dyadic: `+ − × ÷ ⌈ ⌊ ∣ ⋆ ⍟ ○ !` and `< ≤ = ≥ > ≠ ∨ ∧ ⍱ ⍲`. `∣` is residue with APL's sign convention (`¯3∣5` is `¯1`). `A○B` covers the circular functions for `A ∈ ¯7..7` as in APL2. ⟨none — UNPINNED⟩
+Dyadic: `+ − × ÷ ⌈ ⌊ ∣ ⋆ ⍟ ○ !` and `< ≤ = ≥ > ≠ ∨ ∧ ⍱ ⍲`. `∣` is residue with APL's sign convention (`¯3∣5` is `¯1`). `A○B` covers the circular functions for `A ∈ ¯7..7` as in APL2. ⟨`atl/power-log`, `atl/residue-sign`, `atl/reduce-scan` (operands), `atl/errors`⟩
 
 **D-42 · Structural functions (v1).**
 `⍳B` index generator; `A⍳B` index-of; `⍴B` shape; `A⍴B` reshape (cyclic fill); `,B` ravel; `A,B` catenate on last axis; `⌽B`/`A⌽B` reverse/rotate last axis; `⊖`/`A⊖B` first axis; `⍉B` transpose (reverse axes); `A↑B` take, `A↓B` drop (negative counts from the end); `⍋B`, `⍒B` grade (stable); `A∊B` membership; `A/B` compress, `A\B` expand (Boolean left, replicate counts in v1 too); `A⊥B` decode, `A⊤B` encode; `A?B` deal; `⊣`, `⊢` left and right. ⟨none — UNPINNED⟩
@@ -89,7 +89,7 @@ Dyadic: `+ − × ÷ ⌈ ⌊ ∣ ⋆ ⍟ ○ !` and `< ≤ = ≥ > ≠ ∨ ∧ �
 
 **D-44 · Held back from v1, with the reason.** `⌹` matrix divide (needs Lagoon or a float linear solver); `⍎` execute (needs the compiler in the runtime, plan P6 makes it cheap); `⍕` format (monadic only, for display, D-45); `⍷` find; `⍪` table/laminate; `≡` match and depth (match is cheap, depth is nested-only); `⍉` dyadic; `⌽` with axis `[k]`. Each enters with its three vectors or stays out.
 
-**D-45 · Display.** Vectors print space-separated on one line; a matrix prints one row per line, columns right-aligned; higher ranks print planes separated by a blank line. Numbers print with `⎕PP` 10 significant digits, exponent form past `1E10` (`2.642213044E60` as in the README). `%real` whose value is integral prints without a point. Negative numbers print with `¯`, never `-`. Character arrays print raw, without quotes. ⟨none — UNPINNED⟩
+**D-45 · Display.** Vectors print space-separated on one line; a matrix prints one row per line, columns right-aligned; higher ranks print planes separated by a blank line. Numbers print with `⎕PP` 10 significant digits, exponent form past `1E10` (`2.642213044E60` as in the README). `%real` whose value is integral prints without a point. Negative numbers print with `¯`, never `-`. Character arrays print raw, without quotes. ⟨`atl/power-log`, `atl/display`, `atl/residue-sign`⟩
 
 ## 7. Compilation model
 

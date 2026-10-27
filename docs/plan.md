@@ -23,6 +23,16 @@ Three lanes, slowest is the authority.
 
 **No Gall or `%sole` path in v1.** Jock kernels are NockApp-shaped. The Urbit shoe agent in `desk/app/atalante.hoon` is kept as the v2 host: it would hold the Jock-compiled compiler as a noun and fire it with raw Nock. That bridge is untyped and unbuilt; it is a §4 item.
 
+### 1.1 Lagoon via FFI — the strategy (ruled 2026-10-27)
+
+**Lagoon enters as a Jock `%nock` package, not as Jock source.** `pkg/lagoon-core.hoon` is a curated Hoon core of pass-through gates over the vendored Lagoon door (rounding pinned `%n`), the hoon-138 `rd` door, `/lib/math`'s `rd` door and `/lib/twoc` at 64 bits; `tools/pkg.sh` compiles it against the Jock compiler tree with `vendor/numerics` laid beside it and ships honk's construction formula as `pkgs/lagoon.jam`, which `tools/libs.py` turns into an `%nock` library and the program evaluates at startup (so `%fast` registration would fire on a jetted runtime). The package declares two struct types, `Meta` and `Ray`, whose erasure IS Lagoon's `$meta`/`$ray` cell layout, so a ray crosses the boundary untouched and Jock reads `r.meta.shape`. Battery order is signature order; new arms go at the end.
+
+**An ATL array is a ray plus ATL's kind tag** (`src/array.jock`): 1 nat `%uint`, 2 int `%int2`, 3 real `%i754`, 4 char `%uint` codepoints, every ray bloq 6 so promotion never changes width. Lagoon owns storage, construction, reading back, and the same-meta elementwise arms; ATL owns scalar extension, the kind lattice, division-by-zero and residue's sign rule, the transcendentals (through the package's scalar doors, elementwise over the ravel), and display. The split is by semantics: an arm whose Lagoon meaning equals the APL meaning is called directly, anything with a per-element decision walks the ravel in Jock.
+
+**Vendoring is a script**, `tools/vendor-numerics.py`, because three patches stand between the numerics checkout and honk: import-line comments, the `..part` jet parent, and the float-literal sign (S-12). A re-vendor re-applies them; `vendor/NUMERICS.txt` records the pin and the rules.
+
+**What this buys and costs.** Lagoon's 2680 lines of tested array code and its packed layout come for free, and the vere-fork SoftBLAS jets stay reachable in principle (the `..part` patch must be undone for that build). Under NockVM nothing is jetted: `bin-op` walks the ravel with `snag` (quadratic), a Float64 op costs ~0.3 ms, and a corpus-sized program pays ~2 s of package evaluation at startup. Acceptable for the REPL; P7's inference decides what to specialize.
+
 ## 2. Repository layout (target)
 
 ```
@@ -67,8 +77,9 @@ AST as a Jock union: `%array` literal, `%name`, `%monad`, `%dyad`, `%op`, `%inde
 The GREEN PROMPT is in `src/atl.jock`: the session threads a name-class signature that assignments and ∇ headers update, holds definition mode (D-62), and prints the tree for a `🍏>` line (D-54). `tests/atl/readme-green.atl` types EVERY README and ast.md expression at the green prompt, the Caesar block verbatim with its tab-indented body and the body expressions again at top level: 40/40, and that case at 100% is the P2 GATE on the evaluation corpus. All three lanes were re-run after the session edit: lex 30/30, parse 65/65, eval 50/121. Parse-time refusals now reach the evaluation corpus too, which moved from 1/81 to 50/121 with the stub evaluator untouched: every new pass is an assignment or definition line that prints nothing, or a VALUE, VALENCE or SYNTAX refusal the parser owns.
 
 **P3 — Array model and scalar functions, interpreted.**
-`array.jock` (D-13, list-backed), the kind lattice and promotion (D-11, D-12), scalar extension and the rank/length errors (D-25). All of D-41 through the closure interpreter. Display per D-45.
+`array.jock` (D-13, over Lagoon rays per section 1.1), the kind lattice and promotion (D-11, D-12), scalar extension and the rank/length errors (D-25). All of D-41 through the closure interpreter. Display per D-45.
 *Exit:* `n+4`, `2 * 10 *⍟ 10`, `5 DIV 6`'s arithmetic, all of ast.md's scalar table; three vectors per glyph.
+**LANDED 2026-10-27.** `src/array.jock` (189 lines), `src/interp.jock` (~340 lines: literals, names, assignment, `⎕IO`/`⎕PP`, every monadic and dyadic function of D-41 except roll, display with ⎕PP rounding), `pkg/lagoon-core.hoon` (48 arms), `tools/pkg.sh`, `tools/vendor-numerics.py`. Evaluation corpus 78/121 (from 50/121 at P2): `power-log` 7/7 including `2.642213044E60` at ⎕PP 10, `residue-sign` 7/7, `vector-add` 5/5, `readme-green` 40/40; lex 30/30 and parse 65/65 unchanged. A corpus run is three programs of ~2.5 min each (S-13). Every remaining failure in the evaluation corpus is a structural function (D-42/D-43, P4), indexing (D-23, P4), a user-function call (P6) or `)` commands (P6).
 
 **P4 — Structural functions and operators, interpreted.**
 D-42 and D-43: `⍳ ⍴ , ⌽ ⊖ ⍉ ↑ ↓ ⍋ ⍒ ∊ / \ ⊥ ⊤ ? ⊣ ⊢`, then `f/ f⌿ f\ f⍀ f.g ∘.g f¨`. Bracket indexing and indexed assignment (D-23).
@@ -101,6 +112,10 @@ What ATL asks of Jock that nothing else has, each a finding to file once hit. Ap
 | S-5 | A sealed kernel runs jetless; an unsealed one carries the compiler and compiles at boot | P6 | known upstream (wilt arc, 1.1) |
 | S-6 | No Gall / `%sole` host; no typed bridge from a Jock func value to Hoon | v2 | open |
 | S-7 | Compile time of a several-thousand-line Jock program is unmeasured | P5 onward | measure at P2 and P5 |
+| S-11 | Inside a `lambda` body an imported module's namespace is unreachable: `lagoon.rpow` refuses `%mint-field` "`*` has no field rpow"; a named `func` in the same module reaches it | P3 | open — lambdas call named helpers (interp.jock) |
+| S-12 | **honk** (hatch) parses a positive `@r` literal with a non-negative decimal exponent as NEGATIVE: `.~1` → `0xbff0…`, `.1`, `.~~1`, `.~1.5e2` likewise; `.~0.5`, `.~1.0e-10` and the Urbit dojo are right. Cause: `binaryfloat_mul`'s sign branch tests zero mantissas where `binaryfloat_div` tests `sa == sb` (`crates/hatch/src/utils.rs` ~4153). One-line fix drafted; the vendored sources are rewritten to the safe form meanwhile | P3 | open upstream — patch at hand |
+| S-13 | honk-kick crashes with no tag when the whole evaluation corpus runs as one program (every half runs); the runner batches 8 cases per program (`ATL_BATCH`) | P3 | open — likely a memory limit; not characterized |
+| S-14 | `eval` is a Jock keyword, so a module cannot be named `eval.jock` and a func cannot be named `eval`; the refusal is a bare `%parse-name` at the import | P3 | cosmetic — a hint would help |
 | S-10 | `jockc.sh --diag run` crashes in its own Python serializer on an atom past 4300 decimal digits (a ~1.8 KB String product): `ValueError: Exceeds the limit ... for integer string conversion` | P1 | open — `PYTHONINTMAXSTRDIGITS=0` in the child's env works around it; upstream fix is `sys.set_int_max_str_digits(0)` in jockc.sh's serializer |
 | S-9 | `jockc.sh run` renders a `String` returned by an imported module's func as a bare atom; the same literal at top level renders quoted | P0 | open — `--diag` sidesteps it |
 | S-8 | Verified 2026-10-27: hand-built Nock in a Jock program calls a Jock func in the subject via `9 2 10 [6 …] 0 ax` (`eval` probe answered 42) | P5 | closed — assumption holds |
