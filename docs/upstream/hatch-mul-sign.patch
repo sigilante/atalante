@@ -1,0 +1,13 @@
+diff --git a/crates/hatch/src/utils.rs b/crates/hatch/src/utils.rs
+index d4c3a521..111c8036 100644
+--- a/crates/hatch/src/utils.rs
++++ b/crates/hatch/src/utils.rs
+@@ -4150,7 +4150,7 @@ pub fn binaryfloat_mul(
+         };
+     }
+ 
+-    if ma == BigUint::zero() || mb == BigUint::zero() {
++    if sa == sb {
+         return binaryfloat_mul_internal(ea, ma, eb, mb, p, v, w, r, d);
+     }
+     r = swr(r);
