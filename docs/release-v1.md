@@ -9,13 +9,13 @@
 - **The arrays.** Lagoon rays through two Hoon packages, `pkg/lagoon-core.hoon` and `pkg/nasm-core.hoon`, loaded as `%nock` packages. Eight specialised gates take the hot paths as linear Jock passes.
 - **The REPL.** `app/kernel.jock`, booted by jojo in tmux with F5, F6 and F7 bound to the prompt commands. [`docs/repl.md`](repl.md).
 
-## Verified at the release commit
+## Verified at the release commit, 4e29661
 
 | lane | result |
 |---|---|
-| `tools/atlc.sh corpus` | 260 of 260 statements, 26 cases, interpreter and emitted Nock |
+| `tools/atlc.sh corpus` | 262 of 262 statements, 26 cases, interpreter and emitted Nock |
 | `tools/atlc.sh lex` | 30 of 30 |
-| `tools/atlc.sh lexcheck` | 260 of 260 corpus input lines tokenize |
+| `tools/atlc.sh lexcheck` | 262 of 262 corpus input lines tokenize |
 | `tools/atlc.sh parse` | 65 of 65 |
 | `tools/atlc.sh oracle` | 14 of 14 goldens against the Python Nockasm |
 | `tools/atlc.sh kernel-test` | 5 of 5, the sieve poked through arm 23 and the store peeked through arm 22 |

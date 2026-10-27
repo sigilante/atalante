@@ -84,7 +84,7 @@ Prerequisites, each at the commit [`vendor/TOOLCHAIN.txt`](vendor/TOOLCHAIN.txt)
 Every case under [`tests/atl/`](tests/atl/README.md) is a session transcript: input lines and the output each must print.  The runner evaluates each statement twice, through the interpreter and through the Nock it compiles to, and holds the two equal.
 
 ```
-tools/atlc.sh corpus        # 26 cases, 260 statements
+tools/atlc.sh corpus        # 26 cases, 262 statements
 tools/atlc.sh lex           # 30 lexer vectors
 tools/atlc.sh parse         # 65 parser vectors
 tools/atlc.sh oracle        # 14 emission goldens against an independent Nockasm
