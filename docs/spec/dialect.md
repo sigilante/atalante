@@ -70,7 +70,7 @@ ATL/APL is the APL that Atalante compiles. It is Budd's compiler subset (Budd 19
 
 **D-33 · A user function's valence is fixed by its header and checked at the call.** Calling a dyadic function monadically is a VALENCE ERROR. ⟨`parse/refusals`⟩
 
-**D-34 · A tradfn body is compiled on first call, not at the closing `∇`.** The definition stores the header and the body as token lines. The first call parses and emits the body against the store's signature at that moment and caches the formula keyed by that signature; a later change of class for any name the body reads (array to function, a new valence, unbound to bound) invalidates the cache and the next call recompiles. A body may therefore name a function defined after it, as in classical APL, and every executed line is still compiled Nock. A name unbound at the time of the call is a VALUE ERROR at that call. ⟨none — UNPINNED⟩
+**D-34 · A tradfn body is compiled on first call, not at the closing `∇`.** The definition stores the header and the body as token lines. The first call parses and emits the body against the store's signature at that moment and caches the formula keyed by that signature; a later change of class for any name the body reads (array to function, a new valence, unbound to bound) invalidates the cache and the next call recompiles. A body may therefore name a function defined after it, as in classical APL, and every executed line is still compiled Nock. A name unbound at the time of the call is a VALUE ERROR at that call. ⟨`atl/readme-green` (bodies captured unparsed; compile-on-call is P6)⟩
 
 ## 6. Primitive inventory
 
@@ -101,7 +101,7 @@ Dyadic: `+ − × ÷ ⌈ ⌊ ∣ ⋆ ⍟ ○ !` and `< ≤ = ≥ > ≠ ∨ ∧ �
 
 **D-53 · Inference is an optimisation, never a semantics.** Budd's rank, shape and kind propagation chooses a specialised primitive (`%add-real-vector`) over the generic one. A program's value does not depend on whether inference ran. The differential vector `generic == specialised` pins this on every example. ⟨none — UNPINNED⟩
 
-**D-54 · The green prompt shows, the red prompt runs.** `🍏>` prints the AST (and with `:nock`, the emitted formula) without evaluating; `🍎>` evaluates. Both are the same compiler up to the last stage. ⟨none — UNPINNED⟩
+**D-54 · The green prompt shows, the red prompt runs.** `🍏>` prints the AST (and with `:nock`, the emitted formula) without evaluating; `🍎>` evaluates. Both are the same compiler up to the last stage. ⟨`atl/readme-green` (green half; `:nock` is P5)⟩
 
 ## 8. The session
 
@@ -109,7 +109,7 @@ Dyadic: `+ − × ÷ ⌈ ⌊ ∣ ⋆ ⍟ ○ !` and `< ≤ = ≥ > ≠ ∨ ∧ �
 
 **D-61 · System commands.** A `)` that opens a line and is followed by a name is a command token; elsewhere `)` closes a parenthesis. `)VARS` lists variables, `)FNS` lists functions, `)ERASE name`, `)OFF` ends the session. `)SAVE` is the kernel's checkpoint and needs no command; it is parsed and answers that. ⟨`lex/strings-system` (lexing only)⟩
 
-**D-62 · A `∇` line puts the session in definition mode** until a line that is exactly `∇`. Definition-mode lines are stored, not evaluated; a syntax error in a body is reported at the closing `∇` with the body line number. ⟨none — UNPINNED⟩
+**D-62 · A `∇` line puts the session in definition mode** until a line that is exactly `∇`. Definition-mode lines are stored, not evaluated; a syntax error in a body is reported at the closing `∇` with the body line number. ⟨`atl/readme-green`⟩
 
 ## 9. What v2 owes
 

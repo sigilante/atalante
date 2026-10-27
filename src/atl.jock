@@ -1,19 +1,56 @@
 // atl.jock — the Atalante session entry.
 //
-// P0: the pipeline skeleton with a STUB evaluator. `session` takes the
-// lines of one corpus case (tests/atl/README.md) and answers one output
-// record per input line, records separated by \1e (RS). `corpus` runs
-// several cases and separates them with \1d (GS), the case name first,
-// then \1f (US), then the session's records. tools/atlc.py splits them.
-//
-// The stub answers a bare numeral line with the numeral and every other
-// line with %unimplemented, so the P0 exit test (the `trivial` case
-// passing end to end) measures the harness and nothing else. P1 replaces
-// evalLine with the lexer; P2 with the parser; P3 onward with the real
-// thing.
+// `session` takes the lines of one corpus case (tests/atl/README.md) and
+// answers one output record per input line, records separated by \1e
+// (RS). `corpus` runs several cases and separates them with \1d (GS),
+// the case name first, then \1f (US), then the session's records.
+// tools/atlc.py splits them. Evaluation is still the P0 stub; the
+// session, the signature and the green prompt are real (P2).
 import lexer;
 import parse;
 
+// --- the session ----------------------------------------------------------------
+// A session threads a SIGNATURE (name -> class, parse.jock's convention)
+// and a definition-mode flag (D-62). Every line is parsed against the
+// signature; an assignment binds its name as an array and a ∇ header
+// binds its function by valence (D-52). The green prompt `🍏>` prints
+// the tree (D-54); the red prompt `🍎>`, or no prompt, evaluates.
+struct Sess { sig: List<(String, @)>, defn: Bool };
+
+func bind(sig: List<(String, @)>, nm: String, c: @) -> List<(String, @)> {
+  match sig {
+    ((n, k), t) => if n == nm { ((nm, c), t) } else { ((n, k), bind(t, nm, c)) },
+    _ => [(nm, c)],
+  }
+};
+func headerClass(h: parse.Header) -> @ {
+  if h.lft == "" { if h.rgt == "" { 5 } else { 2 } } else { 3 }
+};
+func bindsAll(xs: List<parse.Ast>, sig: List<(String, @)>) -> List<(String, @)> {
+  match xs { (h, t) => bindsAll(t, binds(h, sig)), _ => sig, }
+};
+func binds(a: parse.Ast, sig: List<(String, @)>) -> List<(String, @)> {
+  match a {
+    .assign(s) => binds(s.v, bind(sig, s.nm, 1)),
+    .iassign(s) => binds(s.v, bindsAll(s.ix, sig)),
+    .sysassign(s) => binds(s.v, sig),
+    .monad(m) => binds(m.r, sig),
+    .dyad(d) => binds(d.l, binds(d.r, sig)),
+    .index(ix) => bindsAll(ix.ix, binds(ix.a, sig)),
+    .stmts(ss) => bindsAll(ss, sig),
+    .header(h) => bind(sig, h.nm, headerClass(h)),
+    _ => sig,
+  }
+};
+func isHeader(a: parse.Ast) -> Bool { match a { .header(h) => true, _ => false, } };
+func isFnend(a: parse.Ast) -> Bool { match a { .fnend => true, _ => false, } };
+func dropN(cs: List<UniChar>, n: @) -> List<UniChar> {
+  if n == 0 { cs } else { match cs { (h, t) => dropN(t, n - 1), _ => ~, } }
+};
+func stripPrompt(line: String) -> String { utf8(dropN(line.chars(), 2)).trim() };
+
+// P0 STUB evaluator: a bare numeral answers itself, anything else
+// %unimplemented. P3 replaces it.
 func isDigits(bs: List<Byte>) -> Bool {
   match bs {
     (h, t) => if h < '0' { false } else { if h > '9' { false } else { isDigits(t) } },
@@ -26,15 +63,40 @@ func evalLine(line: String) -> String {
     if isDigits(t.bytes()) { t } else { "%unimplemented" }
   }
 };
-func session(lines: List<String>) -> String {
+
+// one line: (what it prints, the session after it)
+func stepLine(line: String, s: Sess) -> (String, Sess) {
+  let green = line.starts-with("🍏>");
+  let red = line.starts-with("🍎>");
+  let src = if green or red { stripPrompt(line) } else { line };
+  if s.defn {
+    match parse.parseLine(src, s.sig) {
+      .ok(a) => if isFnend(a) { ("", Sess( sig: s.sig, defn: false )) } else { ("", s) },
+      .err(e) => ("", s),
+    }
+  } else {
+    match parse.parseLine(src, s.sig) {
+      .err(e) => (e.tag + " col:{e.col} " + e.hint, s),
+      .ok(a) => {
+        let out = if green { parse.showAst(a) } else { evalLine(src) };
+        (out, Sess( sig: binds(a, s.sig), defn: isHeader(a) ))
+      },
+    }
+  }
+};
+func sessionFrom(lines: List<String>, s: Sess) -> String {
   match lines {
-    (h, t) => match t {
-      (h2, t2) => evalLine(h) + "\1e" + session(t),
-      _ => evalLine(h),
+    (h, t) => match stepLine(h, s) {
+      (out, s2) => match t {
+        (h2, t2) => out + "\1e" + sessionFrom(t, s2),
+        _ => out,
+      },
     },
     _ => "",
   }
 };
+func session(lines: List<String>) -> String { sessionFrom(lines, Sess( sig: ~, defn: false )) };
+
 // the lex corpus (tests/lex): one token dump per input line
 func lexLines(lines: List<String>) -> String {
   match lines {
