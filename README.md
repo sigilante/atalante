@@ -4,7 +4,7 @@
 
 ![](./logo.jpg)
 
-Atalante (ATL for short) is an implementation of APL in Urbit, written in Jock.  It compiles ATL/APL source to Nock and runs as a NockApp kernel.  We call Atalante's idiosyncratic APL ATL/APL.  The dialect is [`docs/spec/dialect.md`](docs/spec/dialect.md), the order of work is [`docs/plan.md`](docs/plan.md), and the v0.1.0 release is [`docs/release-v0.1.md`](docs/release-v0.1.md).
+Atalante (ATL for short) is an implementation of APL in Urbit, written in Jock.  It compiles ATL/APL source to Nock and runs as a NockApp kernel.  We call Atalante's idiosyncratic APL ATL/APL.  The dialect is [`docs/spec/dialect.md`](docs/spec/dialect.md), the order of work is [`docs/plan.md`](docs/plan.md), and the v0.1 releases are in [`docs/release-v0.1.md`](docs/release-v0.1.md).
 
 At the apple prompt:
 
@@ -65,7 +65,13 @@ The green prompt `🍏>` prints a line's tree instead of evaluating it, and `:no
 
 ## Run it
 
-The REPL is a NockApp kernel hosted by jojo and driven from tmux.  [`docs/repl.md`](docs/repl.md) is the guide.
+The REPL is a NockApp kernel hosted by [jojo](https://github.com/sigilante/jojo) and driven from tmux.  [`docs/repl.md`](docs/repl.md) is the guide.  The shortest way in needs no Jock toolchain: jojo stages the built kernel as `atalante.jam` beside its Jock REPL jams, with a manifest of what the jam embeds.
+
+```
+cd jojo && cargo run --release -- --prompt '🍎> ' atalante.jam
+```
+
+From this repository, building the kernel yourself:
 
 ```
 tools/atlc.sh kernel        # build out/atl-kernel.jam (~3.5 min)
@@ -73,7 +79,7 @@ tools/atl-repl.sh start     # boot it under jojo in tmux session `atl` (~75 s)
 tmux attach -t atl          # type at the 🍎> prompt; F5 toggles it to 🍏> and back
 ```
 
-Prerequisites, each at the commit [`vendor/TOOLCHAIN.txt`](vendor/TOOLCHAIN.txt) names:
+The prompt is the mode: `🍎>` evaluates, `🍏>` prints trees, and `)TOGGLE` (F5 in the tmux session) switches.  Prerequisites for the build, each at the commit [`vendor/TOOLCHAIN.txt`](vendor/TOOLCHAIN.txt) names:
 
 - a Jock checkout, pointed at by `JOCK`, with `honk-codex` and `honk-kick` installed;
 - a jojo checkout with a release build, pointed at by `JOJO`, for the REPL;
