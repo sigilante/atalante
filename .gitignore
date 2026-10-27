@@ -3,3 +3,6 @@ nec/
 bud/
 wes/
 piers/
+
+# generated corpus programs
+tests/gen/

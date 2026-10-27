@@ -1,0 +1,42 @@
+// atl.jock — the Atalante session entry.
+//
+// P0: the pipeline skeleton with a STUB evaluator. `session` takes the
+// lines of one corpus case (tests/atl/README.md) and answers one output
+// record per input line, records separated by \1e (RS). `corpus` runs
+// several cases and separates them with \1d (GS), the case name first,
+// then \1f (US), then the session's records. tools/atlc.py splits them.
+//
+// The stub answers a bare numeral line with the numeral and every other
+// line with %unimplemented, so the P0 exit test (the `trivial` case
+// passing end to end) measures the harness and nothing else. P1 replaces
+// evalLine with the lexer; P2 with the parser; P3 onward with the real
+// thing.
+func isDigits(bs: List<Byte>) -> Bool {
+  match bs {
+    (h, t) => if h < '0' { false } else { if h > '9' { false } else { isDigits(t) } },
+    _ => true,
+  }
+};
+func evalLine(line: String) -> String {
+  let t = line.trim();
+  if t.len() == 0 { "" } else {
+    if isDigits(t.bytes()) { t } else { "%unimplemented" }
+  }
+};
+func session(lines: List<String>) -> String {
+  match lines {
+    (h, t) => match t {
+      (h2, t2) => evalLine(h) + "\1e" + session(t),
+      _ => evalLine(h),
+    },
+    _ => "",
+  }
+};
+func corpus(cases: List<(String, List<String>)>) -> String {
+  match cases {
+    (c, rest) => match c {
+      (name, lines) => "\1d" + name + "\1f" + session(lines) + corpus(rest),
+    },
+    _ => "",
+  }
+};

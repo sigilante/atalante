@@ -1,0 +1,7 @@
+∇ R←A DIV B
+R←A÷B
+∇
+5 DIV 6
+⍝ expect: 0.8333333333
+1 2 3 DIV 2
+⍝ expect: 0.5 1 1.5

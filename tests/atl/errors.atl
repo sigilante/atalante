@@ -1,0 +1,12 @@
+1 2+1 2 3
+⍝ refuse: %length-error
+foo
+⍝ refuse: %value-error
+(2 2⍴⍳4)+1 2 3
+⍝ refuse: %rank-error
+'a'+1
+⍝ refuse: %domain-error
+(⍳3)[5]
+⍝ refuse: %index-error
+1 2 3 ÷
+⍝ refuse: %syntax-error

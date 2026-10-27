@@ -1,0 +1,9 @@
+n ← 4 5 6 7
+n
+⍝ expect: 4 5 6 7
+n+4
+⍝ expect: 8 9 10 11
+4+n
+⍝ expect: 8 9 10 11
+n+n
+⍝ expect: 8 10 12 14

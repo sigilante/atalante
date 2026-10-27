@@ -1,0 +1,9 @@
+∇ E←K CAESAR P;A;S
+A←'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+S←(K⌽A),A
+E←S[A⍳P]
+∇
+3 CAESAR 'HELLO'
+⍝ expect: KHOOR
+A
+⍝ refuse: %value-error

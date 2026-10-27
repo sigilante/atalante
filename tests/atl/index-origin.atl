@@ -1,0 +1,10 @@
+⎕IO ← 0
+⍳4
+⍝ expect: 0 1 2 3
+(2 3 5)[1]
+⍝ expect: 3
+⎕IO ← 1
+⍳4
+⍝ expect: 1 2 3 4
+⎕IO ← 2
+⍝ refuse: %domain-error
