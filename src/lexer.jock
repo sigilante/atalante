@@ -44,7 +44,7 @@ func isNameTail(c: @) -> Bool { isLetter(c) or isDigit(c) or c == 175 };  // ¯ 
 // canonical codepoint of a function/operator glyph, 0 if none (D-41..D-43, D-9)
 func canon(c: @) -> @ {
   match c {
-    63 => 63,  // ?
+    63   => 63,    // ?
     8968 => 8968,  // ⌈
     8970 => 8970,  // ⌊
     9076 => 9076,  // ⍴
@@ -53,10 +53,10 @@ func canon(c: @) -> @ {
     9075 => 9075,  // ⍳
     8902 => 8902,  // ⋆
     8722 => 8722,  // −
-    43 => 43,  // +
-    215 => 215,  // ×
-    247 => 247,  // ÷
-    44 => 44,  // ,
+    43   => 43,    // +
+    215  => 215,   // ×
+    247  => 247,   // ÷
+    44   => 44,    // ,
     9017 => 9017,  // ⌹
     9675 => 9675,  // ○
     9055 => 9055,  // ⍟
@@ -67,7 +67,7 @@ func canon(c: @) -> @ {
     9038 => 9038,  // ⍎
     9045 => 9045,  // ⍕
     9033 => 9033,  // ⍉
-    33 => 33,  // !
+    33   => 33,    // !
     8801 => 8801,  // ≡
     9066 => 9066,  // ⍪
     8714 => 8714,  // ∊
@@ -76,14 +76,14 @@ func canon(c: @) -> @ {
     8595 => 8595,  // ↓
     8869 => 8869,  // ⊥
     8868 => 8868,  // ⊤
-    92 => 92,  // \
-    47 => 47,  // /
-    168 => 168,  // ¨
-    60 => 60,  // <
+    92   => 92,    // \
+    47   => 47,    // /
+    168  => 168,   // ¨
+    60   => 60,    // <
     8804 => 8804,  // ≤
-    61 => 61,  // =
+    61   => 61,    // =
     8805 => 8805,  // ≥
-    62 => 62,  // >
+    62   => 62,    // >
     8800 => 8800,  // ≠
     8744 => 8744,  // ∨
     8743 => 8743,  // ∧
@@ -93,14 +93,14 @@ func canon(c: @) -> @ {
     8866 => 8866,  // ⊢
     9023 => 9023,  // ⌿
     9024 => 9024,  // ⍀
-    46 => 46,  // .
+    46   => 46,    // .
     8728 => 8728,  // ∘
-    45 => 8722,  // - is − (D-9)
-    42 => 8902,  // * is ⋆ (D-9)
-    124 => 8739,  // | is ∣ (D-9)
-    126 => 8764,  // ~ is ∼ (D-9)
+    45   => 8722,  // - is − (D-9)
+    42   => 8902,  // * is ⋆ (D-9)
+    124  => 8739,  // | is ∣ (D-9)
+    126  => 8764,  // ~ is ∼ (D-9)
     8712 => 8714,  // ∈ is ∊ (D-9)
-    _ => 0,
+    _    => 0,
   }
 };
 
@@ -199,39 +199,39 @@ func tok(k: Kind, s: String, cp: @, col: @) -> Token { Token( kind: k, text: s, 
 func lexFrom(cs: List<@>, col: @, bol: Bool, acc: List<Token>) -> Lexed {
   match cs {
     (c, rest) => match c {
-      32 => lexFrom(rest, col + 1, bol, acc),                                            // space
-      9 => lexFrom(rest, col + 1, bol, acc),                                             // tab
-      9053 => Lexed.ok(revToks(acc, ~)),                                                 // ⍝ comment (D-7)
-      8900 => lexFrom(rest, col + 1, false, (tok(Kind.diamond, "⋄", 0, col), acc)),      // ⋄
-      8592 => lexFrom(rest, col + 1, false, (tok(Kind.assign, "←", 0, col), acc)),       // ←
-      8711 => lexFrom(rest, col + 1, false, (tok(Kind.del, "∇", 0, col), acc)),          // ∇
-      40 => lexFrom(rest, col + 1, false, (tok(Kind.lparen, "(", 0, col), acc)),
-      41 => if bol and headIs(rest, isLetter) {                                          // )CMD (D-61)
-          match scanName(rest) { (nm, r, n) => lexFrom(r, col + 1 + n, false, (tok(Kind.cmd, text(nm), 0, col), acc)), }
-        } else { lexFrom(rest, col + 1, false, (tok(Kind.rparen, ")", 0, col), acc)) },
-      91 => lexFrom(rest, col + 1, false, (tok(Kind.lbrack, "[", 0, col), acc)),
-      93 => lexFrom(rest, col + 1, false, (tok(Kind.rbrack, "]", 0, col), acc)),
-      59 => lexFrom(rest, col + 1, false, (tok(Kind.semi, ";", 0, col), acc)),
-      175 => if headIs(rest, isDigit) { numeral(cs, col, true, bol, acc) }               // ¯n (D-3)
-        else { Lexed.err(LexErr( tag: "%syntax-error", col: col, hint: "¯ is the negative sign of a numeral; − subtracts (D-3)" )) },
-      46 => if headIs(rest, isDigit) { Lexed.err(LexErr( tag: "%syntax-error", col: col, hint: "a numeral needs a digit before the point (D-3)" )) }
-        else { lexFrom(rest, col + 1, false, (tok(Kind.glyph, ".", 46, col), acc)) },     // . the operator
-      39 => match scanChr(rest, ~, 0) {                                                  // 'chars' (D-5)
-          (closed, body, r, n) => if closed { lexFrom(r, col + 1 + n, false, (tok(Kind.chr, text(body), 0, col), acc)) }
-            else { Lexed.err(LexErr( tag: "%syntax-error", col: col, hint: "unterminated character literal (D-5)" )) },
-        },
-      9109 => match scanName(rest) {                                                     // ⎕NAME (D-60)
-          (nm, r, n) => if n == 0 { Lexed.err(LexErr( tag: "%syntax-error", col: col, hint: "⎕ needs a name (D-60)" )) }
-            else { lexFrom(r, col + 1 + n, false, (tok(Kind.quad, text(nm), 0, col), acc)) },
-        },
-      _ => if isDigit(c) { numeral(cs, col, false, bol, acc) }
-        else if isLetter(c) {                                                            // name (D-2)
-          match scanName(cs) { (nm, r, n) => lexFrom(r, col + n, false, (tok(Kind.name, text(nm), 0, col), acc)), }
-        } else {
-          let k = canon(c);
-          if k == 0 { Lexed.err(LexErr( tag: "%syntax-error", col: col, hint: "not an ATL glyph" )) }
-          else { lexFrom(rest, col + 1, false, (tok(Kind.glyph, text([k]), k, col), acc)) }
-        },
+      32   => lexFrom(rest, col + 1, bol, acc),                                              // space
+      9    => lexFrom(rest, col + 1, bol, acc),                                              // tab
+      9053 => Lexed.ok(revToks(acc, ~)),                                                     // ⍝ comment (D-7)
+      8900 => lexFrom(rest, col + 1, false, (tok(Kind.diamond, "⋄", 0, col), acc)),          // ⋄
+      8592 => lexFrom(rest, col + 1, false, (tok(Kind.assign, "←", 0, col), acc)),           // ←
+      8711 => lexFrom(rest, col + 1, false, (tok(Kind.del, "∇", 0, col), acc)),              // ∇
+      40   => lexFrom(rest, col + 1, false, (tok(Kind.lparen, "(", 0, col), acc)),
+      41   => if bol and headIs(rest, isLetter) {                                            // )CMD (D-61)
+                match scanName(rest) { (nm, r, n) => lexFrom(r, col + 1 + n, false, (tok(Kind.cmd, text(nm), 0, col), acc)), }
+              } else { lexFrom(rest, col + 1, false, (tok(Kind.rparen, ")", 0, col), acc)) },
+      91   => lexFrom(rest, col + 1, false, (tok(Kind.lbrack, "[", 0, col), acc)),
+      93   => lexFrom(rest, col + 1, false, (tok(Kind.rbrack, "]", 0, col), acc)),
+      59   => lexFrom(rest, col + 1, false, (tok(Kind.semi, ";", 0, col), acc)),
+      175  => if headIs(rest, isDigit) { numeral(cs, col, true, bol, acc) }                  // ¯n (D-3)
+              else { Lexed.err(LexErr( tag: "%syntax-error", col: col, hint: "¯ is the negative sign of a numeral; − subtracts (D-3)" )) },
+      46   => if headIs(rest, isDigit) { Lexed.err(LexErr( tag: "%syntax-error", col: col, hint: "a numeral needs a digit before the point (D-3)" )) }
+              else { lexFrom(rest, col + 1, false, (tok(Kind.glyph, ".", 46, col), acc)) },  // . the operator
+      39   => match scanChr(rest, ~, 0) {                                                    // 'chars' (D-5)
+                (closed, body, r, n) => if closed { lexFrom(r, col + 1 + n, false, (tok(Kind.chr, text(body), 0, col), acc)) }
+                                        else { Lexed.err(LexErr( tag: "%syntax-error", col: col, hint: "unterminated character literal (D-5)" )) },
+                },
+      9109 => match scanName(rest) {                                                         // ⎕NAME (D-60)
+                (nm, r, n) => if n == 0 { Lexed.err(LexErr( tag: "%syntax-error", col: col, hint: "⎕ needs a name (D-60)" )) }
+                  else { lexFrom(r, col + 1 + n, false, (tok(Kind.quad, text(nm), 0, col), acc)) },
+              },
+      _    => if isDigit(c) { numeral(cs, col, false, bol, acc) }
+              else if isLetter(c) {                                                          // name (D-2)
+                match scanName(cs) { (nm, r, n) => lexFrom(r, col + n, false, (tok(Kind.name, text(nm), 0, col), acc)), }
+              } else {
+                let k = canon(c);
+                if k == 0 { Lexed.err(LexErr( tag: "%syntax-error", col: col, hint: "not an ATL glyph" )) }
+                else { lexFrom(rest, col + 1, false, (tok(Kind.glyph, text([k]), k, col), acc)) }
+              },
     },
     _ => Lexed.ok(revToks(acc, ~)),
   }
