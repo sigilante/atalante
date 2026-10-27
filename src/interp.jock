@@ -13,8 +13,12 @@ import lagoon;
 import array;
 import parse;
 
-// a tradfn: its header and its body lines, kept as SOURCE (D-34: compiled on call)
-struct Fndef { h: parse.Header, body: List<String> };
+// a tradfn: its header, its body lines kept as SOURCE, and the compile
+// cache (D-34): the trees of the last compilation and the signature they
+// were compiled against. A call whose entry signature equals the key runs
+// the trees; any other signature re-parses, which is what invalidates the
+// cache when a name the body reads changes class.
+struct Fndef { h: parse.Header, body: List<String>, cached: Bool, ckey: List<(String, @)>, cast: List<parse.Ast> };
 struct Env {
   store: List<(String, array.Arr)>,    // arrays by name
   io: @, pp: @,                        // ⎕IO, ⎕PP
@@ -26,6 +30,7 @@ struct Env {
 struct EErr { tag: String, hint: String };
 enum Ev { err(EErr), ok((array.Arr, Env)) };
 enum EnvR { err(EErr), ok(Env) };
+enum BodyR { err(EErr), ok((List<parse.Ast>, Env)) };
 enum Evs { err(EErr), ok((List<array.Arr>, Env)) };
 enum Parts { err(EErr), ok((List<List<@>>, List<@>, Env)) };
 
@@ -929,14 +934,14 @@ func headerClass(h: parse.Header) -> @ { if h.lft == "" { if h.rgt == "" { 5 } e
 func defineStart(h: parse.Header, env: Env) -> Env { setPending(env, h, ~) };
 func defineLine(line: String, env: Env) -> Env { setPending(env, env.phdr, (line, env.pend)) };
 func defineEnd(env: Env) -> Env {
-  let d = Fndef( h: env.phdr, body: revS(env.pend, ~) );
+  let d = Fndef( h: env.phdr, body: revS(env.pend, ~), cached: false, ckey: ~, cast: ~ );
   setPending(setFns(env, putFn(env.fns, env.phdr.nm, d)), noHeader(), ~)
 };
 func putFn(fs: List<(String, Fndef)>, nm: String, d: Fndef) -> List<(String, Fndef)> {
   match fs { ((n, w), t) => if n == nm { ((nm, d), t) } else { ((n, w), putFn(t, nm, d)) }, _ => [(nm, d)], }
 };
 func lookupFn(fs: List<(String, Fndef)>, nm: String) -> (Bool, Fndef) {
-  match fs { ((n, d), t) => if n == nm { (true, d) } else { lookupFn(t, nm) }, _ => (false, Fndef( h: noHeader(), body: ~ )), }
+  match fs { ((n, d), t) => if n == nm { (true, d) } else { lookupFn(t, nm) }, _ => (false, Fndef( h: noHeader(), body: ~, cached: false, ckey: ~, cast: ~ )), }
 };
 // the parser's signature for the environment as it stands (D-52)
 func sigOf(env: Env) -> List<(String, @)> { sigFns(env.fns, sigStore(env.store, ~)) };
@@ -973,16 +978,21 @@ func callUser(nm: String, dyadic: Bool, monadic: Bool, a: array.Arr, b: array.Ar
       let st0 = unbindAll(env.store, localNames(h));
       let st1 = if monadic { put(st0, h.rgt, b) } else { st0 };
       let st2 = if dyadic { put(st1, h.lft, a) } else { st1 };
-      match runBody(d.body, setStore(env, st2)) {
+      let entry = setStore(env, st2);
+      let key = sigOf(entry);
+      let hit = d.cached and d.ckey == key;
+      let ran = if hit { runAsts(d.cast, entry, ~) } else { runBodyCollect(d.body, entry, ~) };
+      match ran {
         .err(e) => Ev.err(e),
-        .ok(env2) => match lookup(env2.store, h.res) {
+        .ok(r) => match r { (asts, env2) => match lookup(env2.store, h.res) {
           (hasRes, res) => {
-            let env3 = setStore(env2, restoreLocals(saved, env2.store, localNames(h)));
+            let fresh = Fndef( h: h, body: d.body, cached: true, ckey: key, cast: asts );
+            let env3 = setFns(setStore(env2, restoreLocals(saved, env2.store, localNames(h))), if hit { env2.fns } else { putFn(env2.fns, nm, fresh) });
             if h.res == "" { fail("%value-error", nm + " returns no result") }
             else if not hasRes { fail("%value-error", nm + " did not set its result " + h.res) }
             else { okv(res, env3) }
           },
-        },
+        }, },
       }
     },
   }
@@ -990,16 +1000,25 @@ func callUser(nm: String, dyadic: Bool, monadic: Bool, a: array.Arr, b: array.Ar
 func unbindAll(st: List<(String, array.Arr)>, names: List<String>) -> List<(String, array.Arr)> {
   match names { (n, rest) => unbindAll(delStore(st, n), rest), _ => st, }
 };
-// the body, one line at a time, each parsed against the signature as it stands (D-34)
-func runBody(lines: List<String>, env: Env) -> EnvR {
+// the body, one line at a time, each parsed against the signature as it
+// stands (D-34);  the trees come back for the cache, in order
+func runBodyCollect(lines: List<String>, env: Env, acc: List<parse.Ast>) -> BodyR {
   match lines {
     (line, rest) => match parse.parseLine(line, sigOf(env)) {
-      .err(e) => EnvR.err(EErr( tag: e.tag, hint: e.hint )),
-      .ok(a) => match runBodyStmt(a, env) { .err(e) => EnvR.err(e), .ok(env2) => runBody(rest, env2), },
+      .err(e) => BodyR.err(EErr( tag: e.tag, hint: e.hint )),
+      .ok(a) => match runBodyStmt(a, env) { .err(e) => BodyR.err(e), .ok(env2) => runBodyCollect(rest, env2, (a, acc)), },
     },
-    _ => EnvR.ok(env),
+    _ => BodyR.ok((revAsts(acc, ~), env)),
   }
 };
+// a cached body:  the trees, no parsing
+func runAsts(asts: List<parse.Ast>, env: Env, acc: List<parse.Ast>) -> BodyR {
+  match asts {
+    (a, rest) => match runBodyStmt(a, env) { .err(e) => BodyR.err(e), .ok(env2) => runAsts(rest, env2, (a, acc)), },
+    _ => BodyR.ok((revAsts(acc, ~), env)),
+  }
+};
+func revAsts(xs: List<parse.Ast>, acc: List<parse.Ast>) -> List<parse.Ast> { match xs { (h, t) => revAsts(t, (h, acc)), _ => acc, } };
 func runBodyStmt(a: parse.Ast, env: Env) -> EnvR {
   match a {
     .empty => EnvR.ok(env),

@@ -1,0 +1,25 @@
+G ← 10
+∇ Z←F B
+Z←G+B
+∇
+F 1
+⍝ expect: 11
+F 2
+⍝ expect: 12
+∇ Z←G B
+Z←B×2
+∇
+F 1
+⍝ expect: 2
+∇ Z←F B
+Z←B-1
+∇
+F 1
+⍝ expect: 0
+∇ Z←COUNT B
+Z←+/⍳B
+2×B
+∇
+COUNT 3
+⍝ expect: 6
+⍝ expect: 6
