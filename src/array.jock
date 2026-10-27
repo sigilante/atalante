@@ -42,6 +42,48 @@ func anyZip(xs: List<@>, ys: List<@>, p: (@, @) -> Bool) -> Bool {
 func mapArr(a: Arr, k: @, f: @ -> @) -> Arr { make(k, shape(a), turnL(vals(a), f)) };
 func zipArr(a: Arr, b: Arr, k: @, f: (@, @) -> @) -> Arr { make(k, shape(a), zipL(vals(a), vals(b), f)) };
 
+
+// --- more list and index helpers (P4) -------------------------------------------------
+func nth(xs: List<@>, i: @) -> @ { match xs { (h, t) => if i == 0 { h } else { nth(t, i - 1) }, _ => 0, } };
+func takeL(xs: List<@>, n: @) -> List<@> { if n == 0 { ~ } else { match xs { (h, t) => (h, takeL(t, n - 1)), _ => ~, } } };
+func dropL(xs: List<@>, n: @) -> List<@> { if n == 0 { xs } else { match xs { (h, t) => dropL(t, n - 1), _ => ~, } } };
+func revL(xs: List<@>, acc: List<@>) -> List<@> { match xs { (h, t) => revL(t, (h, acc)), _ => acc, } };
+func catL(a: List<@>, b: List<@>) -> List<@> { match a { (h, t) => (h, catL(t, b)), _ => b, } };
+func repL(x: @, n: @) -> List<@> { if n == 0 { ~ } else { (x, repL(x, n - 1)) } };
+// n elements drawn cyclically from xs (xs non-empty)
+func cycleL(xs: List<@>, n: @, i: @, len: @) -> List<@> { if i == n { ~ } else { (nth(xs, i % len), cycleL(xs, n, i + 1, len)) } };
+func chunks(xs: List<@>, n: @) -> List<List<@>> { match xs { (h, t) => (takeL(xs, n), chunks(dropL(xs, n), n)), _ => ~, } };
+func flatten(xss: List<List<@>>) -> List<@> { match xss { (r, rest) => catL(r, flatten(rest)), _ => ~, } };
+func countLL(xss: List<List<@>>) -> @ { match xss { (r, rest) => 1 + countLL(rest), _ => 0, } };
+func colOf(rows: List<List<@>>, j: @) -> List<@> { match rows { (r, rest) => (nth(r, j), colOf(rest, j)), _ => ~, } };
+func colsOf(rows: List<List<@>>, ncols: @, j: @) -> List<List<@>> { if j == ncols { ~ } else { (colOf(rows, j), colsOf(rows, ncols, j + 1)) } };
+func iotaL(n: @, from: @) -> List<@> { if n == 0 { ~ } else { (from, iotaL(n - 1, from + 1)) } };
+func lastL(xs: List<@>) -> @ { match xs { (h, t) => match t { (h2, t2) => lastL(t), _ => h, }, _ => 0, } };
+func initL(xs: List<@>) -> List<@> { match xs { (h, t) => match t { (h2, t2) => (h, initL(t)), _ => ~, }, _ => ~, } };
+func fillOf(k: @) -> @ { if k == 4 { 32 } else { 0 } };
+// row-major index arithmetic
+func flatIx(shp: List<@>, ix: List<@>) -> @ {
+  match shp { (d, ds) => match ix { (i, irest) => i * size(ds) + flatIx(ds, irest), _ => 0, }, _ => 0, }
+};
+func unflatIx(shp: List<@>, k: @) -> List<@> {
+  match shp { (d, ds) => { let s = size(ds); ((k / s) % d, unflatIx(ds, k % s)) }, _ => ~, }
+};
+// every combination of one element from each part, first part slowest
+func cartesian(parts: List<List<@>>) -> List<List<@>> {
+  match parts {
+    (p, rest) => match rest { (p2, r2) => prefixAll(p, cartesian(rest)), _ => singles(p), },
+    _ => [~],
+  }
+};
+func singles(xs: List<@>) -> List<List<@>> { match xs { (h, t) => ([h], singles(t)), _ => ~, } };
+func prefixAll(xs: List<@>, tails: List<List<@>>) -> List<List<@>> {
+  match xs { (h, t) => catLL(prefixEach(h, tails), prefixAll(t, tails)), _ => ~, }
+};
+func prefixEach(h: @, tails: List<List<@>>) -> List<List<@>> { match tails { (tl, rest) => ((h, tl), prefixEach(h, rest)), _ => ~, } };
+func catLL(a: List<List<@>>, b: List<List<@>>) -> List<List<@>> { match a { (h, t) => (h, catLL(t, b)), _ => b, } };
+func lastDim(shp: List<@>) -> @ { match shp { (d, ds) => match ds { (d2, r) => lastDim(ds), _ => d, }, _ => 1, } };
+func firstDim(shp: List<@>) -> @ { match shp { (d, ds) => d, _ => 1, } };
+
 // --- scalars of each kind ------------------------------------------------------
 func isNeg(x: @) -> Bool { lagoon.tmsb(x) == 1 };                       // int2 sign
 func fbits(f: Float64) -> @ { f as! @ };

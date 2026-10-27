@@ -52,7 +52,10 @@ def parse_case(path):
         elif line.startswith("⍝ expect:"):
             if not steps:
                 sys.exit(f"{path}: expect before any input")
-            steps[-1][1].append(line[len("⍝ expect:"):].lstrip(" ") if line[len("⍝ expect:"):].strip() else "")
+            # exactly ONE space after the colon is the separator; the rest is
+            # the expected text, leading spaces included (right-aligned columns)
+            rest = line[len("⍝ expect:"):]
+            steps[-1][1].append(rest[1:] if rest.startswith(" ") else rest)
         elif line.startswith("⍝ refuse:"):
             if not steps:
                 sys.exit(f"{path}: refuse before any input")

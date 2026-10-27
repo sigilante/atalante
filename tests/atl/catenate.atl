@@ -1,0 +1,14 @@
+1 2,3
+⍝ expect: 1 2 3
+'ab','cd'
+⍝ expect: abcd
+(2 2⍴⍳4),9
+⍝ expect: 1 2 9
+⍝ expect: 3 4 9
+(2 2⍴⍳4),2 2⍴5
+⍝ expect: 1 2 5 5
+⍝ expect: 3 4 5 5
+1 2,'a'
+⍝ refuse: %nested-unsupported
+⍴1 2,3 4 5
+⍝ expect: 5

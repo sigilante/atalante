@@ -56,7 +56,7 @@ ATL/APL is the APL that Atalante compiles. It is Budd's compiler subset (Budd 19
 
 **D-23 · Bracket indexing.** `X[i]`, `M[i;j]`, `M[i;]`, `M[;j]`. Indices are arrays; the result shape is the catenation of the index shapes. An index outside `⎕IO`-based bounds is an INDEX ERROR. Indexed assignment `X[i] ← v` is v1. ⟨`parse/indexing` (parsing only)⟩
 
-**D-24 · Assignment `←` is an expression whose value is its right side.** At the top level a statement whose last act is an assignment prints nothing. Variables are global unless localised in a `∇` header (D-31). ⟨`parse/readme`, `parse/statements` (parsing only)⟩
+**D-24 · Assignment `←` is an expression whose value is its right side.** At the top level a statement whose last act is an assignment prints nothing. Variables are global unless localised in a `∇` header (D-31). ⟨`parse/readme`, `parse/statements`, `atl/indexing` (indexed assignment), `atl/readme-red`⟩
 
 **D-25 · Scalar extension.** A scalar or one-element vector extends to the other argument's shape. Otherwise shapes must match exactly; a rank mismatch is a RANK ERROR, a length mismatch a LENGTH ERROR. ⟨`atl/vector-add`, `atl/errors`⟩
 
@@ -83,9 +83,9 @@ Monadic: `+` conjugate (identity), `−` negate, `×` signum, `÷` reciprocal, `
 Dyadic: `+ − × ÷ ⌈ ⌊ ∣ ⋆ ⍟ ○ !` and `< ≤ = ≥ > ≠ ∨ ∧ ⍱ ⍲`. `∣` is residue with APL's sign convention (`¯3∣5` is `¯1`). `A○B` covers the circular functions for `A ∈ ¯7..7` as in APL2. ⟨`atl/power-log`, `atl/residue-sign`, `atl/reduce-scan` (operands), `atl/errors`⟩
 
 **D-42 · Structural functions (v1).**
-`⍳B` index generator; `A⍳B` index-of; `⍴B` shape; `A⍴B` reshape (cyclic fill); `,B` ravel; `A,B` catenate on last axis; `⌽B`/`A⌽B` reverse/rotate last axis; `⊖`/`A⊖B` first axis; `⍉B` transpose (reverse axes); `A↑B` take, `A↓B` drop (negative counts from the end); `⍋B`, `⍒B` grade (stable); `A∊B` membership; `A/B` compress, `A\B` expand (Boolean left, replicate counts in v1 too); `A⊥B` decode, `A⊤B` encode; `A?B` deal; `⊣`, `⊢` left and right. ⟨none — UNPINNED⟩
+`⍳B` index generator; `A⍳B` index-of; `⍴B` shape; `A⍴B` reshape (cyclic fill); `,B` ravel; `A,B` catenate on last axis; `⌽B`/`A⌽B` reverse/rotate last axis; `⊖`/`A⊖B` first axis; `⍉B` transpose (reverse axes); `A↑B` take, `A↓B` drop (negative counts from the end); `⍋B`, `⍒B` grade (stable); `A∊B` membership; `A/B` compress, `A\B` expand (Boolean left, replicate counts in v1 too); `A⊥B` decode, `A⊤B` encode; `A?B` deal; `⊣`, `⊢` left and right. ⟨`atl/reshape`, `atl/take-drop-rotate`, `atl/grade`, `atl/compress-member`, `atl/encode-decode`, `atl/catenate`, `atl/sieve`, `atl/axes`⟩
 
-**D-43 · Operators (v1).** `f/` reduce last axis, `f⌿` first axis; `f\`, `f⍀` scan; `f.g` inner product; `∘.g` outer product; `f¨` each (over a flat array, each is the scalar map; it earns its keep in v2). Identity elements for reduce over empty come from `ast.md`'s table. ⟨none — UNPINNED⟩
+**D-43 · Operators (v1).** `f/` reduce last axis, `f⌿` first axis; `f\`, `f⍀` scan; `f.g` inner product; `∘.g` outer product; `f¨` each (over a flat array, each is the scalar map; it earns its keep in v2). Identity elements for reduce over empty come from `ast.md`'s table. ⟨`atl/reduce-scan`, `atl/outer-inner`, `atl/axes`, `atl/readme-red`⟩
 
 **D-44 · Held back from v1, with the reason.** `⌹` matrix divide (needs Lagoon or a float linear solver); `⍎` execute (needs the compiler in the runtime, plan P6 makes it cheap); `⍕` format (monadic only, for display, D-45); `⍷` find; `⍪` table/laminate; `≡` match and depth (match is cheap, depth is nested-only); `⍉` dyadic; `⌽` with axis `[k]`. Each enters with its three vectors or stays out.
 

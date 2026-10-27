@@ -16,6 +16,8 @@ import parse;
 struct Env { store: List<(String, array.Arr)>, io: @, pp: @ };
 struct EErr { tag: String, hint: String };
 enum Ev { err(EErr), ok((array.Arr, Env)) };
+enum Evs { err(EErr), ok((List<array.Arr>, Env)) };
+enum Parts { err(EErr), ok((List<List<@>>, List<@>, Env)) };
 
 func fail(tag: String, hint: String) -> Ev { Ev.err(EErr( tag: tag, hint: hint )) };
 func dom(hint: String) -> Ev { fail("%domain-error", hint) };
@@ -282,6 +284,547 @@ func monadPrim(cp: @, a: array.Arr, env: Env) -> Ev {
   }
 };
 
+// --- function application (D-21, D-43) ----------------------------------------------------
+func isScalarMonad(cp: @) -> Bool {
+  cp == 43 or cp == 8722 or cp == 215 or cp == 247 or cp == 8968 or cp == 8970 or cp == 8739
+  or cp == 8902 or cp == 9055 or cp == 9675 or cp == 33 or cp == 8764
+};
+func applyMonad(f: parse.Fn, a: array.Arr, env: Env) -> Ev {
+  match f {
+    .prim(cp) => if isScalarMonad(cp) { monadPrim(cp, a, env) } else { monadStruct(cp, a, env) },
+    .reduce(g) => reduce(g, a, false, env),
+    .reduce1(g) => reduce(g, a, true, env),
+    .scan(g) => scan(g, a, false, env),
+    .scan1(g) => scan(g, a, true, env),
+    .each(g) => applyMonad(g, a, env),
+    .inner(i) => nyi("monadic inner product"),
+    .outer(g) => nyi("monadic outer product"),
+    .user(nm) => nyi("user function " + nm),
+  }
+};
+func applyDyad(f: parse.Fn, a: array.Arr, b: array.Arr, env: Env) -> Ev {
+  match f {
+    .prim(cp) => if isScalarFn(cp) { dyadPrim(cp, a, b, env) } else { dyadStruct(cp, a, b, env) },
+    .each(g) => applyDyad(g, a, b, env),
+    .inner(i) => inner(i.f, i.g, a, b, env),
+    .outer(g) => outer(g, a, b, env),
+    .reduce(g) => nyi("n-wise reduction"),
+    .reduce1(g) => nyi("n-wise reduction"),
+    .scan(g) => nyi("dyadic scan"),
+    .scan1(g) => nyi("dyadic scan"),
+    .user(nm) => nyi("user function " + nm),
+  }
+};
+// a scalar function as a value: f on two SCALARS, the result's single element and kind
+func mk(k: @, shp: List<@>, vs: List<@>) -> array.Arr { array.make(k, shp, vs) };
+func vec(k: @, vs: List<@>) -> array.Arr { array.make(k, [array.count(vs)], vs) };
+func sc(k: @, v: @) -> array.Arr { array.scalar(k, v) };
+func natArg(a: array.Arr, what: String) -> (Bool, @) {
+  if a.kind == 1 and array.size(array.shape(a)) == 1 { (true, array.first(a)) } else { (false, 0) }
+};
+// an integer argument that may be negative:  (ok, negative, magnitude)
+func intArg(a: array.Arr) -> (Bool, Bool, @) {
+  if array.size(array.shape(a)) != 1 { (false, false, 0) }
+  else {
+    let x = array.first(a);
+    match a.kind { 1 => (true, false, x), 2 => (true, array.isNeg(x), lagoon.tabs(x)), _ => (false, false, 0), }
+  }
+};
+func natVec(a: array.Arr) -> (Bool, List<@>) {
+  if a.kind == 1 and array.rank(a) <= 1 { (true, array.vals(a)) } else { (false, ~) }
+};
+
+// --- monadic structural functions (D-42) --------------------------------------------------
+func monadStruct(cp: @, a: array.Arr, env: Env) -> Ev {
+  match cp {
+    9075 => match natArg(a, "⍳") { (ok, n) => if ok { okv(vec(1, array.iotaL(n, env.io)), env) } else { dom("⍳ takes a non-negative integer scalar") }, },   // ⍳
+    9076 => okv(vec(1, array.shape(a)), env),                                                   // ⍴
+    44   => okv(vec(a.kind, array.vals(a)), env),                                               // , ravel
+    8714 => okv(vec(a.kind, array.vals(a)), env),                                               // ∊ enlist (flat: ravel)
+    9021 => okv(reverseLast(a), env),                                                           // ⌽
+    8854 => okv(reverseFirst(a), env),                                                          // ⊖
+    9033 => okv(transposeArr(a), env),                                                          // ⍉
+    9035 => grade(a, true, env),                                                                // ⍋
+    9042 => grade(a, false, env),                                                               // ⍒
+    8867 => okv(a, env),                                                                        // ⊣
+    8866 => okv(a, env),                                                                        // ⊢
+    _    => nyi("monadic " + lexerText(cp)),
+  }
+};
+func reverseLast(a: array.Arr) -> array.Arr {
+  if array.rank(a) == 0 { a } else {
+    let n = array.lastDim(array.shape(a));
+    mk(a.kind, array.shape(a), array.flatten(revRows(array.chunks(array.vals(a), n))))
+  }
+};
+func revRows(rows: List<List<@>>) -> List<List<@>> { match rows { (r, rest) => (array.revL(r, ~), revRows(rest)), _ => ~, } };
+func reverseFirst(a: array.Arr) -> array.Arr {
+  if array.rank(a) == 0 or array.size(array.shape(a)) == 0 { a } else {
+    let n = array.size(array.shape(a)) / array.firstDim(array.shape(a));
+    mk(a.kind, array.shape(a), array.flatten(revLL(array.chunks(array.vals(a), n), ~)))
+  }
+};
+func revLL(xss: List<List<@>>, acc: List<List<@>>) -> List<List<@>> { match xss { (h, t) => revLL(t, (h, acc)), _ => acc, } };
+func transposeArr(a: array.Arr) -> array.Arr {
+  if array.rank(a) <= 1 { a } else {
+    let shp = array.shape(a);
+    let tshp = array.revL(shp, ~);
+    let vs = array.vals(a);
+    mk(a.kind, tshp, transposeGather(shp, tshp, vs, 0, array.size(shp)))
+  }
+};
+func transposeGather(shp: List<@>, tshp: List<@>, vs: List<@>, k: @, n: @) -> List<@> {
+  if k == n { ~ } else { (array.nth(vs, array.flatIx(shp, array.revL(array.unflatIx(tshp, k), ~))), transposeGather(shp, tshp, vs, k + 1, n)) }
+};
+// stable insertion of (index, value) into a list sorted up or down
+func gradeIns(i: @, v: @, k: @, up: Bool, sorted: List<(@, @)>) -> List<(@, @)> {
+  match sorted {
+    ((j, w), t) => if (up and gtK(k, w, v)) or ((not up) and gtK(k, v, w)) { ((i, v), sorted) } else { ((j, w), gradeIns(i, v, k, up, t)) },
+    _ => [(i, v)],
+  }
+};
+func gradeAll(vs: List<@>, i: @, k: @, up: Bool, sorted: List<(@, @)>) -> List<(@, @)> {
+  match vs { (v, rest) => gradeAll(rest, i + 1, k, up, gradeIns(i, v, k, up, sorted)), _ => sorted, }
+};
+func gradeIdx(sorted: List<(@, @)>, io: @) -> List<@> { match sorted { ((i, v), t) => (i + io, gradeIdx(t, io)), _ => ~, } };
+func grade(a: array.Arr, up: Bool, env: Env) -> Ev {
+  if array.rank(a) != 1 { fail("%rank-error", "grade takes a vector") }
+  else { okv(vec(1, gradeIdx(gradeAll(array.vals(a), 0, a.kind, up, ~), env.io)), env) }
+};
+
+// --- dyadic structural functions (D-42) ----------------------------------------------------
+func dyadStruct(cp: @, a: array.Arr, b: array.Arr, env: Env) -> Ev {
+  match cp {
+    9075 => indexOf(a, b, env),                                                                 // A⍳B
+    9076 => reshape(a, b, env),                                                                 // A⍴B
+    44   => catenate(a, b, env),                                                                // A,B
+    9021 => rotate(a, b, false, env),                                                           // A⌽B
+    8854 => rotate(a, b, true, env),                                                            // A⊖B
+    8593 => takeDrop(a, b, true, env),                                                          // A↑B
+    8595 => takeDrop(a, b, false, env),                                                         // A↓B
+    8714 => member(a, b, env),                                                                  // A∊B
+    47   => compress(a, b, env),                                                                // A/B
+    92   => expand(a, b, env),                                                                  // A\B
+    8869 => decode(a, b, env),                                                                  // A⊥B
+    8868 => encode(a, b, env),                                                                  // A⊤B
+    8867 => okv(a, env),                                                                        // A⊣B
+    8866 => okv(b, env),                                                                        // A⊢B
+    _    => nyi("dyadic " + lexerText(cp)),
+  }
+};
+// equality of two elements of possibly different kinds (chars never equal numbers)
+func elemEq(ka: @, x: @, kb: @, y: @) -> Bool {
+  if (ka == 4) != (kb == 4) { false }
+  else if ka == 4 { x == y }
+  else {
+    let k = array.maxk(ka, kb);
+    eqK(k, promoteElem(ka, x, k), promoteElem(kb, y, k))
+  }
+};
+func promoteElem(from: @, x: @, to: @) -> @ {
+  if from == to { x } else if to == 3 { if from == 1 { array.natToReal(x) } else { array.intToReal(x) } } else { x }
+};
+func findIn(ka: @, xs: List<@>, kb: @, y: @, i: @) -> @ {
+  match xs { (x, rest) => if elemEq(ka, x, kb, y) { i } else { findIn(ka, rest, kb, y, i + 1) }, _ => i, }
+};
+func indexOf(a: array.Arr, b: array.Arr, env: Env) -> Ev {
+  if array.rank(a) != 1 { fail("%rank-error", "the left argument of ⍳ is a vector") }
+  else {
+    let xs = array.vals(a);
+    okv(mk(1, array.shape(b), indexAll(a.kind, xs, b.kind, array.vals(b), env.io)), env)
+  }
+};
+func indexAll(ka: @, xs: List<@>, kb: @, ys: List<@>, io: @) -> List<@> {
+  match ys { (y, rest) => (findIn(ka, xs, kb, y, 0) + io, indexAll(ka, xs, kb, rest, io)), _ => ~, }
+};
+func member(a: array.Arr, b: array.Arr, env: Env) -> Ev {
+  let ys = array.vals(b);
+  okv(mk(1, array.shape(a), memberAll(a.kind, array.vals(a), b.kind, ys, array.count(ys))), env)
+};
+func memberAll(ka: @, xs: List<@>, kb: @, ys: List<@>, n: @) -> List<@> {
+  match xs { (x, rest) => (if findIn(kb, ys, ka, x, 0) < n { 1 } else { 0 }, memberAll(ka, rest, kb, ys, n)), _ => ~, }
+};
+func reshape(a: array.Arr, b: array.Arr, env: Env) -> Ev {
+  match natVec(a) {
+    (ok, shp) => if not ok { dom("the left argument of ⍴ is a vector of non-negative integers") }
+    else {
+      let n = array.size(shp);
+      let vs = array.vals(b);
+      let len = array.count(vs);
+      if n == 0 { okv(mk(b.kind, shp, ~), env) }
+      else if len == 0 { okv(mk(b.kind, shp, array.repL(array.fillOf(b.kind), n)), env) }
+      else { okv(mk(b.kind, shp, array.cycleL(vs, n, 0, len)), env) }
+    },
+  }
+};
+func joinKind(a: array.Arr, b: array.Arr) -> @ { array.maxk(a.kind, b.kind) };
+func catenate(a0: array.Arr, b0: array.Arr, env: Env) -> Ev {
+  if (a0.kind == 4) != (b0.kind == 4) { fail("%nested-unsupported", "mixed character and number arrays are v2 (D-6)") }
+  else {
+    let k = joinKind(a0, b0);
+    let a = array.promote(a0, k);
+    let b = array.promote(b0, k);
+    let ra = array.rank(a);
+    let rb = array.rank(b);
+    if ra <= 1 and rb <= 1 { okv(vec(k, array.catL(array.vals(a), array.vals(b))), env) }
+    else if ra == 2 and rb == 2 {
+      if array.firstDim(array.shape(a)) != array.firstDim(array.shape(b)) { fail("%length-error", "rows differ") }
+      else {
+        let ca = array.lastDim(array.shape(a));
+        let cb = array.lastDim(array.shape(b));
+        let rows = catRows(array.chunks(array.vals(a), ca), array.chunks(array.vals(b), cb));
+        okv(mk(k, [array.firstDim(array.shape(a)), ca + cb], array.flatten(rows)), env)
+      }
+    }
+    else if ra == 2 and rb <= 1 { catColumn(a, b, true, k, env) }
+    else if rb == 2 and ra <= 1 { catColumn(b, a, false, k, env) }
+    else { nyi("catenating rank 3 and above") }
+  }
+};
+func catRows(xs: List<List<@>>, ys: List<List<@>>) -> List<List<@>> {
+  match xs { (r, rest) => match ys { (r2, rest2) => (array.catL(r, r2), catRows(rest, rest2)), _ => ~, }, _ => ~, }
+};
+// a matrix m and a scalar or vector v joined along the last axis;  v after m when `after`
+func catColumn(m: array.Arr, v: array.Arr, after: Bool, k: @, env: Env) -> Ev {
+  let nrows = array.firstDim(array.shape(m));
+  let ncols = array.lastDim(array.shape(m));
+  let vs = array.vals(v);
+  let col = if array.rank(v) == 0 { array.repL(array.first(v), nrows) } else { vs };
+  if array.count(col) != nrows { fail("%length-error", "a vector joins a matrix along its rows") }
+  else {
+    let rows = array.chunks(array.vals(m), ncols);
+    let joined = if after { catRows(rows, array.singles(col)) } else { catRows(array.singles(col), rows) };
+    okv(mk(k, [nrows, ncols + 1], array.flatten(joined)), env)
+  }
+};
+func rotateL(xs: List<@>, by: @) -> List<@> { array.catL(array.dropL(xs, by), array.takeL(xs, by)) };
+func rotate(a: array.Arr, b: array.Arr, first: Bool, env: Env) -> Ev {
+  match intArg(a) {
+    (ok, neg, mag) => if not ok { dom("the left argument of rotate is an integer scalar") }
+    else if array.rank(b) == 0 or array.size(array.shape(b)) == 0 { okv(b, env) }
+    else {
+      let shp = array.shape(b);
+      if first {
+        let n = array.firstDim(shp);
+        let by = if n == 0 { 0 } else if neg { (n - (mag % n)) % n } else { mag % n };
+        let rowlen = array.size(shp) / n;
+        okv(mk(b.kind, shp, array.flatten(rotLL(array.chunks(array.vals(b), rowlen), by))), env)
+      } else {
+        let n = array.lastDim(shp);
+        let by = if n == 0 { 0 } else if neg { (n - (mag % n)) % n } else { mag % n };
+        okv(mk(b.kind, shp, array.flatten(rotRows(array.chunks(array.vals(b), n), by))), env)
+      }
+    },
+  }
+};
+func rotRows(rows: List<List<@>>, by: @) -> List<List<@>> { match rows { (r, rest) => (rotateL(r, by), rotRows(rest, by)), _ => ~, } };
+func rotLL(rows: List<List<@>>, by: @) -> List<List<@>> {
+  if by == 0 { rows } else { match rows { (r, rest) => rotLL(array.catLL(rest, [r]), by - 1), _ => ~, } }
+};
+func takeDrop(a: array.Arr, b0: array.Arr, take: Bool, env: Env) -> Ev {
+  match intArg(a) {
+    (ok, neg, mag) => if not ok { dom("the left argument of ↑ and ↓ is an integer scalar") }
+    else if array.rank(b0) > 1 { nyi("take and drop on rank 2 and above") }
+    else {
+      let b = if array.rank(b0) == 0 { vec(b0.kind, [array.first(b0)]) } else { b0 };
+      let vs = array.vals(b);
+      let n = array.count(vs);
+      if take {
+        if neg {
+          if mag <= n { okv(vec(b.kind, array.dropL(vs, n - mag)), env) }
+          else { okv(vec(b.kind, array.catL(array.repL(array.fillOf(b.kind), mag - n), vs)), env) }
+        } else {
+          if mag <= n { okv(vec(b.kind, array.takeL(vs, mag)), env) }
+          else { okv(vec(b.kind, array.catL(vs, array.repL(array.fillOf(b.kind), mag - n))), env) }
+        }
+      } else {
+        if mag >= n { okv(vec(b.kind, ~), env) }
+        else if neg { okv(vec(b.kind, array.takeL(vs, n - mag)), env) }
+        else { okv(vec(b.kind, array.dropL(vs, mag)), env) }
+      }
+    },
+  }
+};
+// A/B along the last axis:  counts in A, one per column of B, or a scalar for every column
+func compress(a: array.Arr, b: array.Arr, env: Env) -> Ev {
+  match natVec(a) {
+    (ok, counts0) => if not ok { dom("the left argument of / is a vector of non-negative integers") }
+    else if array.rank(b) > 2 { nyi("replicate on rank 3 and above") }
+    else {
+      let ncols = if array.rank(b) == 0 { 1 } else { array.lastDim(array.shape(b)) };
+      let counts = if array.rank(a) == 0 { array.repL(array.first(a), ncols) } else { counts0 };
+      let bvs = if array.rank(b) == 0 and array.count(counts) > 1 { array.repL(array.first(b), array.count(counts)) } else { array.vals(b) };
+      let width = if array.rank(b) == 0 { array.count(counts) } else { ncols };
+      if array.count(counts) != width { fail("%length-error", "the counts and the last axis differ") }
+      else {
+        let rows = array.chunks(bvs, width);
+        let out = array.flatten(repRows(rows, counts));
+        let total = sumL(counts);
+        if array.rank(b) == 2 { okv(mk(b.kind, [array.firstDim(array.shape(b)), total], out), env) } else { okv(vec(b.kind, out), env) }
+      }
+    },
+  }
+};
+func sumL(xs: List<@>) -> @ { match xs { (h, t) => h + sumL(t), _ => 0, } };
+func repRows(rows: List<List<@>>, counts: List<@>) -> List<List<@>> { match rows { (r, rest) => (repRow(r, counts), repRows(rest, counts)), _ => ~, } };
+func repRow(r: List<@>, counts: List<@>) -> List<@> {
+  match r { (x, xs) => match counts { (c, cs) => array.catL(array.repL(x, c), repRow(xs, cs)), _ => ~, }, _ => ~, }
+};
+// A\B along the last axis:  a 0 in A inserts a fill, a count n takes the next element n times
+func expand(a: array.Arr, b: array.Arr, env: Env) -> Ev {
+  match natVec(a) {
+    (ok, counts) => if not ok { dom("the left argument of \\ is a vector of non-negative integers") }
+    else if array.rank(b) > 2 { nyi("expand on rank 3 and above") }
+    else {
+      let need = countNonzero(counts);
+      let ncols = if array.rank(b) == 0 { 1 } else { array.lastDim(array.shape(b)) };
+      let bvs = if array.rank(b) == 0 and need > 1 { array.repL(array.first(b), need) } else { array.vals(b) };
+      let width = if array.rank(b) == 0 { need } else { ncols };
+      if need != width { fail("%length-error", "the nonzero counts and the last axis differ") }
+      else {
+        let rows = array.chunks(bvs, width);
+        let out = array.flatten(expRows(rows, counts, array.fillOf(b.kind)));
+        let total = sumL(counts) + (array.count(counts) - need);
+        if array.rank(b) == 2 { okv(mk(b.kind, [array.firstDim(array.shape(b)), total], out), env) } else { okv(vec(b.kind, out), env) }
+      }
+    },
+  }
+};
+func countNonzero(xs: List<@>) -> @ { match xs { (h, t) => (if h == 0 { 0 } else { 1 }) + countNonzero(t), _ => 0, } };
+func expRows(rows: List<List<@>>, counts: List<@>, fill: @) -> List<List<@>> {
+  match rows { (r, rest) => (expRow(r, counts, fill), expRows(rest, counts, fill)), _ => ~, }
+};
+func expRow(r: List<@>, counts: List<@>, fill: @) -> List<@> {
+  match counts {
+    (c, cs) => if c == 0 { (fill, expRow(r, cs, fill)) } else { match r { (x, xs) => array.catL(array.repL(x, c), expRow(xs, cs, fill)), _ => ~, } },
+    _ => ~,
+  }
+};
+func decode(a: array.Arr, b: array.Arr, env: Env) -> Ev {
+  if a.kind != 1 or b.kind != 1 { nyi("⊥ beyond natural numbers") }
+  else if array.rank(b) > 1 { nyi("⊥ on rank 2 and above") }
+  else {
+    let bs = array.vals(b);
+    let n = array.count(bs);
+    let radix = if array.size(array.shape(a)) == 1 { array.repL(array.first(a), n) } else { array.vals(a) };
+    if array.count(radix) != n { fail("%length-error", "radix and digits differ") }
+    else { okv(sc(1, decodeL(radix, bs, 0)), env) }
+  }
+};
+// Horner:  acc = acc * radix_i + digit_i, left to right
+func decodeL(radix: List<@>, ds: List<@>, acc: @) -> @ {
+  match ds { (d, rest) => match radix { (r, rrest) => decodeL(rrest, rest, acc * r + d), _ => acc, }, _ => acc, }
+};
+func encode(a: array.Arr, b: array.Arr, env: Env) -> Ev {
+  if a.kind != 1 or b.kind != 1 { nyi("⊤ beyond natural numbers") }
+  else if array.size(array.shape(b)) != 1 { nyi("⊤ of a non-scalar") }
+  else { okv(vec(1, array.revL(encodeL(array.revL(array.vals(a), ~), array.first(b)), ~)), env) }
+};
+// radix from the last digit backwards
+func encodeL(radixRev: List<@>, x: @) -> List<@> {
+  match radixRev { (r, rest) => if r == 0 { (x, encodeL(rest, 0)) } else { (x % r, encodeL(rest, x / r)) }, _ => ~, }
+};
+
+// --- operators (D-43) --------------------------------------------------------------------------
+func identity(f: parse.Fn) -> (Bool, array.Arr) {
+  match f {
+    .prim(cp) => match cp {
+      43 => (true, sc(1, 0)), 8722 => (true, sc(1, 0)), 215 => (true, sc(1, 1)), 247 => (true, sc(1, 1)),
+      8739 => (true, sc(1, 0)), 8902 => (true, sc(1, 1)), 8744 => (true, sc(1, 0)), 8743 => (true, sc(1, 1)),
+      61 => (true, sc(1, 1)), 8800 => (true, sc(1, 0)), 60 => (true, sc(1, 0)), 8804 => (true, sc(1, 1)),
+      62 => (true, sc(1, 0)), 8805 => (true, sc(1, 1)), 33 => (true, sc(1, 1)),
+      8968 => (true, sc(3, 18442240474082181119)), 8970 => (true, sc(3, 9218868437227405311)),
+      _ => (false, sc(1, 0)),
+    },
+    _ => (false, sc(1, 0)),
+  }
+};
+// f/ over one list of elements of kind k, right to left:  x1 f (x2 f (... f xn))
+func reduceL(f: parse.Fn, k: @, xs: List<@>, env: Env) -> Ev {
+  match array.revL(xs, ~) {
+    (lst, restRev) => foldRight(f, k, restRev, sc(k, lst), env),
+    _ => match identity(f) { (ok, id) => if ok { okv(id, env) } else { dom("no identity for reducing an empty array with that function") }, },
+  }
+};
+func foldRight(f: parse.Fn, k: @, restRev: List<@>, acc: array.Arr, env: Env) -> Ev {
+  match restRev {
+    (x, more) => match applyDyad(f, sc(k, x), acc, env) { .err(e) => Ev.err(e), .ok(r) => match r { (v, env2) => foldRight(f, k, more, v, env2), }, },
+    _ => okv(acc, env),
+  }
+};
+func reduce(f: parse.Fn, a: array.Arr, first: Bool, env: Env) -> Ev {
+  let r = array.rank(a);
+  if r == 0 { okv(a, env) }
+  else if r == 1 { reduceL(f, a.kind, array.vals(a), env) }
+  else if r == 2 {
+    let shp = array.shape(a);
+    let nrows = array.firstDim(shp);
+    let ncols = array.lastDim(shp);
+    let rows = array.chunks(array.vals(a), ncols);
+    let groups = if first { array.colsOf(rows, ncols, 0) } else { rows };
+    match reduceEach(f, a.kind, groups, env, ~) {
+      .err(e) => Ev.err(e),
+      .ok(rs) => match rs { (scalars, env2) => okv(gather(scalars), env2), },
+    }
+  }
+  else { nyi("reduction on rank 3 and above") }
+};
+func reduceEach(f: parse.Fn, k: @, groups: List<List<@>>, env: Env, acc: List<array.Arr>) -> Evs {
+  match groups {
+    (g, rest) => match reduceL(f, k, g, env) { .err(e) => Evs.err(e), .ok(r) => match r { (v, env2) => reduceEach(f, k, rest, env2, (v, acc)), }, },
+    _ => Evs.ok((revArrs(acc, ~), env)),
+  }
+};
+func revArrs(xs: List<array.Arr>, acc: List<array.Arr>) -> List<array.Arr> { match xs { (h, t) => revArrs(t, (h, acc)), _ => acc, } };
+// a vector from scalar results, promoted to their join kind
+func maxKind(xs: List<array.Arr>, k: @) -> @ { match xs { (h, t) => maxKind(t, array.maxk(k, h.kind)), _ => k, } };
+func firstVals(xs: List<array.Arr>, k: @) -> List<@> { match xs { (h, t) => (array.first(array.promote(h, k)), firstVals(t, k)), _ => ~, } };
+func gather(xs: List<array.Arr>) -> array.Arr { let k = maxKind(xs, 1); vec(k, firstVals(xs, k)) };
+func gatherShaped(xs: List<array.Arr>, shp: List<@>) -> array.Arr { let k = maxKind(xs, 1); mk(k, shp, firstVals(xs, k)) };
+// f\:  element i is f/ of the first i+1 elements
+func scanL(f: parse.Fn, k: @, xs: List<@>, i: @, n: @, env: Env, acc: List<array.Arr>) -> Evs {
+  if i == n { Evs.ok((revArrs(acc, ~), env)) }
+  else { match reduceL(f, k, array.takeL(xs, i + 1), env) { .err(e) => Evs.err(e), .ok(r) => match r { (v, env2) => scanL(f, k, xs, i + 1, n, env2, (v, acc)), }, } }
+};
+func scan(f: parse.Fn, a: array.Arr, first: Bool, env: Env) -> Ev {
+  let r = array.rank(a);
+  if r == 0 { okv(a, env) }
+  else if r == 1 { match scanL(f, a.kind, array.vals(a), 0, array.count(array.vals(a)), env, ~) { .err(e) => Ev.err(e), .ok(rs) => match rs { (scalars, env2) => okv(gather(scalars), env2), }, } }
+  else if r == 2 {
+    let shp = array.shape(a);
+    let ncols = array.lastDim(shp);
+    let rows = array.chunks(array.vals(a), ncols);
+    let groups = if first { array.colsOf(rows, ncols, 0) } else { rows };
+    match scanEach(f, a.kind, groups, env, ~) {
+      .err(e) => Ev.err(e),
+      .ok(rs) => match rs { (scalars, env2) => {
+        let g = gather(scalars);
+        if first { okv(transposeArr(mk(g.kind, [ncols, array.firstDim(shp)], array.vals(g))), env2) } else { okv(mk(g.kind, shp, array.vals(g)), env2) }
+      }, },
+    }
+  }
+  else { nyi("scan on rank 3 and above") }
+};
+func scanEach(f: parse.Fn, k: @, groups: List<List<@>>, env: Env, acc: List<array.Arr>) -> Evs {
+  match groups {
+    (g, rest) => match scanL(f, k, g, 0, array.count(g), env, ~) {
+      .err(e) => Evs.err(e),
+      .ok(r) => match r { (vs, env2) => scanEach(f, k, rest, env2, catArrs(revArrs(vs, ~), acc)), },
+    },
+    _ => Evs.ok((revArrs(acc, ~), env)),
+  }
+};
+func catArrs(a: List<array.Arr>, b: List<array.Arr>) -> List<array.Arr> { match a { (h, t) => (h, catArrs(t, b)), _ => b, } };
+// A ∘.g B:  every a against every b, shape A ++ shape B
+func outer(g: parse.Fn, a: array.Arr, b: array.Arr, env: Env) -> Ev {
+  let avs = array.vals(a);
+  let bvs = array.vals(b);
+  let na = array.count(avs);
+  let nb = array.count(bvs);
+  let aa = vec(a.kind, spreadEach(avs, nb));
+  let bb = vec(b.kind, array.cycleL(bvs, na * nb, 0, if nb == 0 { 1 } else { nb }));
+  if na * nb == 0 { okv(mk(array.maxk(a.kind, b.kind), array.catL(array.shape(a), array.shape(b)), ~), env) }
+  else {
+    match applyDyad(g, aa, bb, env) {
+      .err(e) => Ev.err(e),
+      .ok(r) => match r { (v, env2) => okv(mk(v.kind, array.catL(array.shape(a), array.shape(b)), array.vals(v)), env2), },
+    }
+  }
+};
+func spreadEach(xs: List<@>, n: @) -> List<@> { match xs { (h, t) => array.catL(array.repL(h, n), spreadEach(t, n)), _ => ~, } };
+// A f.g B for ranks up to 2:  rows of A against columns of B, g then f/
+func inner(f: parse.Fn, g: parse.Fn, a: array.Arr, b: array.Arr, env: Env) -> Ev {
+  let ra = array.rank(a);
+  let rb = array.rank(b);
+  if ra > 2 or rb > 2 { nyi("inner product on rank 3 and above") }
+  else {
+    let arows = if ra == 2 { array.chunks(array.vals(a), array.lastDim(array.shape(a))) } else { [array.vals(a)] };
+    let bcols = if rb == 2 { array.colsOf(array.chunks(array.vals(b), array.lastDim(array.shape(b))), array.lastDim(array.shape(b)), 0) } else { [array.vals(b)] };
+    match innerAll(f, g, a.kind, arows, b.kind, bcols, env, ~) {
+      .err(e) => Ev.err(e),
+      .ok(rs) => match rs { (scalars, env2) => {
+        let shp = array.catL(if ra == 2 { [array.firstDim(array.shape(a))] } else { ~ }, if rb == 2 { [array.lastDim(array.shape(b))] } else { ~ });
+        okv(gatherShaped(scalars, shp), env2)
+      }, },
+    }
+  }
+};
+func innerAll(f: parse.Fn, g: parse.Fn, ka: @, arows: List<List<@>>, kb: @, bcols: List<List<@>>, env: Env, acc: List<array.Arr>) -> Evs {
+  match arows {
+    (r, rest) => match innerRow(f, g, ka, r, kb, bcols, env, ~) {
+      .err(e) => Evs.err(e),
+      .ok(rs) => match rs { (vs, env2) => innerAll(f, g, ka, rest, kb, bcols, env2, catArrs(acc, vs)), },
+    },
+    _ => Evs.ok((acc, env)),
+  }
+};
+func innerRow(f: parse.Fn, g: parse.Fn, ka: @, r: List<@>, kb: @, bcols: List<List<@>>, env: Env, acc: List<array.Arr>) -> Evs {
+  match bcols {
+    (c, rest) => match applyDyad(g, vec(ka, r), vec(kb, c), env) {
+      .err(e) => Evs.err(e),
+      .ok(p) => match p { (prod, env2) => match reduceL(f, prod.kind, array.vals(prod), env2) {
+        .err(e) => Evs.err(e),
+        .ok(q) => match q { (v, env3) => innerRow(f, g, ka, r, kb, rest, env3, (v, acc)), },
+      }, },
+    },
+    _ => Evs.ok((revArrs(acc, ~), env)),
+  }
+};
+
+// --- bracket indexing (D-23) ----------------------------------------------------------------------
+// each index part as 0-based positions, plus the result shape (D-23): a part
+// contributes its own shape, so a scalar index contributes nothing and an
+// elision contributes the axis length
+func evalParts(ixs: List<parse.Ast>, x: array.Arr, env: Env, acc: List<List<@>>, shp: List<@>) -> Parts {
+  match ixs {
+    (ix, rest) => match ix {
+      .elide => {
+        let n = array.nth(array.shape(x), array.countLL(acc));
+        evalParts(rest, x, env, (array.iotaL(n, 0), acc), array.catL(shp, [n]))
+      },
+      _ => match evalAst(ix, env) {
+        .err(e) => Parts.err(e),
+        .ok(r) => match r { (iv, env2) => if iv.kind != 1 { Parts.err(EErr( tag: "%domain-error", hint: "indices are non-negative integers" )) }
+          else { evalParts(rest, x, env2, (shiftIo(array.vals(iv), env2.io), acc), array.catL(shp, array.shape(iv))) }, },
+      },
+    },
+    _ => Parts.ok((revLL(acc, ~), shp, env)),
+  }
+};
+func shiftIo(xs: List<@>, io: @) -> List<@> { match xs { (h, t) => (if h < io { 4294967295 } else { h - io }, shiftIo(t, io)), _ => ~, } };
+func inBounds(parts: List<List<@>>, shp: List<@>) -> Bool {
+  match parts { (p, rest) => match shp { (d, ds) => array.allL(p, lambda (i: @) -> Bool { i < d }) and inBounds(rest, ds), _ => false, }, _ => true, }
+};
+func positions(parts: List<List<@>>, shp: List<@>) -> List<@> { flatAll(array.cartesian(parts), shp) };
+func flatAll(ixs: List<List<@>>, shp: List<@>) -> List<@> { match ixs { (ix, rest) => (array.flatIx(shp, ix), flatAll(rest, shp)), _ => ~, } };
+func gatherAt(vs: List<@>, pos: List<@>) -> List<@> { match pos { (p, rest) => (array.nth(vs, p), gatherAt(vs, rest)), _ => ~, } };
+func indexed(x: array.Arr, parts: List<List<@>>, rshp: List<@>, env: Env) -> Ev {
+  let shp = array.shape(x);
+  if array.countLL(parts) != array.count(shp) { fail("%rank-error", "the number of indices is the rank") }
+  else if not inBounds(parts, shp) { fail("%index-error", "index out of range") }
+  else { okv(mk(x.kind, rshp, gatherAt(array.vals(x), positions(parts, shp))), env) }
+};
+func assignAt(x0: array.Arr, parts: List<List<@>>, v0: array.Arr, env: Env) -> Ev {
+  let shp = array.shape(x0);
+  if array.countLL(parts) != array.count(shp) { fail("%rank-error", "the number of indices is the rank") }
+  else if not inBounds(parts, shp) { fail("%index-error", "index out of range") }
+  else if (x0.kind == 4) != (v0.kind == 4) { dom("characters and numbers do not mix") }
+  else {
+    let k = joinKind(x0, v0);
+    let x = array.promote(x0, k);
+    let v = array.promote(v0, k);
+    let pos = positions(parts, shp);
+    let n = array.count(pos);
+    let vs = if array.size(array.shape(v)) == 1 { array.repL(array.first(v), n) } else { array.vals(v) };
+    if array.count(vs) != n { fail("%length-error", "the value does not fit the indices") }
+    else { okv(mk(k, shp, setAll(array.vals(x), pos, vs)), env) }
+  }
+};
+func setAll(xs: List<@>, pos: List<@>, vs: List<@>) -> List<@> {
+  match pos { (p, prest) => match vs { (v, vrest) => setAll(setNth(xs, p, v), prest, vrest), _ => xs, }, _ => xs, }
+};
+func setNth(xs: List<@>, i: @, v: @) -> List<@> { match xs { (h, t) => if i == 0 { (v, t) } else { (h, setNth(t, i - 1, v)) }, _ => ~, } };
+
 // --- the tree -------------------------------------------------------------------------------
 func evalAst(a: parse.Ast, env: Env) -> Ev {
   match a {
@@ -290,14 +833,36 @@ func evalAst(a: parse.Ast, env: Env) -> Ev {
     .sysvar(nm) => if nm == "IO" { okv(array.scalar(1, env.io), env) } else if nm == "PP" { okv(array.scalar(1, env.pp), env) } else { nyi("⎕" + nm) },
     .monad(m) => match evalAst(m.r, env) {
       .err(e) => Ev.err(e),
-      .ok(r) => match r { (rv, env2) => match m.f { .prim(cp) => monadPrim(cp, rv, env2), _ => nyi("operators and user functions"), }, },
+      .ok(r) => match r { (rv, env2) => applyMonad(m.f, rv, env2), },
     },
     .dyad(d) => match evalAst(d.r, env) {
       .err(e) => Ev.err(e),
       .ok(r) => match r { (rv, env2) => match evalAst(d.l, env2) {
         .err(e) => Ev.err(e),
-        .ok(l) => match l { (lv, env3) => match d.f { .prim(cp) => dyadPrim(cp, lv, rv, env3), _ => nyi("operators and user functions"), }, },
+        .ok(l) => match l { (lv, env3) => applyDyad(d.f, lv, rv, env3), },
       }, },
+    },
+    .index(ix) => match evalAst(ix.a, env) {
+      .err(e) => Ev.err(e),
+      .ok(r) => match r { (xv, env2) => match evalParts(ix.ix, xv, env2, ~, ~) {
+        .err(e) => Ev.err(e),
+        .ok(pr) => match pr { (parts, rshp, env3) => indexed(xv, parts, rshp, env3), },
+      }, },
+    },
+    .iassign(s) => match lookup(env.store, s.nm) {
+      (found, x0) => if not found { fail("%value-error", s.nm + " is not defined") }
+      else {
+        match evalAst(s.v, env) {
+          .err(e) => Ev.err(e),
+          .ok(r) => match r { (v, env2) => match evalParts(s.ix, x0, env2, ~, ~) {
+            .err(e) => Ev.err(e),
+            .ok(pr) => match pr { (parts, rshp, env3) => match assignAt(x0, parts, v, env3) {
+              .err(e) => Ev.err(e),
+              .ok(r2) => match r2 { (x2, env4) => okv(v, Env( store: put(env4.store, s.nm, x2), io: env4.io, pp: env4.pp )), },
+            }, },
+          }, },
+        }
+      },
     },
     .assign(s) => match evalAst(s.v, env) {
       .err(e) => Ev.err(e),
@@ -319,7 +884,7 @@ func sysSet(nm: String, v: array.Arr, env: Env) -> Ev {
     else { nyi("⎕" + nm) }
   }
 };
-func isAssign(a: parse.Ast) -> Bool { match a { .assign(s) => true, .sysassign(s) => true, _ => false, } };
+func isAssign(a: parse.Ast) -> Bool { match a { .assign(s) => true, .sysassign(s) => true, .iassign(s) => true, _ => false, } };
 // one statement: what it prints (D-24) and the environment after it
 func runStmt(a: parse.Ast, env: Env) -> (String, Env) {
   match a {
