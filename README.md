@@ -63,4 +63,4 @@ Use this as:
 KHOOR
 ```
 
-Nested arrays (`'sing' 'goddess' 'sing'`) are v2; v1 arrays are flat (dialect D-6).  The examples above and more are pinned as cases in [`tests/atl/`](tests/atl/README.md), run by `tools/atlc.sh corpus`.
+Nested arrays (`'sing' 'goddess' 'sing'`) are v2; v1 arrays are flat (dialect D-6).  The examples above and more are pinned as cases in [`tests/atl/`](tests/atl/README.md), run by `tools/atlc.sh corpus`.  To type at the prompts yourself, build the REPL kernel and boot it in tmux: [`docs/repl.md`](docs/repl.md).
