@@ -63,6 +63,7 @@ UTF-8 decoding (Jock strings are byte-oriented; a codepoint walker is the first 
 **P2 — Parser.**
 AST as a Jock union: `%array` literal, `%name`, `%monad`, `%dyad`, `%op`, `%index`, `%assign`, `%strand`, `%tradfn`, `%system`. Right-to-left with D-22 valence resolution against a store signature (names → array | function with valence). Operators per D-21. `∇` capture per D-30/D-31.
 *Exit:* the green prompt (D-54) prints the AST of every README expression; SYNTAX ERROR vectors green.
+**LANDED 2026-10-27.** `src/parse.jock` (~500 lines): phase A classifies tokens into items left to right under a name-class signature and folds operators into derived functions; phase B builds the tree right to left. `tests/parse/` holds 5 cases, 65 steps: every README expression, the operators, indexing, statements and headers, and 21 refusals across the syntax, value, valence and nested tags. 64/65 on the first compile; the one miss was a test whose signature left two names unbound. A parse corpus run costs ~88 s (three modules in the generated program).
 
 **P3 — Array model and scalar functions, interpreted.**
 `array.jock` (D-13, list-backed), the kind lattice and promotion (D-11, D-12), scalar extension and the rank/length errors (D-25). All of D-41 through the closure interpreter. Display per D-45.

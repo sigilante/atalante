@@ -12,6 +12,7 @@
 // evalLine with the lexer; P2 with the parser; P3 onward with the real
 // thing.
 import lexer;
+import parse;
 
 func isDigits(bs: List<Byte>) -> Bool {
   match bs {
@@ -48,6 +49,24 @@ func lexcorpus(cases: List<(String, List<String>)>) -> String {
   match cases {
     (c, rest) => match c {
       (name, lines) => "\1d" + name + "\1f" + lexLines(lines) + lexcorpus(rest),
+    },
+    _ => "",
+  }
+};
+// the parse corpus (tests/parse): one tree per input line, under a signature
+func parseLines(sig: List<(String, @)>, lines: List<String>) -> String {
+  match lines {
+    (h, t) => match t {
+      (h2, t2) => parse.dump(h, sig) + "\1e" + parseLines(sig, t),
+      _ => parse.dump(h, sig),
+    },
+    _ => "",
+  }
+};
+func parsecorpus(cases: List<(String, List<(String, @)>, List<String>)>) -> String {
+  match cases {
+    (c, rest) => match c {
+      (name, sig, lines) => "\1d" + name + "\1f" + parseLines(sig, lines) + parsecorpus(rest),
     },
     _ => "",
   }

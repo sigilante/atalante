@@ -1,0 +1,29 @@
+⍝ sig: n:a X:a R:a A:a B:a DIV:d
+1
+⍝ expect: 1
+n ← 4 5 6 7
+⍝ expect: ←(n, 4 5 6 7)
+n
+⍝ expect: n
+n+4
+⍝ expect: +(n, 4)
++/3+⍳4
+⍝ expect: +/(+(3, ⍳(4)))
+2 * 10 *⍟ 10
+⍝ expect: ⋆(2, ⋆(10, ⍟(10)))
+⍋X
+⍝ expect: ⍋(X)
+X[⍋X]
+⍝ expect: X[⍋(X)]
+R ← 21
+⍝ expect: ←(R, 21)
+(~R ∊ R ∘.× R) / R ← 1↓⍳R
+⍝ expect: /(∼(∊(R, ∘.×(R, R))), ←(R, ↓(1, ⍳(R))))
+∇ R← A DIV B
+⍝ expect: ∇ R←A DIV B
+R←A÷B
+⍝ expect: ←(R, ÷(A, B))
+∇
+⍝ expect: ∇
+5 DIV 6
+⍝ expect: DIV(5, 6)

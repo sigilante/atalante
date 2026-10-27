@@ -20,11 +20,11 @@ ATL/APL is the APL that Atalante compiles. It is Budd's compiler subset (Budd 19
 
 **D-3 · Numeric literals.** `¯` (U+00AF) is the negative sign and part of the literal; `−` is the subtraction function. Forms: `12`, `¯3`, `1.5`, `.5` is refused, `1E6`, `1.5E¯3`. A literal with `.` or `E` is Float64; a literal with `¯` and no `.`/`E` is Int; otherwise Nat (D-10). ⟨`lex/numerals`, `lex/numeral-errors`⟩
 
-**D-4 · Strands.** Two or more literals separated by spaces form one vector: `4 5 6 7`. A strand of mixed numeric kinds promotes to the join (D-11). Names do not strand in v1: `a b` is a SYNTAX ERROR, not a two-element vector (this is the nested-array question, D-6). ⟨none — UNPINNED⟩
+**D-4 · Strands.** Two or more literals separated by spaces form one vector: `4 5 6 7`. A strand of mixed numeric kinds promotes to the join (D-11). Names do not strand in v1: `a b` is a SYNTAX ERROR, not a two-element vector (this is the nested-array question, D-6). ⟨`parse/readme`, `parse/refusals`⟩
 
 **D-5 · Character literals.** `'abc'` is a character vector; `'a'` is a character scalar; `''` is the empty character vector; `''''` is one quote. Elements are codepoints. ⟨`lex/strings-system`⟩
 
-**D-6 · Nested arrays are v2.** RULED 2026-10-27: v1 is flat. The README's `X ← 'sing' 'goddess' 'sing'` needs a boxed element kind; v1 refuses a strand of character vectors with `%nested-unsupported`. v2 revisits a `%box` kind (APL2 nesting) against a rank-2 character matrix idiom. Nothing in v1 may preclude either. ⟨none — UNPINNED⟩
+**D-6 · Nested arrays are v2.** RULED 2026-10-27: v1 is flat. The README's `X ← 'sing' 'goddess' 'sing'` needs a boxed element kind; v1 refuses a strand of character vectors with `%nested-unsupported`. v2 revisits a `%box` kind (APL2 nesting) against a rank-2 character matrix idiom. Nothing in v1 may preclude either. ⟨`parse/refusals`, `parse/operators`⟩
 
 **D-7 · Comments and separators.** `⍝` comments to end of line. `⋄` separates statements on one line. A newline ends a statement except inside a `∇` definition. ⟨`lex/names-glyphs`, `lex/strings-system`⟩
 
@@ -48,27 +48,27 @@ ATL/APL is the APL that Atalante compiles. It is Budd's compiler subset (Budd 19
 
 ## 4. Syntax and evaluation
 
-**D-20 · Right-to-left; a function takes everything to its right.** `2×3+4` is 14. A dyadic function's left argument is the single array immediately to its left. Parentheses group. ⟨none — UNPINNED⟩
+**D-20 · Right-to-left; a function takes everything to its right.** `2×3+4` is 14. A dyadic function's left argument is the single array immediately to its left. Parentheses group. ⟨`parse/readme`, `parse/operators`⟩
 
-**D-21 · Operators bind before functions and take their operand from the left.** `+/`, `+\`, `+.×`, `∘.×`, `f¨`. The derived function then follows D-20. Operands are primitive functions or user-defined functions in v1; no derived-function operands (`+/¨` is v2). ⟨none — UNPINNED⟩
+**D-21 · Operators bind before functions and take their operand from the left.** `+/`, `+\`, `+.×`, `∘.×`, `f¨`. The derived function then follows D-20. Operands are primitive functions or user-defined functions in v1; no derived-function operands (`+/¨` is v2). ⟨`parse/readme`, `parse/operators`⟩
 
-**D-22 · Monadic or dyadic is decided by what stands to the left.** A function with an array (or a parenthesised expression, or a name bound to an array) on its left is dyadic; otherwise monadic. A name's valence is looked up in the store at compile time (D-52). ⟨none — UNPINNED⟩
+**D-22 · Monadic or dyadic is decided by what stands to the left.** A function with an array (or a parenthesised expression, or a name bound to an array) on its left is dyadic; otherwise monadic. A name's valence is looked up in the store at compile time (D-52). ⟨`parse/readme`, `parse/operators`, `parse/refusals`⟩
 
-**D-23 · Bracket indexing.** `X[i]`, `M[i;j]`, `M[i;]`, `M[;j]`. Indices are arrays; the result shape is the catenation of the index shapes. An index outside `⎕IO`-based bounds is an INDEX ERROR. Indexed assignment `X[i] ← v` is v1. ⟨none — UNPINNED⟩
+**D-23 · Bracket indexing.** `X[i]`, `M[i;j]`, `M[i;]`, `M[;j]`. Indices are arrays; the result shape is the catenation of the index shapes. An index outside `⎕IO`-based bounds is an INDEX ERROR. Indexed assignment `X[i] ← v` is v1. ⟨`parse/indexing` (parsing only)⟩
 
-**D-24 · Assignment `←` is an expression whose value is its right side.** At the top level a statement whose last act is an assignment prints nothing. Variables are global unless localised in a `∇` header (D-31). ⟨none — UNPINNED⟩
+**D-24 · Assignment `←` is an expression whose value is its right side.** At the top level a statement whose last act is an assignment prints nothing. Variables are global unless localised in a `∇` header (D-31). ⟨`parse/readme`, `parse/statements` (parsing only)⟩
 
 **D-25 · Scalar extension.** A scalar or one-element vector extends to the other argument's shape. Otherwise shapes must match exactly; a rank mismatch is a RANK ERROR, a length mismatch a LENGTH ERROR. ⟨none — UNPINNED⟩
 
 ## 5. Functions
 
-**D-30 · Tradfns.** `∇ R←A F B` opens a definition; a lone `∇` closes it. Headers: `∇F`, `∇F B`, `∇A F B`, each with optional `R←`. Lines between are statements. The REPL reads the body until the closing `∇` (D-62). ⟨none — UNPINNED⟩
+**D-30 · Tradfns.** `∇ R←A F B` opens a definition; a lone `∇` closes it. Headers: `∇F`, `∇F B`, `∇A F B`, each with optional `R←`. Lines between are statements. The REPL reads the body until the closing `∇` (D-62). ⟨`parse/readme`, `parse/statements`, `parse/refusals` (header only)⟩
 
-**D-31 · Locals are declared in the header after `;`.** `∇ R←A F B;T;U` makes `T` and `U` local; everything else is global (dynamic scope, as in classical APL). Arguments and the result are local. ⟨none — UNPINNED⟩
+**D-31 · Locals are declared in the header after `;`.** `∇ R←A F B;T;U` makes `T` and `U` local; everything else is global (dynamic scope, as in classical APL). Arguments and the result are local. ⟨`parse/statements` (header only)⟩
 
 **D-32 · OPEN · Branching.** `→` and labels are the classical control flow. v1 has none: a tradfn body is straight-line. The maintainer rules between `→` (Budd's subset has it) and dfns `{⍺ ⍵}` with guards (the modern form). Both are expressible on the v1 AST; neither is in it.
 
-**D-33 · A user function's valence is fixed by its header and checked at the call.** Calling a dyadic function monadically is a VALENCE ERROR. ⟨none — UNPINNED⟩
+**D-33 · A user function's valence is fixed by its header and checked at the call.** Calling a dyadic function monadically is a VALENCE ERROR. ⟨`parse/refusals`⟩
 
 **D-34 · A tradfn body is compiled on first call, not at the closing `∇`.** The definition stores the header and the body as token lines. The first call parses and emits the body against the store's signature at that moment and caches the formula keyed by that signature; a later change of class for any name the body reads (array to function, a new valence, unbound to bound) invalidates the cache and the next call recompiles. A body may therefore name a function defined after it, as in classical APL, and every executed line is still compiled Nock. A name unbound at the time of the call is a VALUE ERROR at that call. ⟨none — UNPINNED⟩
 
@@ -97,7 +97,7 @@ Dyadic: `+ − × ÷ ⌈ ⌊ ∣ ⋆ ⍟ ○ !` and `< ≤ = ≥ > ≠ ∨ ∧ �
 
 **D-51 · Primitives are called by axis, never by name, in emitted Nock.** The emitter knows the runtime core's layout; a primitive call is `9 2 10 [6 args] 0 axis` against the subject (verified 2026-10-27 against Jock `eval`). Changing the runtime core's layout re-blesses every emission vector. ⟨none — UNPINNED⟩
 
-**D-52 · Names resolve at compile time against the store's shape, not its values.** A name's kind (array or function, valence) decides parsing (D-22); its value is read at run time. An unbound name in a top-level statement is a VALUE ERROR at compile time; inside a tradfn body the check is deferred to the first call (D-34). ⟨none — UNPINNED⟩
+**D-52 · Names resolve at compile time against the store's shape, not its values.** A name's kind (array or function, valence) decides parsing (D-22); its value is read at run time. An unbound name in a top-level statement is a VALUE ERROR at compile time; inside a tradfn body the check is deferred to the first call (D-34). ⟨`parse/refusals`⟩
 
 **D-53 · Inference is an optimisation, never a semantics.** Budd's rank, shape and kind propagation chooses a specialised primitive (`%add-real-vector`) over the generic one. A program's value does not depend on whether inference ran. The differential vector `generic == specialised` pins this on every example. ⟨none — UNPINNED⟩
 

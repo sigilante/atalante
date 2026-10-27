@@ -1,0 +1,43 @@
+⍝ sig: a:a b:a M:m D:d
+a b
+⍝ expect: %syntax-error col:1 arrays do not strand in v1 (D-4)
+'sing' 'goddess'
+⍝ expect: %nested-unsupported col:8 nested arrays are v2 (D-6)
+foo
+⍝ expect: %value-error col:1 foo is not defined
+1 2 3 ÷
+⍝ expect: %syntax-error col:7 a function needs a right argument
+D 6
+⍝ expect: %valence-error col:1 D is dyadic
+5 M 6
+⍝ expect: %valence-error col:3 M is monadic
+(1 2
+⍝ expect: %syntax-error col:1 unbalanced (
+1 2)
+⍝ expect: %syntax-error col:4 unbalanced )
+a[1
+⍝ expect: %syntax-error col:2 unbalanced [
++[1]a
+⍝ expect: %syntax-error col:2 axis specification is v2
+¨1
+⍝ expect: %syntax-error col:1 ¨ needs a function to its left
+∘×a
+⍝ expect: %syntax-error col:1 ∘ is used only as ∘.g in v1
+()
+⍝ expect: %syntax-error col:1 empty parentheses
+← 3
+⍝ expect: %syntax-error col:1 nothing to assign to
+3 ← a
+⍝ expect: %syntax-error col:3 cannot assign to that
+⎕FOO
+⍝ expect: %value-error col:1 unknown system variable ⎕FOO
+∇ A B C D
+⍝ expect: %syntax-error col:1 a header is [R←] F, F B or A F B (D-30)
+a;b
+⍝ expect: %syntax-error col:2 ; outside brackets
+3 foo
+⍝ expect: %value-error col:3 foo is not defined
+foo[1] ← 2
+⍝ expect: %value-error col:1 foo is not defined
+.5
+⍝ expect: %syntax-error col:1 a numeral needs a digit before the point (D-3)

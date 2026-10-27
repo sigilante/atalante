@@ -1,0 +1,23 @@
+⍝ sig: a:a
+a←1 ⋄ a+1
+⍝ expect: ←(a, 1) ⋄ +(a, 1)
+⎕IO ← 0
+⍝ expect: ←(⎕IO, 0)
+⎕IO
+⍝ expect: ⎕IO
+)VARS
+⍝ expect: )VARS
+)ERASE a
+⍝ expect: )ERASE a
+⍝ only a comment
+⍝ expect:
+∇ F
+⍝ expect: ∇ F
+∇ Z←F B;T;U
+⍝ expect: ∇ Z←F B;T;U
+∇ A F B
+⍝ expect: ∇ A F B
+b ← a ← 3
+⍝ expect: ←(b, ←(a, 3))
+'it''s'
+⍝ expect: 'it's'
