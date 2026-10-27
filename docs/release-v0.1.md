@@ -50,3 +50,7 @@ Each is worked around in this tree. v1.1 drops the workarounds as the fixes land
 ## Removed at v0.1.0
 
 The 2024 Hoon tree, `desk/`, a shoe agent with a glyph inventory in `desk/sur/atalante.hoon`. It stays in history at b721975 and the spec cites it there.
+
+## v0.1.1: the apple prompts in jojo
+
+jojo's prompt was a literal, `jojo> `. jojo now takes `--prompt STR` for the opening prompt and honours a `[%prompt cord]` effect that sets it for the lines that follow, and it prints no line for an empty answer. The kernel declares its own `Effect` enum with `exit`, `markdown` and `prompt` cases and sends the prompt effect after every line, so the prompt is the apple of the session's mode. Declaring the enum locally also removes the kernel's one import from the Jock tree, so the unsealed jam embeds no module source but Atalante's own. The kernel jam ships with jojo, beside the Jock REPL jams, as `atalante.jam` with a manifest of what it embeds.

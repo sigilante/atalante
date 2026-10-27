@@ -7,20 +7,20 @@ The REPL is a NockApp kernel (`app/kernel.jock`) hosted by jojo and driven from 
 ```
 tools/atlc.sh kernel        # build out/atl-kernel.jam (~3.5 min)
 tools/atl-repl.sh start     # boot it under jojo in tmux session `atl` (~75 s)
-tmux attach -t atl          # type at the jojo> prompt
+tmux attach -t atl          # type at the 🍎> prompt
 ```
 
 The jam is built locally and never shipped: unsealed, it embeds the Jock compiler and the sources (ledger S-5). `JOCK` names the Jock checkout to build with (`vendor/JOCK.txt` records the pin); `JOJO` the jojo checkout with a release build. `tools/atl-repl.sh send LINE`, `show` and `stop` drive the session from a script.
 
 ## The prompts
 
-A line is evaluated (the red prompt) unless the session is in green mode, where a line prints its tree instead. `🍎> ` and `🍏> ` prefixes on a line choose per line; the commands choose the mode:
+The prompt is the apple of the session's mode. jojo opens with `🍎> ` (its `--prompt` flag, passed by `tools/atl-repl.sh`), and after every line the kernel sends a `[%prompt text]` effect naming the mode it is now in, so `)TOGGLE` moves the prompt itself. A line is evaluated (the red prompt) unless the session is in green mode, where a line prints its tree instead. `🍎> ` and `🍏> ` prefixes on a line choose per line; the commands choose the mode:
 
 | command | effect |
 |---|---|
-| `)GREEN` | print trees (D-54); answers 🍏 |
-| `)RED` | evaluate; answers 🍎 |
-| `)TOGGLE` | switch; answers the new mode |
+| `)GREEN` | print trees (D-54); answers 🍏 and the prompt turns green |
+| `)RED` | evaluate; answers 🍎 and the prompt turns red |
+| `)TOGGLE` | switch; answers the new mode, and the prompt follows |
 | `:nock EXPR` at the green prompt | the Nockasm program for EXPR |
 | `:noun EXPR` at the green prompt | its lowered Nock formula |
 | `)VARS` `)FNS` `)ERASE n…` | D-61 |

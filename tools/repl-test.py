@@ -11,6 +11,9 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "tools"))
 from atlc import parse_case
 SESSION = os.environ.get("SESSION", "atl")
+# the prompts a pane line can end on: jojo's own, and the two apples the
+# kernel sets through its [%prompt text] effect (trailing space stripped)
+PROMPTS = ("jojo>", "\U0001F34E>", "\U0001F34F>")
 
 
 def pane():
@@ -32,7 +35,7 @@ def wait_prompt(timeout):
     t = time.time()
     while time.time() - t < timeout:
         lines = [l for l in pane() if l != ""]
-        if lines and lines[-1] == "jojo>":
+        if lines and lines[-1] in PROMPTS:
             return True
         time.sleep(0.3)
     return False
@@ -46,9 +49,9 @@ def send(line, timeout=120):
         return None
     lines = [l for l in pane() if l != ""]
     out = lines[before:]            # the echoed command, the output, the fresh prompt
-    if out and out[0].startswith("jojo> "):
+    if out and any(out[0].startswith(p + " ") for p in PROMPTS):
         out = out[1:]
-    if out and out[-1] == "jojo>":
+    if out and out[-1] in PROMPTS:
         out = out[:-1]
     return "\n".join(out)
 

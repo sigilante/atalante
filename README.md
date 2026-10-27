@@ -61,7 +61,7 @@ Use this as:
 KHOOR
 ```
 
-The green prompt `🍏>` prints a line's tree instead of evaluating it, and `:nock EXPR` at it prints the Nockasm program the line compiles to.  `)TOGGLE` switches prompts.
+The green prompt `🍏>` prints a line's tree instead of evaluating it, and `:nock EXPR` at it prints the Nockasm program the line compiles to.  `)TOGGLE` switches prompts, and the prompt you see is the mode you are in.
 
 ## Run it
 
@@ -70,7 +70,7 @@ The REPL is a NockApp kernel hosted by jojo and driven from tmux.  [`docs/repl.m
 ```
 tools/atlc.sh kernel        # build out/atl-kernel.jam (~3.5 min)
 tools/atl-repl.sh start     # boot it under jojo in tmux session `atl` (~75 s)
-tmux attach -t atl          # type at the prompt; F5 toggles the apple prompts
+tmux attach -t atl          # type at the 🍎> prompt; F5 toggles it to 🍏> and back
 ```
 
 Prerequisites, each at the commit [`vendor/TOOLCHAIN.txt`](vendor/TOOLCHAIN.txt) names:

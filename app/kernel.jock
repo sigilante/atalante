@@ -4,33 +4,40 @@
 // kernel): the line goes through the session (src/atl.jock) --- the
 // prompts, definition mode, the ) commands, the interpreter and the
 // emitted Nock held equal --- and what it prints comes back as one
-// [%markdown text] effect. )OFF answers bye and an exit effect. Peek
-// answers the session's environment as a noun. State is the session,
-// data only, so load adopts it with a mold check.
+// [%markdown text] effect, followed by a [%prompt text] effect naming
+// the apple of the mode the session is now in (jojo shows it as the
+// prompt). )OFF answers bye and an exit effect. Peek answers the
+// session's environment as a noun. State is the session, data only, so
+// load adopts it with a mold check.
+//
+// Effect is declared here rather than imported from nockapp, so the
+// unsealed jam embeds no module source but Atalante's own (S-5): a Jock
+// enum erases to the tagged cell its case names, [%exit code],
+// [%markdown cord], [%prompt cord], which is what the host matches.
 //
 // Build:  tools/atlc.sh kernel         (kern.sh over src/ and pkgs/)
 // Run:    tools/atl-repl.sh            (jojo in a tmux session)
-import nockapp;
 import atl;
 import interp;
+enum Effect { exit(@), markdown(String), prompt(String) };
 struct KS { s: atl.Sess };
-class Atl(KS) impl Kernel<nockapp.Effect> {
+class Atl(KS) impl Kernel<Effect> {
   load(self: Atl, old: *) -> Atl { old as! Atl };
   peek(self: Atl, p: *) -> * { self.s.env };
-  poke(self: Atl, e: *) -> (List<nockapp.Effect>, Atl) {
+  poke(self: Atl, e: *) -> (List<Effect>, Atl) {
     // jojo's host hands the whole ovum, [1 wire eny our now cause]; a
     // bare [%command line] is accepted too
     match e {
       as? (Term, @) => self.run(e as! (Term, @)),
       as? (*, *, *, *, *, (Term, @)) => match e as! (*, *, *, *, *, (Term, @)) { (a, b, c, d, f, cause) => self.run(cause), },
-      _ => ([nockapp.Effect.markdown("error: bad cause " + interp.showNoun(e))], self),
+      _ => ([Effect.markdown("error: bad cause " + interp.showNoun(e))], self),
     }
   };
-  run(self: Atl, c: (Term, @)) -> (List<nockapp.Effect>, Atl) {
+  run(self: Atl, c: (Term, @)) -> (List<Effect>, Atl) {
     match c {
       (tag, cord) => match atl.stepLine(cord as! String, self.s) {
-        (out, s2) => if out == "bye" { ([nockapp.Effect.markdown("bye"), nockapp.Effect.exit(0)], Atl( s: s2 )) }
-          else { ([nockapp.Effect.markdown(if out == "" { " " } else { out })], Atl( s: s2 )) },
+        (out, s2) => if out == "bye" { ([Effect.markdown("bye"), Effect.exit(0)], Atl( s: s2 )) }
+          else { ([Effect.markdown(out), Effect.prompt(if s2.green { "🍏> " } else { "🍎> " })], Atl( s: s2 )) },
       },
     }
   };
