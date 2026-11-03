@@ -1,6 +1,6 @@
 # Atalante — Roadmap
 
-**Status: draft for the maintainer's ordering (2026-10-28).** v0.1.1 implements dialect v1 in full ([release notes](release-v0.1.md)). This file carries what comes after, in the plan's shape: numbered phases from P8, each with its scope, the rules it closes, a mechanical exit test, and what it waits on. The order below is a dependency order and a recommendation; the maintainer rules it. A phase lands as the P0–P7 phases did ([plan.md §3](plan.md)): with its vectors, recorded in the plan with numbers, and the spec's rules pinned.
+**Status: P8 landed 2026-11-03; the rest is for the maintainer's ordering.** v0.1.1 implements dialect v1 in full ([release notes](release-v0.1.md)). This file carries what comes after, in the plan's shape: numbered phases from P8, each with its scope, the rules it closes, a mechanical exit test, and what it waits on. The order below is a dependency order and a recommendation; the maintainer rules it. A phase lands as the P0–P7 phases did ([plan.md §3](plan.md)): with its vectors, recorded in the plan with numbers, and the spec's rules pinned.
 
 Two facts fix most of the order. Nested arrays change the array model every structural function sits on, so they precede the primitives that need them (`⍷ ⍪ ≡`, dyadic `⍕`). Dfns need `⍺ ⍵` and guards in the parser before the emitter can see them, so they are a phase of their own and come first, since nothing else depends on them and they are what the v1 tradfn programmer reaches for next.
 
@@ -8,7 +8,7 @@ Two facts fix most of the order. Nested arrays change the array model every stru
 
 **P8 — Dfns with guards (D-32, RULED).** `{⍺ ⍵}` bodies with `cond: expr` guards, `⍺` and `⍵` as the implicit arguments, nested dfns, dfns as operator operands. A dfn is a function value in the store with the same name classes as a tradfn (D-52), compiles on first call under the D-34 cache, and runs through both the interpreter and the emitted Nock. `→` and labels stay out for good.
 *Exit:* a dfn version of every README tradfn (`DIV`, `CaesarCipher`) gives the same output; a guarded `{⍵≤1: 1 ⋄ ⍵×∇ ⍵-1}` factorial, recursive through `∇`, agrees between interpreter and emitter on the corpus; a dfn as a `/` operand.
-*Waits on:* nothing.
+**LANDED 2026-11-03** as D-63..D-69 ([plan §3](plan.md)). Left for a later phase: dfn operators (`⍺⍺ ⍵⍵`), a default left argument (`⍺←`), error guards (`::`), a dfn as the operand of `.` or `∘.`.
 
 **P9 — Nested arrays (D-6).** The `%box` element kind: a strand of character vectors, `⊂` enclose, `⊃` disclose and pick, `≡` depth, display of nested arrays. The ruled-out alternative, a rank-2 character matrix idiom, is revisited here before the kind enters. Every v1 primitive keeps its value on flat arrays, and the corpus is the regression test for that.
 *Exit:* the README's `X ← 'sing' 'goddess' 'sing' 'of' 'the' 'rage'`, `⍋X`, `X[⍋X]` as the 2024 README printed them; v1 corpus unchanged; `≡` on flat and nested vectors.

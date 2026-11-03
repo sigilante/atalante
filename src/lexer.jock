@@ -9,8 +9,16 @@
 // Refusals are VALUES, not crashes: a corpus run feeds many lines
 // through one program, and a crash would take the run with it. The
 // tag is always %syntax-error at this layer; the hint says which rule.
+//
+// Dfns (D-63): `{` `}` and `:` are tokens of their own, and `⍺` `⍵`
+// are one-glyph names. `nl` is a line end inside one entry (D-69): a
+// host that reads an open brace to its close (jojo does) hands the
+// kernel the lines as one string with `\n` in it, and the session puts
+// an `nl` between lines that arrive one at a time. A `⍝` comment runs
+// to the line end, not the entry's. `unlex` renders a token run back to
+// source for a dfn body (D-67).
 struct Token { kind: Kind, text: String, cp: @, col: @ };
-enum Kind { nat, int, real, chr, name, quad, cmd, glyph, lparen, rparen, lbrack, rbrack, semi, assign, del, diamond };
+enum Kind { nat, int, real, chr, name, quad, cmd, glyph, lparen, rparen, lbrack, rbrack, semi, assign, del, diamond, lbrace, rbrace, colon, nl };
 struct LexErr { tag: String, col: @, hint: String };
 enum Lexed { ok(List<Token>), err(LexErr) };
 
@@ -201,10 +209,17 @@ func lexFrom(cs: List<@>, col: @, bol: Bool, acc: List<Token>) -> Lexed {
     (c, rest) => match c {
       32   => lexFrom(rest, col + 1, bol, acc),                                              // space
       9    => lexFrom(rest, col + 1, bol, acc),                                              // tab
-      9053 => Lexed.ok(revToks(acc, ~)),                                                     // ⍝ comment (D-7)
+      13   => lexFrom(rest, col, bol, acc),                                                  // CR
+      10   => lexFrom(rest, 1, true, (tok(Kind.nl, "", 0, col), acc)),                       // line end (D-69)
+      9053 => lexFrom(toLineEnd(rest), col, bol, acc),                                       // ⍝ comment to the line end (D-7)
       8900 => lexFrom(rest, col + 1, false, (tok(Kind.diamond, "⋄", 0, col), acc)),          // ⋄
       8592 => lexFrom(rest, col + 1, false, (tok(Kind.assign, "←", 0, col), acc)),           // ←
       8711 => lexFrom(rest, col + 1, false, (tok(Kind.del, "∇", 0, col), acc)),              // ∇
+      123  => lexFrom(rest, col + 1, false, (tok(Kind.lbrace, "{{", 0, col), acc)),           // { (D-63)
+      125  => lexFrom(rest, col + 1, false, (tok(Kind.rbrace, "}}", 0, col), acc)),           // }
+      58   => lexFrom(rest, col + 1, false, (tok(Kind.colon, ":", 0, col), acc)),            // : (D-66)
+      9082 => lexFrom(rest, col + 1, false, (tok(Kind.name, "⍺", 0, col), acc)),             // ⍺ (D-63)
+      9077 => lexFrom(rest, col + 1, false, (tok(Kind.name, "⍵", 0, col), acc)),             // ⍵
       40   => lexFrom(rest, col + 1, false, (tok(Kind.lparen, "(", 0, col), acc)),
       41   => if bol and headIs(rest, isLetter) {                                            // )CMD (D-61)
                 match scanName(rest) { (nm, r, n) => lexFrom(r, col + 1 + n, false, (tok(Kind.cmd, text(nm), 0, col), acc)), }
@@ -236,6 +251,7 @@ func lexFrom(cs: List<@>, col: @, bol: Bool, acc: List<Token>) -> Lexed {
     _ => Lexed.ok(revToks(acc, ~)),
   }
 };
+func toLineEnd(cs: List<@>) -> List<@> { match cs { (c, rest) => if c == 10 { cs } else { toLineEnd(rest) }, _ => ~, } };
 func tokens(line: String) -> Lexed { lexFrom(toCps(line.chars()), 1, true, ~) };
 
 // --- rendering (the lex corpus) -------------------------------------------
@@ -244,6 +260,7 @@ func kindName(k: Kind) -> String {
     .nat => "nat", .int => "int", .real => "real", .chr => "chr", .name => "name",
     .quad => "quad", .cmd => "cmd", .glyph => "glyph", .lparen => "lparen", .rparen => "rparen",
     .lbrack => "lbrack", .rbrack => "rbrack", .semi => "semi", .assign => "assign", .del => "del", .diamond => "diamond",
+    .lbrace => "lbrace", .rbrace => "rbrace", .colon => "colon", .nl => "nl",
   }
 };
 func showTok(t: Token) -> String {
@@ -262,4 +279,34 @@ func dump(line: String) -> String {
     .ok(ts) => render(ts),
     .err(e) => e.tag + " col:{e.col} " + e.hint,
   }
+};
+
+// --- back to source (a dfn body, D-67) ---------------------------------------
+// The tokens of a run, as a line that lexes to the same tokens: a
+// character literal gets its quotes back (a quote doubled, D-5), two
+// word-like tokens get a space between them, and `⋄` and `:` get the
+// spaces that read well. Columns are not preserved; a body line's
+// refusal is reported by its line.
+func wordy(k: Kind) -> Bool {
+  match k { .nat => true, .int => true, .real => true, .chr => true, .name => true, .quad => true, .cmd => true, _ => false, }
+};
+func quoteChr(cs: List<@>) -> List<@> {
+  match cs { (c, rest) => if c == 39 { (39, (39, quoteChr(rest))) } else { (c, quoteChr(rest)) }, _ => ~, }
+};
+func tokText(t: Token) -> String {
+  match t.kind {
+    .chr => "'" + text(quoteChr(toCps(t.text.chars()))) + "'",
+    .quad => "⎕" + t.text,
+    .cmd => ")" + t.text,
+    _ => t.text,
+  }
+};
+func spaced(a: Token, b: Token) -> Bool {
+  (wordy(a.kind) and wordy(b.kind)) or (match a.kind { .diamond => true, .colon => true, _ => false, }) or (match b.kind { .diamond => true, _ => false, })
+};
+func unlexFrom(prev: Token, ts: List<Token>) -> String {
+  match ts { (t, rest) => (if spaced(prev, t) { " " } else { "" }) + tokText(t) + unlexFrom(t, rest), _ => "", }
+};
+func unlex(ts: List<Token>) -> String {
+  match ts { (t, rest) => tokText(t) + unlexFrom(t, rest), _ => "", }
 };

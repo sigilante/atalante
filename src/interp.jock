@@ -20,13 +20,22 @@ import nasm;
 // the trees; any other signature re-parses, which is what invalidates the
 // cache when a name the body reads changes class.
 struct Fndef { h: parse.Header, body: List<String>, cached: Bool, ckey: List<(String, @)>, cast: List<parse.Ast>, cfor: List<List<*>> };
+// a named dfn (D-64) with the same cache; the cache holds the lines a call
+// has reached so far (a guard ends a body early), and a later call that
+// goes further parses the rest and extends it
+struct Dfndef { d: parse.Dfn, cached: Bool, ckey: List<(String, @)>, cast: List<parse.Ast>, cfor: List<List<(*, *)>> };
+// a dfn call's scope (D-65): its locals, its local dfns, the dfn itself
+// (what ∇ names) and its global name when it has one (for the cache)
+struct Frame { vars: List<(String, array.Arr)>, fns: List<(String, parse.Dfn)>, own: parse.Dfn, name: String };
 struct Env {
-  store: List<(String, array.Arr)>,    // arrays by name
+  store: List<(String, array.Arr)>,    // arrays by name (the globals)
   io: @, pp: @,                        // ⎕IO, ⎕PP
   fns: List<(String, Fndef)>,          // tradfns by name
   phdr: parse.Header,                  // the header of a definition in progress (D-62)
   pend: List<String>,                  // its body lines so far, reversed
   out: List<String>,                   // what body lines printed, reversed (drained by runStmt)
+  dfns: List<(String, Dfndef)>,        // global dfns by name (D-64)
+  frames: List<Frame>,                 // the dfn calls in progress, innermost first (D-65)
 };
 struct EErr { tag: String, hint: String };
 enum Ev { err(EErr), ok((array.Arr, Env)) };
@@ -40,15 +49,19 @@ enum Nasm { atom(@), axis(String), cell(List<Nasm>), op((String, List<Nasm>)), b
 enum Sema { leaf(String), pair((Sema, Sema)) };
 enum Evs { err(EErr), ok((List<array.Arr>, Env)) };
 enum Parts { err(EErr), ok((List<List<@>>, List<@>, Env)) };
+enum DfnR { err(EErr), ok((List<parse.Ast>, List<List<(*, *)>>, Bool, array.Arr, Env)) };
+enum StepR { err(EErr), next(Env), done((array.Arr, Env)) };
 
 func fail(tag: String, hint: String) -> Ev { Ev.err(EErr( tag: tag, hint: hint )) };
 func noHeader() -> parse.Header { parse.Header( nm: "", res: "", lft: "", rgt: "", locals: ~ ) };
-func setStore(e: Env, st: List<(String, array.Arr)>) -> Env { Env( store: st, io: e.io, pp: e.pp, fns: e.fns, phdr: e.phdr, pend: e.pend, out: e.out ) };
-func setIo(e: Env, io: @) -> Env { Env( store: e.store, io: io, pp: e.pp, fns: e.fns, phdr: e.phdr, pend: e.pend, out: e.out ) };
-func setPp(e: Env, pp: @) -> Env { Env( store: e.store, io: e.io, pp: pp, fns: e.fns, phdr: e.phdr, pend: e.pend, out: e.out ) };
-func setFns(e: Env, fns: List<(String, Fndef)>) -> Env { Env( store: e.store, io: e.io, pp: e.pp, fns: fns, phdr: e.phdr, pend: e.pend, out: e.out ) };
-func setPending(e: Env, h: parse.Header, pend: List<String>) -> Env { Env( store: e.store, io: e.io, pp: e.pp, fns: e.fns, phdr: h, pend: pend, out: e.out ) };
-func setOut(e: Env, out: List<String>) -> Env { Env( store: e.store, io: e.io, pp: e.pp, fns: e.fns, phdr: e.phdr, pend: e.pend, out: out ) };
+func setStore(e: Env, st: List<(String, array.Arr)>) -> Env { Env( store: st, io: e.io, pp: e.pp, fns: e.fns, phdr: e.phdr, pend: e.pend, out: e.out, dfns: e.dfns, frames: e.frames ) };
+func setIo(e: Env, io: @) -> Env { Env( store: e.store, io: io, pp: e.pp, fns: e.fns, phdr: e.phdr, pend: e.pend, out: e.out, dfns: e.dfns, frames: e.frames ) };
+func setPp(e: Env, pp: @) -> Env { Env( store: e.store, io: e.io, pp: pp, fns: e.fns, phdr: e.phdr, pend: e.pend, out: e.out, dfns: e.dfns, frames: e.frames ) };
+func setFns(e: Env, fns: List<(String, Fndef)>) -> Env { Env( store: e.store, io: e.io, pp: e.pp, fns: fns, phdr: e.phdr, pend: e.pend, out: e.out, dfns: e.dfns, frames: e.frames ) };
+func setPending(e: Env, h: parse.Header, pend: List<String>) -> Env { Env( store: e.store, io: e.io, pp: e.pp, fns: e.fns, phdr: h, pend: pend, out: e.out, dfns: e.dfns, frames: e.frames ) };
+func setOut(e: Env, out: List<String>) -> Env { Env( store: e.store, io: e.io, pp: e.pp, fns: e.fns, phdr: e.phdr, pend: e.pend, out: out, dfns: e.dfns, frames: e.frames ) };
+func setDfns(e: Env, dfns: List<(String, Dfndef)>) -> Env { Env( store: e.store, io: e.io, pp: e.pp, fns: e.fns, phdr: e.phdr, pend: e.pend, out: e.out, dfns: dfns, frames: e.frames ) };
+func setFrames(e: Env, frames: List<Frame>) -> Env { Env( store: e.store, io: e.io, pp: e.pp, fns: e.fns, phdr: e.phdr, pend: e.pend, out: e.out, dfns: e.dfns, frames: frames ) };
 func pushOut(e: Env, line: String) -> Env { if line == "" { e } else { setOut(e, (line, e.out)) } };
 func dom(hint: String) -> Ev { fail("%domain-error", hint) };
 func nyi(what: String) -> Ev { fail("%unimplemented", what) };
@@ -59,6 +72,62 @@ func lookup(st: List<(String, array.Arr)>, nm: String) -> (Bool, array.Arr) {
 };
 func put(st: List<(String, array.Arr)>, nm: String, v: array.Arr) -> List<(String, array.Arr)> {
   match st { ((n, w), t) => if n == nm { ((nm, v), t) } else { ((n, w), put(t, nm, v)) }, _ => [(nm, v)], }
+};
+// --- scope (D-65) ------------------------------------------------------------------
+// A name is read through the dfn frames, innermost first, then the store;
+// ⍺ and ⍵ belong to the innermost frame alone. An assignment inside a dfn
+// binds in the innermost frame; at the prompt it binds in the store, and
+// a dfn of that name is gone (D-64).
+func isArg(nm: String) -> Bool { nm == "⍺" or nm == "⍵" };
+func lookupVar(env: Env, nm: String) -> (Bool, array.Arr) {
+  match env.frames {
+    (f, rest) => match lookup(f.vars, nm) {
+      (found, v) => if found { (true, v) } else if isArg(nm) { (false, v) } else { lookupFrames(rest, env.store, nm) },
+    },
+    _ => if isArg(nm) { (false, array.scalar(1, 0)) } else { lookup(env.store, nm) },
+  }
+};
+func lookupFrames(frames: List<Frame>, st: List<(String, array.Arr)>, nm: String) -> (Bool, array.Arr) {
+  match frames {
+    (f, rest) => match lookup(f.vars, nm) { (found, v) => if found { (true, v) } else { lookupFrames(rest, st, nm) }, },
+    _ => lookup(st, nm),
+  }
+};
+func putVar(env: Env, nm: String, v: array.Arr) -> Env {
+  match env.frames {
+    (f, rest) => setFrames(env, (Frame( vars: put(f.vars, nm, v), fns: f.fns, own: f.own, name: f.name ), rest)),
+    _ => setDfns(setStore(env, put(env.store, nm, v)), delDfn(env.dfns, nm)),
+  }
+};
+func delDfn(ds: List<(String, Dfndef)>, nm: String) -> List<(String, Dfndef)> {
+  match ds { ((n, d), t) => if n == nm { t } else { ((n, d), delDfn(t, nm)) }, _ => ~, }
+};
+func putDfn(ds: List<(String, Dfndef)>, nm: String, d: Dfndef) -> List<(String, Dfndef)> {
+  match ds { ((n, w), t) => if n == nm { ((nm, d), t) } else { ((n, w), putDfn(t, nm, d)) }, _ => [(nm, d)], }
+};
+func lookupDfn(ds: List<(String, Dfndef)>, nm: String) -> (Bool, Dfndef) {
+  match ds { ((n, d), t) => if n == nm { (true, d) } else { lookupDfn(t, nm) }, _ => (false, noDfn()), }
+};
+func noDfn() -> Dfndef { Dfndef( d: parse.Dfn( body: ~ ), cached: false, ckey: ~, cast: ~, cfor: ~ ) };
+func lookupLocalFn(frames: List<Frame>, nm: String) -> (Bool, parse.Dfn) {
+  match frames {
+    (f, rest) => match lookupPD(f.fns, nm) { (found, d) => if found { (true, d) } else { lookupLocalFn(rest, nm) }, },
+    _ => (false, parse.Dfn( body: ~ )),
+  }
+};
+func lookupPD(fs: List<(String, parse.Dfn)>, nm: String) -> (Bool, parse.Dfn) {
+  match fs { ((n, d), t) => if n == nm { (true, d) } else { lookupPD(t, nm) }, _ => (false, parse.Dfn( body: ~ )), }
+};
+func putPD(fs: List<(String, parse.Dfn)>, nm: String, d: parse.Dfn) -> List<(String, parse.Dfn)> {
+  match fs { ((n, w), t) => if n == nm { ((nm, d), t) } else { ((n, w), putPD(t, nm, d)) }, _ => [(nm, d)], }
+};
+// F ← {…}: in a dfn a local function, at the prompt a global one that
+// replaces a tradfn of the name (D-64)
+func putFnDef(env: Env, nm: String, d: parse.Dfn) -> Env {
+  match env.frames {
+    (f, rest) => setFrames(env, (Frame( vars: delStore(f.vars, nm), fns: putPD(f.fns, nm, d), own: f.own, name: f.name ), rest)),
+    _ => setFns(setStore(setDfns(env, putDfn(env.dfns, nm, Dfndef( d: d, cached: false, ckey: ~, cast: ~, cfor: ~ ))), delStore(env.store, nm)), delFn(env.fns, nm)),
+  }
 };
 
 // --- literals (D-3, D-5) ------------------------------------------------------------
@@ -329,8 +398,23 @@ func applyMonad(f: parse.Fn, a: array.Arr, env: Env) -> Ev {
     .each(g) => applyMonad(g, a, env),
     .inner(i) => nyi("monadic inner product"),
     .outer(g) => nyi("monadic outer product"),
-    .user(nm) => callUser(nm, false, true, array.scalar(1, 0), a, env),
+    .user(nm) => callNamed(nm, false, array.scalar(1, 0), a, env),
+    .dfn(d) => callDfn("", d, false, array.scalar(1, 0), a, env),
+    .own => callOwn(false, array.scalar(1, 0), a, env),
   }
+};
+// a name of function class: a local dfn, a global dfn, or a tradfn (D-64, D-65)
+func callNamed(nm: String, dyadic: Bool, a: array.Arr, b: array.Arr, env: Env) -> Ev {
+  match lookupLocalFn(env.frames, nm) {
+    (local, ld) => if local { callDfn("", ld, dyadic, a, b, env) }
+      else { match lookupDfn(env.dfns, nm) {
+        (global, gd) => if global { callDfn(nm, gd.d, dyadic, a, b, env) } else { callUser(nm, dyadic, true, a, b, env) },
+      } },
+  }
+};
+// ∇ inside a body: the dfn the innermost frame runs (D-63)
+func callOwn(dyadic: Bool, a: array.Arr, b: array.Arr, env: Env) -> Ev {
+  match env.frames { (f, rest) => callDfn(f.name, f.own, dyadic, a, b, env), _ => fail("%syntax-error", "∇ names a dfn only inside one"), }
 };
 func applyDyad(f: parse.Fn, a: array.Arr, b: array.Arr, env: Env) -> Ev {
   match f {
@@ -342,7 +426,9 @@ func applyDyad(f: parse.Fn, a: array.Arr, b: array.Arr, env: Env) -> Ev {
     .reduce1(g) => nyi("n-wise reduction"),
     .scan(g) => nyi("dyadic scan"),
     .scan1(g) => nyi("dyadic scan"),
-    .user(nm) => callUser(nm, true, true, a, b, env),
+    .user(nm) => callNamed(nm, true, a, b, env),
+    .dfn(d) => callDfn("", d, true, a, b, env),
+    .own => callOwn(true, a, b, env),
   }
 };
 // a scalar function as a value: f on two SCALARS, the result's single element and kind
@@ -859,7 +945,7 @@ func setNth(xs: List<@>, i: @, v: @) -> List<@> { match xs { (h, t) => if i == 0
 func evalAst(a: parse.Ast, env: Env) -> Ev {
   match a {
     .lit(l) => okv(litArr(l), env),
-    .name(nm) => match lookup(env.store, nm) { (found, v) => if found { okv(v, env) } else { fail("%value-error", nm + " is not defined") }, },
+    .name(nm) => match lookupVar(env, nm) { (found, v) => if found { okv(v, env) } else { fail("%value-error", nm + " is not defined") }, },
     .nilad(nm) => callUser(nm, false, false, array.scalar(1, 0), array.scalar(1, 0), env),
     .sysvar(nm) => if nm == "IO" { okv(array.scalar(1, env.io), env) } else if nm == "PP" { okv(array.scalar(1, env.pp), env) } else { nyi("⎕" + nm) },
     .monad(m) => match evalAst(m.r, env) {
@@ -880,7 +966,7 @@ func evalAst(a: parse.Ast, env: Env) -> Ev {
         .ok(pr) => match pr { (parts, rshp, env3) => indexed(xv, parts, rshp, env3), },
       }, },
     },
-    .iassign(s) => match lookup(env.store, s.nm) {
+    .iassign(s) => match lookupVar(env, s.nm) {
       (found, x0) => if not found { fail("%value-error", s.nm + " is not defined") }
       else {
         match evalAst(s.v, env) {
@@ -889,7 +975,7 @@ func evalAst(a: parse.Ast, env: Env) -> Ev {
             .err(e) => Ev.err(e),
             .ok(pr) => match pr { (parts, rshp, env3) => match assignAt(x0, parts, v, env3) {
               .err(e) => Ev.err(e),
-              .ok(r2) => match r2 { (x2, env4) => okv(v, setStore(env4, put(env4.store, s.nm, x2))), },
+              .ok(r2) => match r2 { (x2, env4) => okv(v, putVar(env4, s.nm, x2)), },
             }, },
           }, },
         }
@@ -897,7 +983,7 @@ func evalAst(a: parse.Ast, env: Env) -> Ev {
     },
     .assign(s) => match evalAst(s.v, env) {
       .err(e) => Ev.err(e),
-      .ok(r) => match r { (v, env2) => okv(v, setStore(env2, put(env2.store, s.nm, v))), },
+      .ok(r) => match r { (v, env2) => okv(v, putVar(env2, s.nm, v)), },
     },
     .sysassign(s) => match evalAst(s.v, env) {
       .err(e) => Ev.err(e),
@@ -923,25 +1009,29 @@ func runStmt(a: parse.Ast, env: Env) -> (String, Env) {
     .fnend => ("", env),
     .stmts(ss) => runAll(ss, env, ""),
     .cmd(c) => command(c, env),
+    .fassign(s) => ("", putFnDef(env, s.nm, dfnOf(s.f))),
+    .guard(g) => ("%syntax-error a guard belongs in a dfn body (D-66)", env),
     _ => finish(a, evalAst(a, env), env),
   }
 };
+func dfnOf(f: parse.Fn) -> parse.Dfn { match f { .dfn(d) => d, _ => parse.Dfn( body: ~ ), } };
 // --- system commands (D-61) ----------------------------------------------------------------------
 func command(c: parse.Cmd, env: Env) -> (String, Env) {
   if c.nm == "VARS" { (array.joinS(sortS(storeNames(env.store, ~)), " "), env) }
-  else if c.nm == "FNS" { (array.joinS(sortS(fnNames(env.fns, ~)), " "), env) }
+  else if c.nm == "FNS" { (array.joinS(sortS(fnNames(env.fns, dfnNames(env.dfns, ~))), " "), env) }
   else if c.nm == "ERASE" { (eraseAll(c.args, env, ""), eraseEnv(c.args, env)) }
   else if c.nm == "OFF" { ("bye", env) }
   else { ("%syntax-error unknown command )" + c.nm, env) }
 };
 func storeNames(st: List<(String, array.Arr)>, acc: List<String>) -> List<String> { match st { ((n, v), t) => storeNames(t, (n, acc)), _ => acc, } };
 func fnNames(fs: List<(String, Fndef)>, acc: List<String>) -> List<String> { match fs { ((n, d), t) => fnNames(t, (n, acc)), _ => acc, } };
+func dfnNames(ds: List<(String, Dfndef)>, acc: List<String>) -> List<String> { match ds { ((n, d), t) => dfnNames(t, (n, acc)), _ => acc, } };
 func eraseEnv(names: List<String>, env: Env) -> Env {
-  match names { (n, rest) => eraseEnv(rest, setFns(setStore(env, delStore(env.store, n)), delFn(env.fns, n))), _ => env, }
+  match names { (n, rest) => eraseEnv(rest, setDfns(setFns(setStore(env, delStore(env.store, n)), delFn(env.fns, n)), delDfn(env.dfns, n))), _ => env, }
 };
 func eraseAll(names: List<String>, env: Env, acc: String) -> String {
   match names {
-    (n, rest) => match lookup(env.store, n) { (had, v) => match lookupFn(env.fns, n) { (hadf, d) => eraseAll(rest, env, if had or hadf { acc } else if acc == "" { "%value-error " + n + " is not defined" } else { acc }), }, },
+    (n, rest) => match lookup(env.store, n) { (had, v) => match lookupFn(env.fns, n) { (hadf, d) => match lookupDfn(env.dfns, n) { (hadd, dd) => eraseAll(rest, env, if had or hadf or hadd { acc } else if acc == "" { "%value-error " + n + " is not defined" } else { acc }), }, }, },
     _ => acc,
   }
 };
@@ -974,7 +1064,7 @@ func defineStart(h: parse.Header, env: Env) -> Env { setPending(env, h, ~) };
 func defineLine(line: String, env: Env) -> Env { setPending(env, env.phdr, (line, env.pend)) };
 func defineEnd(env: Env) -> Env {
   let d = Fndef( h: env.phdr, body: revS(env.pend, ~), cached: false, ckey: ~, cast: ~, cfor: ~ );
-  setPending(setFns(env, putFn(env.fns, env.phdr.nm, d)), noHeader(), ~)
+  setPending(setDfns(setFns(env, putFn(env.fns, env.phdr.nm, d)), delDfn(env.dfns, env.phdr.nm)), noHeader(), ~)
 };
 func putFn(fs: List<(String, Fndef)>, nm: String, d: Fndef) -> List<(String, Fndef)> {
   match fs { ((n, w), t) => if n == nm { ((nm, d), t) } else { ((n, w), putFn(t, nm, d)) }, _ => [(nm, d)], }
@@ -982,8 +1072,24 @@ func putFn(fs: List<(String, Fndef)>, nm: String, d: Fndef) -> List<(String, Fnd
 func lookupFn(fs: List<(String, Fndef)>, nm: String) -> (Bool, Fndef) {
   match fs { ((n, d), t) => if n == nm { (true, d) } else { lookupFn(t, nm) }, _ => (false, Fndef( h: noHeader(), body: ~, cached: false, ckey: ~, cast: ~, cfor: ~ )), }
 };
-// the parser's signature for the environment as it stands (D-52)
-func sigOf(env: Env) -> List<(String, @)> { sigFns(env.fns, sigStore(env.store, ~)) };
+// the parser's signature for the environment as it stands (D-52): the
+// globals, then each frame's bindings in front of them, innermost first,
+// so a local shadows a global; inside a dfn `∇` is an ambivalent function
+func sigOf(env: Env) -> List<(String, @)> {
+  let globals = sigDfns(env.dfns, sigFns(env.fns, sigStore(env.store, ~)));
+  match env.frames { (f, rest) => (("∇", 4), sigFrames(env.frames, globals)), _ => globals, }
+};
+func sigDfns(ds: List<(String, Dfndef)>, acc: List<(String, @)>) -> List<(String, @)> {
+  match ds { ((n, d), t) => sigDfns(t, ((n, 4), acc)), _ => acc, }
+};
+// innermost first in the list means the innermost frame's entries go in front last
+func sigFrames(frames: List<Frame>, acc: List<(String, @)>) -> List<(String, @)> {
+  match frames { (f, rest) => sigFrame(f, sigFrames(rest, acc)), _ => acc, }
+};
+func sigFrame(f: Frame, acc: List<(String, @)>) -> List<(String, @)> { sigPDs(f.fns, sigStore(f.vars, acc)) };
+func sigPDs(fs: List<(String, parse.Dfn)>, acc: List<(String, @)>) -> List<(String, @)> {
+  match fs { ((n, d), t) => sigPDs(t, ((n, 4), acc)), _ => acc, }
+};
 func sigStore(st: List<(String, array.Arr)>, acc: List<(String, @)>) -> List<(String, @)> {
   match st { ((n, v), t) => sigStore(t, ((n, 1), acc)), _ => acc, }
 };
@@ -1017,7 +1123,9 @@ func callUser(nm: String, dyadic: Bool, monadic: Bool, a: array.Arr, b: array.Ar
       let st0 = unbindAll(env.store, localNames(h));
       let st1 = if monadic { put(st0, h.rgt, b) } else { st0 };
       let st2 = if dyadic { put(st1, h.lft, a) } else { st1 };
-      let entry = setStore(env, st2);
+      // a tradfn lives in the global, dynamic scope: the dfn frames of its
+      // caller are hidden for the call (D-65)
+      let entry = setFrames(setStore(env, st2), ~);
       let key = sigOf(entry);
       let hit = d.cached and d.ckey == key;
       let ran = if hit { runCached(d.cast, d.cfor, entry, ~, ~) } else { runBodyCollect(d.body, entry, ~, ~) };
@@ -1026,7 +1134,7 @@ func callUser(nm: String, dyadic: Bool, monadic: Bool, a: array.Arr, b: array.Ar
         .ok(r) => match r { (asts, fors, env2) => match lookup(env2.store, h.res) {
           (hasRes, res) => {
             let fresh = Fndef( h: h, body: d.body, cached: true, ckey: key, cast: asts, cfor: fors );
-            let env3 = setFns(setStore(env2, restoreLocals(saved, env2.store, localNames(h))), if hit { env2.fns } else { putFn(env2.fns, nm, fresh) });
+            let env3 = setFrames(setFns(setStore(env2, restoreLocals(saved, env2.store, localNames(h))), if hit { env2.fns } else { putFn(env2.fns, nm, fresh) }), env.frames);
             if h.res == "" { fail("%value-error", nm + " returns no result") }
             else if not hasRes { fail("%value-error", nm + " did not set its result " + h.res) }
             else { okv(res, env3) }
@@ -1096,9 +1204,120 @@ func runBodyStmt(a: parse.Ast, f: *, env: Env) -> EnvR {
     .empty => EnvR.ok(env),
     .fnend => EnvR.ok(env),
     .header(h) => EnvR.err(EErr( tag: "%syntax-error", hint: "∇ inside a function body" )),
+    .fassign(s) => EnvR.ok(putFnDef(env, s.nm, dfnOf(s.f))),
+    .guard(g) => EnvR.err(EErr( tag: "%syntax-error", hint: "a guard belongs in a dfn body (D-66)" )),
     _ => match bodyEv(a, f, env) {
       .err(e) => EnvR.err(e),
       .ok(r) => match r { (v, env2) => EnvR.ok(if isAssign(a) { env2 } else { pushOut(env2, array.format(v, env2.pp)) }), },
+    },
+  }
+};
+
+// --- dfns (D-63..D-69) -------------------------------------------------------------------------------
+// A call opens a frame holding ⍵ (and ⍺ when dyadic) and runs the body
+// line by line, each line parsed against the signature as it stands and
+// emitted, as a tradfn body is (D-34); the statements run in order, an
+// assignment or a false guard continues, a true guard's expression or any
+// other value ENDS the body and is the result (D-66). A global dfn runs
+// over the store alone; a nested or anonymous one over its definer's
+// frames too (D-65). ⎕IO and ⎕PP set inside are local. A named dfn keeps
+// the trees and formulas of the lines a call reached, keyed by the entry
+// signature (which carries ⍺ only when bound, D-67); a later call that
+// reaches further parses on from there and extends the cache.
+func callDfn(nm: String, d: parse.Dfn, dyadic: Bool, a: array.Arr, b: array.Arr, env: Env) -> Ev {
+  let global = nm != "";
+  let args = if dyadic { [("⍺", a), ("⍵", b)] } else { [("⍵", b)] };
+  let frame = Frame( vars: args, fns: ~, own: d, name: nm );
+  let entry = setFrames(env, if global { [frame] } else { (frame, env.frames) });
+  let key = sigOf(entry);
+  match lookupDfn(env.dfns, nm) {
+    (found, cd) => {
+      let hit = global and found and cd.cached and cd.ckey == key;
+      let ran = if hit { dfnCached(cd.cast, cd.cfor, d.body, entry, ~, ~) } else { dfnLines(d.body, 1, entry, ~, ~) };
+      match ran {
+        .err(e) => Ev.err(e),
+        .ok(r) => match r { (asts, fors, has, v, env2) => {
+          let env3 = setPp(setIo(setFrames(env2, env.frames), env.io), env.pp);
+          let env4 = if global { setDfns(env3, putDfn(env3.dfns, nm, Dfndef( d: d, cached: true, ckey: key, cast: asts, cfor: fors ))) } else { env3 };
+          if has { okv(v, env4) } else { fail("%value-error", "the dfn returned no result (D-66)") }
+        }, },
+      }
+    },
+  }
+};
+func dfnLines(lines: List<String>, n: @, env: Env, acc: List<parse.Ast>, facc: List<List<(*, *)>>) -> DfnR {
+  match lines {
+    (line, rest) => match parse.parseLine(line, sigOf(env)) {
+      .err(e) => DfnR.err(EErr( tag: e.tag, hint: "dfn line {n}: " + e.hint )),
+      .ok(a) => {
+        let ss = flatStmts(a);
+        let fs = dfnFormulas(ss, env);
+        match dfnStmts(ss, fs, env) {
+          .err(e) => DfnR.err(e),
+          .next(env2) => dfnLines(rest, n + 1, env2, (a, acc), (fs, facc)),
+          .done(r) => match r { (v, env2) => DfnR.ok((revAsts((a, acc), ~), revDFors((fs, facc), ~), true, v, env2)), },
+        }
+      },
+    },
+    _ => DfnR.ok((revAsts(acc, ~), revDFors(facc, ~), false, array.scalar(1, 0), env)),
+  }
+};
+// the cached prefix replayed, then the lines past it parsed on
+func dfnCached(asts: List<parse.Ast>, fors: List<List<(*, *)>>, lines: List<String>, env: Env, acc: List<parse.Ast>, facc: List<List<(*, *)>>) -> DfnR {
+  match asts {
+    (a, arest) => match fors {
+      (fs, frest) => match dfnStmts(flatStmts(a), fs, env) {
+        .err(e) => DfnR.err(e),
+        .next(env2) => dfnCached(arest, frest, tailS(lines), env2, (a, acc), (fs, facc)),
+        .done(r) => match r { (v, env2) => DfnR.ok((revAsts((a, acc), ~), revDFors((fs, facc), ~), true, v, env2)), },
+      },
+      _ => DfnR.err(EErr( tag: "%emit-mismatch", hint: "cache shape" )),
+    },
+    _ => dfnLines(lines, countAsts(acc) + 1, env, acc, facc),
+  }
+};
+func tailS(xs: List<String>) -> List<String> { match xs { (h, t) => t, _ => ~, } };
+func countAsts(xs: List<parse.Ast>) -> @ { match xs { (h, t) => 1 + countAsts(t), _ => 0, } };
+func revDFors(xs: List<List<(*, *)>>, acc: List<List<(*, *)>>) -> List<List<(*, *)>> { match xs { (h, t) => revDFors(t, (h, acc)), _ => acc, } };
+// a formula per statement; a guard carries one for its condition and one for its expression
+func dfnFormulas(ss: List<parse.Ast>, env: Env) -> List<(*, *)> {
+  match ss { (st, rest) => (dfnFormula(st, env), dfnFormulas(rest, env)), _ => ~, }
+};
+func dfnFormula(st: parse.Ast, env: Env) -> (*, *) {
+  match st { .guard(g) => (lowerOr(g.c, env), lowerOr(g.e, env)), _ => (lowerOr(st, env), noFormula()), }
+};
+func lowerOr(a: parse.Ast, env: Env) -> * { if emittable(a) { lower(a, env) } else { noFormula() } };
+func noFormula() -> * { 0 };
+func dfnStmts(ss: List<parse.Ast>, fs: List<(*, *)>, env: Env) -> StepR {
+  match ss {
+    (st, rest) => match fs {
+      ((f1, f2), frest) => match dfnStmt(st, f1, f2, env) {
+        .err(e) => StepR.err(e),
+        .next(env2) => dfnStmts(rest, frest, env2),
+        .done(r) => StepR.done(r),
+      },
+      _ => StepR.err(EErr( tag: "%emit-mismatch", hint: "formula count" )),
+    },
+    _ => StepR.next(env),
+  }
+};
+func boolScalar(v: array.Arr) -> Bool { v.kind == 1 and array.size(array.shape(v)) == 1 and isBool(array.first(v)) };
+func dfnStmt(a: parse.Ast, f1: *, f2: *, env: Env) -> StepR {
+  match a {
+    .empty => StepR.next(env),
+    .fassign(s) => StepR.next(putFnDef(env, s.nm, dfnOf(s.f))),
+    .guard(g) => match bodyEv(g.c, f1, env) {
+      .err(e) => StepR.err(e),
+      .ok(r) => match r { (cv, env2) => if not boolScalar(cv) { StepR.err(EErr( tag: "%domain-error", hint: "a guard takes a scalar 0 or 1 (D-66)" )) }
+        else if array.first(cv) == 1 { match bodyEv(g.e, f2, env2) { .err(e) => StepR.err(e), .ok(r2) => match r2 { (v, env3) => StepR.done((v, env3)), }, } }
+        else { StepR.next(env2) }, },
+    },
+    .header(h) => StepR.err(EErr( tag: "%syntax-error", hint: "∇ opens no definition inside a dfn" )),
+    .fnend => StepR.err(EErr( tag: "%syntax-error", hint: "∇ opens no definition inside a dfn" )),
+    .cmd(c) => StepR.err(EErr( tag: "%syntax-error", hint: ") commands belong at the prompt" )),
+    _ => match bodyEv(a, f1, env) {
+      .err(e) => StepR.err(e),
+      .ok(r) => match r { (v, env2) => if isAssign(a) { StepR.next(env2) } else { StepR.done((v, env2)) }, },
     },
   }
 };
@@ -1154,7 +1373,7 @@ func fnKind(f: parse.Fn, kl: @, kr: @) -> @ {
 func inferK(a: parse.Ast, env: Env) -> Info {
   match a {
     .lit(l) => known(l.kind, if l.kind == 4 { if array.count(cps(litText(l))) == 1 { 0 } else { 1 } } else { if countS(l.vals) == 1 { 0 } else { 1 } }),
-    .name(nm) => match lookup(env.store, nm) { (found, v) => if found { known(v.kind, array.rank(v)) } else { unknown() }, },
+    .name(nm) => match lookupVar(env, nm) { (found, v) => if found { known(v.kind, array.rank(v)) } else { unknown() }, },
     .sysvar(nm) => known(1, 0),
     .assign(s) => inferK(s.v, env),
     .sysassign(s) => known(1, 0),
@@ -1338,7 +1557,7 @@ func gMonad(f: parse.Fn, r: Ev) -> Ev { match r { .err(e) => r, .ok(p) => match 
 func gDyad(f: parse.Fn, l: Ev, r: Ev) -> Ev {
   match r { .err(e) => r, .ok(p) => match p { (rv, env1) => match l { .err(e2) => l, .ok(q) => match q { (lv, env2) => applyDyad(f, lv, rv, env2), }, }, }, }
 };
-func gAssign(nm: String, v: Ev) -> Ev { match v { .err(e) => v, .ok(p) => match p { (val, env) => okv(val, setStore(env, put(env.store, nm, val))), }, } };
+func gAssign(nm: String, v: Ev) -> Ev { match v { .err(e) => v, .ok(p) => match p { (val, env) => okv(val, putVar(env, nm, val)), }, } };
 func gSysassign(nm: String, v: Ev) -> Ev { match v { .err(e) => v, .ok(p) => match p { (val, env) => sysSet(nm, val, env), }, } };
 // parts arrive evaluated, in order; the environment is the last part's (or x's)
 func gIndex(x: Ev, parts: List<Part>) -> Ev {
@@ -1350,13 +1569,13 @@ func gIndex(x: Ev, parts: List<Part>) -> Ev {
 func gIassign(nm: String, parts: List<Part>, v: Ev) -> Ev {
   match v { .err(e) => v, .ok(p) => match p { (val, env0) => {
     let env1 = lastEnv(parts, env0);
-    match lookup(env1.store, nm) {
+    match lookupVar(env1, nm) {
       (found, x0) => if not found { fail("%value-error", nm + " is not defined") }
       else { match partsOf(parts, x0, env1, ~, ~) {
         .err(e) => Ev.err(e),
         .ok(pr) => match pr { (pos, rshp, env2) => match assignAt(x0, pos, val, env2) {
           .err(e) => Ev.err(e),
-          .ok(r2) => match r2 { (x2, env3) => okv(val, setStore(env3, put(env3.store, nm, x2))), },
+          .ok(r2) => match r2 { (x2, env3) => okv(val, putVar(env3, nm, x2)), },
         }, },
       } },
     }
@@ -1382,7 +1601,7 @@ func partsOf(parts: List<Part>, x: array.Arr, env: Env, acc: List<List<@>>, shp:
     _ => Parts.ok((revLL(acc, ~), shp, env)),
   }
 };
-func initial() -> Env { Env( store: ~, io: 1, pp: 10, fns: ~, phdr: noHeader(), pend: ~, out: ~ ) };
+func initial() -> Env { Env( store: ~, io: 1, pp: 10, fns: ~, phdr: noHeader(), pend: ~, out: ~, dfns: ~, frames: ~ ) };
 
 // --- the emitter (P5): a statement to a Nockasm program over [rt env] ---------------------------
 // (moved from emit.jock so that a tradfn body can be emitted and run from

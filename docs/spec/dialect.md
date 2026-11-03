@@ -1,6 +1,6 @@
 # ATL/APL — The Dialect
 
-**Status: v1 (2026-10-28).** The maintainer approved Draft 1 as the v1 scope on 2026-10-27 and ruled the last three open items on 2026-10-28 (D-8 deferred to the §9 roadmap, D-15 and D-32 ruled); `%box` nesting and the other §9 items are revisited for v2. Rules carry flat `D-n` ids, append-only. Each rule names the corpus vectors that pin it; `⟨none — UNPINNED⟩` marks a rule that has no vector yet. A rule without a vector is not a rule. No rule is OPEN; DEFERRED marks a continuation on the §9 roadmap.
+**Status: v2 in progress (2026-11-03).** v1 is the approved Draft 1 of 2026-10-27 with the three rulings of 2026-10-28 (D-8 deferred to the §9 roadmap, D-15 and D-32 ruled). v2 opened on 2026-11-03 with P8: the maintainer approved seven items for dfns, written as D-63..D-69, and D-21, D-22, D-32, D-33, D-52 and D-62 carry the amendments. `%box` nesting and the other §9 items follow. Rules carry flat `D-n` ids, append-only. Each rule names the corpus vectors that pin it; `⟨none — UNPINNED⟩` marks a rule that has no vector yet. A rule without a vector is not a rule. No rule is OPEN; DEFERRED marks a continuation on the §9 roadmap.
 
 ATL/APL is the APL that Atalante compiles. It is Budd's compiler subset (Budd 1987, *An APL Compiler*) with the additions the README examples use, and it is specified here as a *language*, independent of its host. The host is Jock; the companion [`docs/plan.md`](../plan.md) fixes the order in which this spec is implemented.
 
@@ -50,9 +50,9 @@ ATL/APL is the APL that Atalante compiles. It is Budd's compiler subset (Budd 19
 
 **D-20 · Right-to-left; a function takes everything to its right.** `2×3+4` is 14. A dyadic function's left argument is the single array immediately to its left. Parentheses group. ⟨`parse/readme`, `parse/operators`⟩
 
-**D-21 · Operators bind before functions and take their operand from the left.** `+/`, `+\`, `+.×`, `∘.×`, `f¨`. The derived function then follows D-20. Operands are primitive functions or user-defined functions in v1; no derived-function operands (`+/¨` is v2). ⟨`parse/readme`, `parse/operators`⟩
+**D-21 · Operators bind before functions and take their operand from the left.** `+/`, `+\`, `+.×`, `∘.×`, `f¨`. The derived function then follows D-20. Operands are primitive functions, user-defined functions and dfns (D-63: `{⍺+⍵}/1 2 3`); no derived-function operands (`+/¨` is on the roadmap). ⟨`parse/readme`, `parse/operators`, `parse/dfns`⟩
 
-**D-22 · Monadic or dyadic is decided by what stands to the left.** A function with an array (or a parenthesised expression, or a name bound to an array) on its left is dyadic; otherwise monadic. A name's valence is looked up in the store at compile time (D-52). ⟨`parse/readme`, `parse/operators`, `parse/refusals`⟩
+**D-22 · Monadic or dyadic is decided by what stands to the left.** A function with an array (or a parenthesised expression, or a name bound to an array) on its left is dyadic; otherwise monadic. A name's valence is looked up in the store at compile time (D-52); a dfn, and a name bound to one, is ambivalent (D-64, D-67). ⟨`parse/readme`, `parse/operators`, `parse/refusals`, `parse/dfns`⟩
 
 **D-23 · Bracket indexing.** `X[i]`, `M[i;j]`, `M[i;]`, `M[;j]`. Indices are arrays; the result shape is the catenation of the index shapes. An index outside `⎕IO`-based bounds is an INDEX ERROR. Indexed assignment `X[i] ← v` is v1. ⟨`parse/indexing` (parsing only)⟩
 
@@ -66,11 +66,25 @@ ATL/APL is the APL that Atalante compiles. It is Budd's compiler subset (Budd 19
 
 **D-31 · Locals are declared in the header after `;`.** `∇ R←A F B;T;U` makes `T` and `U` local; everything else is global (dynamic scope, as in classical APL). Arguments and the result are local. ⟨`parse/statements`, `atl/caesar` (locals restored: `A` unbound after the call), `atl/readme-red`⟩
 
-**D-32 · RULED 2026-10-28 · Control flow is dfns with guards, in v2.** v1 has none: a tradfn body is straight-line. v2 adds dfns `{⍺ ⍵}` with guards `cond: expr`, the modern form; `→` and labels, Budd's classical form, are omitted for good. Guards compose with the emitter's straight-line formulas where `→` would need a label table and a loop in the generated Nock. Both were expressible on the v1 AST; dfns are what enters.
+**D-32 · RULED 2026-10-28 · Control flow is dfns with guards, in v2.** v1 has none: a tradfn body is straight-line. v2 adds dfns `{⍺ ⍵}` with guards `cond: expr`, the modern form; `→` and labels, Budd's classical form, are omitted for good. Guards compose with the emitter's straight-line formulas where `→` would need a label table and a loop in the generated Nock. Both were expressible on the v1 AST; dfns are what enters. LANDED 2026-11-03 as P8: D-63..D-69.
 
-**D-33 · A user function's valence is fixed by its header and checked at the call.** Calling a dyadic function monadically is a VALENCE ERROR. ⟨`parse/refusals`⟩
+**D-33 · A user function's valence is fixed by its header and checked at the call.** Calling a dyadic function monadically is a VALENCE ERROR. A dfn has no header: its valence is settled at each call (D-67). ⟨`parse/refusals`⟩
 
-**D-34 · A tradfn body is compiled on first call, not at the closing `∇`.** The definition stores the header and the body as token lines. The first call parses and emits the body against the store's signature at that moment and caches the formula keyed by that signature; a later change of class for any name the body reads (array to function, a new valence, unbound to bound) invalidates the cache and the next call recompiles. A body may therefore name a function defined after it, as in classical APL, and every executed line is still compiled Nock. A name unbound at the time of the call is a VALUE ERROR at that call. ⟨`atl/readme-green` (bodies captured unparsed), `atl/tradfn-div`, `atl/caesar` (compiled on call), `atl/tradfn-cache` (the hit, the class-change re-parse, the redefinition; the cache holds the formulas, and every body statement runs through its formula against the tree evaluation)⟩
+**D-34 · A tradfn body is compiled on first call, not at the closing `∇`.** The definition stores the header and the body as token lines. The first call parses and emits the body against the store's signature at that moment and caches the formula keyed by that signature; a later change of class for any name the body reads (array to function, a new valence, unbound to bound) invalidates the cache and the next call recompiles. A body may therefore name a function defined after it, as in classical APL, and every executed line is still compiled Nock. A name unbound at the time of the call is a VALUE ERROR at that call. A dfn body is compiled the same way (D-67). ⟨`atl/readme-green` (bodies captured unparsed), `atl/tradfn-div`, `atl/caesar` (compiled on call), `atl/tradfn-cache` (the hit, the class-change re-parse, the redefinition; the cache holds the formulas, and every body statement runs through its formula against the tree evaluation)⟩
+
+### Dfns (P8, 2026-11-03)
+
+**D-63 · Dfns.** `{…}` is a function value: the body between the braces is statements separated by `⋄` or by line ends (D-69). `⍵` names the right argument and `⍺` the left; `∇` inside the body names the dfn itself. A dfn stands wherever a function stands: applied to the array on its right, with an array on its left, and as the operand of `/ \ ⌿ ⍀ ¨` (`{⍺+⍵}/1 2 3`). Dfns nest. Out of v2, on the roadmap: dfn operators (`⍺⍺ ⍵⍵`), a default left argument (`⍺←`), error guards (`::`), and a dfn as the operand of `.` or `∘.`. ⟨`lex/dfns`, `parse/dfns`, `atl/dfns`⟩
+
+**D-64 · A name takes a dfn by assignment and is then an ambivalent function.** `F←{⍺÷⍵}` binds `F` with class ambivalent (D-22, D-52): `F 6` is monadic, `5 F 6` dyadic. Only a brace literal is assigned as a function; `F←+` is a SYNTAX ERROR. The name is one name: an array assigned to it later makes it an array (`DIV←3`), a `∇` definition replaces the dfn, and a dfn assignment replaces a tradfn. `)FNS` lists it and `)ERASE` erases it. ⟨`parse/dfns`, `atl/dfns`⟩
+
+**D-65 · Dfn scope is lexical.** A call opens a frame. An assignment in the body binds a local of that call, never a global; a read falls through the frame, then the frames of the enclosing dfns, then the store. `⍺` and `⍵` belong to the innermost dfn alone. A global dfn runs over the store, not over its caller's locals: with `a←1`, `K←{a+⍵}` and `L←{a←100 ⋄ K ⍵}`, `L 1` is 2. `⎕IO` and `⎕PP` assigned in a body are local to the call. A tradfn keeps D-31's dynamic scope and sees no dfn frame. ⟨`atl/dfns` (`H 5` then `a`; the nested read; `L 1`; `⎕IO`)⟩
+
+**D-66 · The result is the first statement that is not an assignment; a guard chooses.** Statements run in order. An assignment, of an array or of a dfn, continues. A guard `cond: expr` evaluates `cond`, which must be a scalar 0 or 1 (DOMAIN ERROR otherwise); at 1 the value of `expr` is the result, at 0 the next statement runs. Any other statement's value is the result. A body that runs off its end has no result: VALUE ERROR. A guard outside a dfn is a SYNTAX ERROR. ⟨`parse/dfns`, `atl/dfns`, `atl/dfn-lines`⟩
+
+**D-67 · A dfn is ambivalent; valence is settled at the call, and the body is compiled on first call (D-34).** `⍺` in a body called monadically is a VALUE ERROR at that call. The body is kept as source lines and parsed, emitted and run on the call: each line against the signature as it stands, each statement through its formula against the tree evaluation. The entry signature carries `⍺` only when bound, so monadic and dyadic calls compile apart. A named dfn caches the lines a call reached, keyed by the entry signature; a later call that goes past a false guard parses the lines beyond and extends the cache. Guards and the statement order belong to the body runner, as a tradfn's line order does: a guard's condition and its expression are each a formula, the branch between them is not Nock. ⟨`atl/dfns` (`{⍺} 3`), `atl/dfn-lines` (`SIGN`: the cache extended past its guards)⟩
+
+**D-68 · Class changes inside a line thread the signature.** Each `⋄`-separated statement parses against the signature the statements before it leave: an assignment binds an array, a dfn assignment an ambivalent function, a header its valence. `G←{⍵+1} ⋄ G 3` is 4 with `G` an array before the line. Inside a body each line parses against the signature the lines before it left at run time, the same rule with values in hand. ⟨`parse/dfns` (`G←{⍵} ⋄ G 3`), `atl/dfns`⟩
 
 ## 6. Primitive inventory
 
@@ -97,7 +111,7 @@ Dyadic: `+ − × ÷ ⌈ ⌊ ∣ ⋆ ⍟ ○ !` and `< ≤ = ≥ > ≠ ∨ ∧ �
 
 **D-51 · Primitives are called by axis, never by name, in emitted Nock.** The emitter knows the runtime core's layout; a primitive call is `9 2 10 [6 args] 0 axis` against the subject (verified 2026-10-27 against Jock `eval`). Changing the runtime core's layout re-blesses every emission vector. ⟨`atl/nock` (`%call 2 (%edit 6 … .g-x)` by name), `atl/goldens` (the lowered nouns), the P5 probe of 2026-10-27⟩
 
-**D-52 · Names resolve at compile time against the store's shape, not its values.** A name's kind (array or function, valence) decides parsing (D-22); its value is read at run time. An unbound name in a top-level statement is a VALUE ERROR at compile time; inside a tradfn body the check is deferred to the first call (D-34). ⟨`parse/refusals`⟩
+**D-52 · Names resolve at compile time against the store's shape, not its values.** A name's kind (array or function, valence) decides parsing (D-22), and the statements of one line thread it (D-68); its value is read at run time. An unbound name in a top-level statement is a VALUE ERROR at compile time; inside a tradfn body the check is deferred to the first call (D-34). ⟨`parse/refusals`⟩
 
 **D-53 · Inference is an optimisation, never a semantics.** Budd's rank, shape and kind propagation chooses a specialised primitive (`%add-real-vector`) over the generic one. A program's value does not depend on whether inference ran. The differential vector `generic == specialised` pins this on every example. ⟨the evaluation corpus, every red statement both ways; `atl/goldens` (`+/n` chooses `g-reduce`, `n[2]` chooses `g-index1`)⟩
 
@@ -111,11 +125,13 @@ Dyadic: `+ − × ÷ ⌈ ⌊ ∣ ⋆ ⍟ ○ !` and `< ≤ = ≥ > ≠ ∨ ∧ �
 
 **D-62 · A `∇` line puts the session in definition mode** until a line that is exactly `∇`. Definition-mode lines are stored, not evaluated; a syntax error in a body is reported at the closing `∇` with the body line number. ⟨`atl/readme-green`⟩
 
+**D-69 · A line whose braces do not close continues on the next line** until they do; the lines are one statement, and a line end inside the braces separates statements like `⋄`. The held lines print nothing. A host that reads an open brace to its close itself (jojo does) hands the kernel the lines as one entry with line ends in it, and the lexer reads a line end as that separator; the session does the same for lines that arrive one at a time, as a transcript's do. A `⍝` comment ends at the line end. A lexing refusal in a continuation line is reported at once and the whole is dropped; a parse refusal is reported when the braces close; a body line's refusal names its line, at the call (D-67). The mode of the first line (D-54) is the mode of the statement. ⟨`atl/dfn-lines` (`SIGN`, `CAESAR`, the green `FACT`)⟩
+
 ## 9. What v2 owes
 
 Ordered as phases P8 onward in [`docs/roadmap.md`](../roadmap.md).
 
-Nested arrays or their ruled-out alternative (D-6); dfns with guards (D-32, ruled); dyadic `⍉`, axis specification `[k]`, `⍎`, `⍕` dyadic, `⌹`, `⍷`, `⍪`, `≡`; derived-function operands; an ASCII input pre-pass (D-8, deferred); `⎕TYPE`'s meaning (D-15, the name is reserved); packed Lagoon erasure and SoftBLAS jets (plan P7).
+Nested arrays or their ruled-out alternative (D-6); dfn operators, `⍺←` and `::` (D-63); dyadic `⍉`, axis specification `[k]`, `⍎`, `⍕` dyadic, `⌹`, `⍷`, `⍪`, `≡`; derived-function operands; an ASCII input pre-pass (D-8, deferred); `⎕TYPE`'s meaning (D-15, the name is reserved); packed Lagoon erasure and SoftBLAS jets (plan P7).
 
 ## References
 

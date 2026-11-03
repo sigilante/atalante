@@ -1,0 +1,36 @@
+SIGN←{
+⍵>0: 1
+⍵<0: ¯1
+0
+}
+SIGN 5
+⍝ expect: 1
+SIGN ¯3
+⍝ expect: ¯1
+SIGN 0
+⍝ expect: 0
+SIGN 7
+⍝ expect: 1
+CAESAR←{
+A←'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+S←(⍺⌽A),A
+S[A⍳⍵]
+}
+3 CAESAR 'HELLO'
+⍝ expect: KHOOR
+A
+⍝ refuse: %value-error
+🍎> F←{⍵+1}
+🍏> F 3
+⍝ expect: F(3)
+🍏> F←{⍵+1}
+⍝ expect: ←(F, {⍵+1})
+🍏> {⍵≤1: 1 ⋄ ⍵×∇ ⍵-1} 5
+⍝ expect: {⍵≤1: 1 ⋄ ⍵×∇⍵−1}(5)
+🍏> FACT←{
+⍵≤1: 1
+⍵×∇ ⍵-1
+}
+⍝ expect: ←(FACT, {⍵≤1: 1 ⋄ ⍵×∇⍵−1})
+🍎> F 3
+⍝ expect: 4

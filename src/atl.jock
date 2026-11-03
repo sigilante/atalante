@@ -14,34 +14,19 @@ import array;
 // --- the session ----------------------------------------------------------------
 // A session threads a SIGNATURE (name -> class, parse.jock's convention)
 // and a definition-mode flag (D-62). Every line is parsed against the
-// signature; an assignment binds its name as an array and a ∇ header
-// binds its function by valence (D-52). The green prompt `🍏>` prints
-// the tree (D-54); the red prompt `🍎>`, or no prompt, evaluates.
-struct Sess { sig: List<(String, @)>, defn: Bool, env: interp.Env, green: Bool };
+// signature; an assignment binds its name as an array, a dfn assignment
+// binds an ambivalent function, and a ∇ header binds its function by
+// valence (D-52, D-68). The green prompt `🍏>` prints the tree (D-54);
+// the red prompt `🍎>`, or no prompt, evaluates. A line whose braces do
+// not close is held, with the lines after it, until they do (D-69):
+// `open` is that token run, `depth` its net brace depth, and `omode` the
+// mode of its first line (0 red, 1 green, 2 :nock, 3 :noun).
+struct Sess { sig: List<(String, @)>, defn: Bool, env: interp.Env, green: Bool, open: List<lexer.Token>, depth: @, omode: @ };
 
-func bind(sig: List<(String, @)>, nm: String, c: @) -> List<(String, @)> {
-  match sig {
-    ((n, k), t) => if n == nm { ((nm, c), t) } else { ((n, k), bind(t, nm, c)) },
-    _ => [(nm, c)],
-  }
+func mk(sig: List<(String, @)>, defn: Bool, env: interp.Env, green: Bool) -> Sess {
+  Sess( sig: sig, defn: defn, env: env, green: green, open: ~, depth: 0, omode: 0 )
 };
-func headerClass(h: parse.Header) -> @ { interp.headerClass(h) };
-func bindsAll(xs: List<parse.Ast>, sig: List<(String, @)>) -> List<(String, @)> {
-  match xs { (h, t) => bindsAll(t, binds(h, sig)), _ => sig, }
-};
-func binds(a: parse.Ast, sig: List<(String, @)>) -> List<(String, @)> {
-  match a {
-    .assign(s) => binds(s.v, bind(sig, s.nm, 1)),
-    .iassign(s) => binds(s.v, bindsAll(s.ix, sig)),
-    .sysassign(s) => binds(s.v, sig),
-    .monad(m) => binds(m.r, sig),
-    .dyad(d) => binds(d.l, binds(d.r, sig)),
-    .index(ix) => bindsAll(ix.ix, binds(ix.a, sig)),
-    .stmts(ss) => bindsAll(ss, sig),
-    .header(h) => bind(sig, h.nm, headerClass(h)),
-    _ => sig,
-  }
-};
+func binds(a: parse.Ast, sig: List<(String, @)>) -> List<(String, @)> { parse.binds(a, sig) };
 func isHeader(a: parse.Ast) -> Bool { match a { .header(h) => true, _ => false, } };
 func isFnend(a: parse.Ast) -> Bool { match a { .fnend => true, _ => false, } };
 // a body line that is exactly ∇ closes the definition (D-62)
@@ -53,6 +38,10 @@ func dropN(cs: List<UniChar>, n: @) -> List<UniChar> {
 };
 func stripPrompt(line: String) -> String { utf8(dropN(line.chars(), 2)).trim() };
 
+func catT(a: List<lexer.Token>, b: List<lexer.Token>) -> List<lexer.Token> { match a { (h, t) => (h, catT(t, b)), _ => b, } };
+func nlTok() -> lexer.Token { lexer.Token( kind: lexer.Kind.nl, text: "", cp: 0, col: 0 ) };
+func modeOf(green: Bool, nock: Bool, noun: Bool) -> @ { if nock { 2 } else if noun { 3 } else if green { 1 } else { 0 } };
+
 // one line: (what it prints, the session after it)
 func stepLine(line: String, s: Sess) -> (String, Sess) {
   let green = line.starts-with("🍏>") or (s.green and not line.starts-with("🍎>"));
@@ -63,30 +52,46 @@ func stepLine(line: String, s: Sess) -> (String, Sess) {
   let src = if nock or noun { utf8(dropN(src0.chars(), 6)).trim() } else { src0 };
   if s.defn {
     match lexer.tokens(src) {
-      .ok(ts) => if isLoneDel(ts) { ("", Sess( sig: s.sig, defn: false, env: interp.defineEnd(s.env), green: s.green )) }
-        else { ("", Sess( sig: s.sig, defn: true, env: interp.defineLine(src, s.env), green: s.green )) },
-      .err(e) => ("", Sess( sig: s.sig, defn: true, env: interp.defineLine(src, s.env), green: s.green )),
+      .ok(ts) => if isLoneDel(ts) { ("", mk(s.sig, false, interp.defineEnd(s.env), s.green)) }
+        else { ("", mk(s.sig, true, interp.defineLine(src, s.env), s.green)) },
+      .err(e) => ("", mk(s.sig, true, interp.defineLine(src, s.env), s.green)),
     }
   } else {
-    match parse.parseLine(src, s.sig) {
-      .err(e) => (e.tag + " col:{e.col} " + e.hint, s),
-      .ok(a) => match a {
-        .header(h) => (if green { parse.showAst(a) } else { "" }, Sess( sig: binds(a, s.sig), defn: true, env: interp.defineStart(h, s.env), green: s.green )),
-        .cmd(c) => if c.nm == "GREEN" { ("🍏", Sess( sig: s.sig, defn: false, env: s.env, green: true )) }
-          else if c.nm == "RED" { ("🍎", Sess( sig: s.sig, defn: false, env: s.env, green: false )) }
-          else if c.nm == "TOGGLE" { (if s.green { "🍎" } else { "🍏" }, Sess( sig: s.sig, defn: false, env: s.env, green: not s.green )) }
-          else { match interp.runStmt(a, s.env) { (out, env2) => (out, Sess( sig: sigOf(env2), defn: false, env: env2, green: s.green )), } },
-        _ => if green { (if nock { interp.render(a, s.env).trim() } else if noun { interp.lowerText(a, s.env) } else { parse.showAst(a) }, Sess( sig: binds(a, s.sig), defn: false, env: s.env, green: s.green )) }
-          else {
-            match interp.runStmt(a, s.env) {
-              (out, env2) => match emitted(a, s.env) {
-                (out2, env3) => if out == out2 and env2 == env3 { (out, Sess( sig: binds(a, s.sig), defn: false, env: env2, green: s.green )) }
-                  else { ("%emit-mismatch interpreter: " + out + " | emitter: " + out2, Sess( sig: binds(a, s.sig), defn: false, env: env2, green: s.green )) },
-              },
-            }
-          },
+    match lexer.tokens(src) {
+      .err(e) => (e.tag + " col:{e.col} " + e.hint, mk(s.sig, false, s.env, s.green)),
+      .ok(ts) => {
+        let depth = parse.braceDepth(ts, s.depth);
+        let all = if s.depth == 0 { ts } else { catT(s.open, (nlTok(), ts)) };
+        let mode = if s.depth == 0 { modeOf(green, nock, noun) } else { s.omode };
+        if depth > 0 { ("", Sess( sig: s.sig, defn: false, env: s.env, green: s.green, open: all, depth: depth, omode: mode )) }
+        else { stepToks(all, mode, mk(s.sig, false, s.env, s.green)) }
       },
     }
+  }
+};
+// one statement's tokens, braces closed, in the mode of its first line
+func stepToks(ts: List<lexer.Token>, mode: @, s: Sess) -> (String, Sess) {
+  let green = mode != 0;
+  let nock = mode == 2;
+  let noun = mode == 3;
+  match parse.parseToks(ts, s.sig) {
+    .err(e) => (e.tag + " col:{e.col} " + e.hint, s),
+    .ok(a) => match a {
+      .header(h) => (if green { parse.showAst(a) } else { "" }, mk(binds(a, s.sig), true, interp.defineStart(h, s.env), s.green)),
+      .cmd(c) => if c.nm == "GREEN" { ("🍏", mk(s.sig, false, s.env, true)) }
+        else if c.nm == "RED" { ("🍎", mk(s.sig, false, s.env, false)) }
+        else if c.nm == "TOGGLE" { (if s.green { "🍎" } else { "🍏" }, mk(s.sig, false, s.env, not s.green)) }
+        else { match interp.runStmt(a, s.env) { (out, env2) => (out, mk(sigOf(env2), false, env2, s.green)), } },
+      _ => if green { (if nock { interp.render(a, s.env).trim() } else if noun { interp.lowerText(a, s.env) } else { parse.showAst(a) }, mk(binds(a, s.sig), false, s.env, s.green)) }
+        else {
+          match interp.runStmt(a, s.env) {
+            (out, env2) => match emitted(a, s.env) {
+              (out2, env3) => if out == out2 and env2 == env3 { (out, mk(binds(a, s.sig), false, env2, s.green)) }
+                else { ("%emit-mismatch interpreter: " + out + " | emitter: " + out2, mk(binds(a, s.sig), false, env2, s.green)) },
+            },
+          }
+        },
+    },
   }
 };
 // the same statement through the emitter: compiled, lowered, run, then
@@ -117,7 +122,7 @@ func sessionFrom(lines: List<String>, s: Sess) -> String {
     _ => "",
   }
 };
-func initialSess() -> Sess { Sess( sig: ~, defn: false, env: interp.initial(), green: false ) };
+func initialSess() -> Sess { mk(~, false, interp.initial(), false) };
 // the parser's signature from the environment (after )ERASE the two must agree)
 func sigOf(env: interp.Env) -> List<(String, @)> { interp.sigOf(env) };
 func session(lines: List<String>) -> String { sessionFrom(lines, initialSess()) };

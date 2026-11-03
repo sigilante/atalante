@@ -41,15 +41,20 @@ def wait_prompt(timeout):
     return False
 
 
-def send(line, timeout=120):
+def send(line, timeout=120, open_brace=False, continued=False):
     before = len([l for l in pane() if l != ""])
     subprocess.run(["tmux", "send-keys", "-t", SESSION, line, "Enter"])
     time.sleep(0.3)
+    if open_brace:                  # jojo reads on to the closing brace: no prompt yet (D-69)
+        time.sleep(0.5)
+        return ""
     if not wait_prompt(timeout):
         return None
     lines = [l for l in pane() if l != ""]
     out = lines[before:]            # the echoed command, the output, the fresh prompt
     if out and any(out[0].startswith(p + " ") for p in PROMPTS):
+        out = out[1:]
+    elif continued and out and out[0] == line:   # a continuation line echoes with no prompt
         out = out[1:]
     if out and out[-1] in PROMPTS:
         out = out[:-1]
@@ -64,9 +69,12 @@ def main():
         sys.exit("repl-test: no prompt")
     bad = 0
     t0 = time.time()
+    depth = 0
     for inp, expects, refuse in steps:
         t = time.time()
-        got = send(inp)
+        was_open = depth > 0
+        depth += inp.count("{") - inp.count("}")
+        got = send(inp, open_brace=depth > 0, continued=was_open)
         dt = time.time() - t
         if got is None:
             print(f"FAIL  {inp!r}: no prompt after 120 s"); bad += 1; continue

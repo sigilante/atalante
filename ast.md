@@ -30,7 +30,7 @@ ATL/APL statements parse to the `Ast` of `src/parse.jock` (dialect D-52 to D-54)
 - The green apple prompt `🍏>` prints a statement's tree in prefix form and does not evaluate it; `:nock EXPR` at it prints the Nockasm program.
 - The red apple prompt `🍎>` evaluates.
 
-These transcripts are the vectors `tests/atl/readme-green.atl` and `tests/atl/readme-red.atl`, run by `tools/atlc.sh corpus`. An assignment prints nothing; a refusal is shown by its tag, and the kernel adds the column and a hint.
+These transcripts are the vectors `tests/atl/readme-green.atl` and `tests/atl/readme-red.atl`, run by `tools/atlc.sh corpus`; the dfn transcript at the end is `tests/atl/dfn-lines.atl`. An assignment prints nothing; a refusal is shown by its tag, and the kernel adds the column and a hint.
 
 ```apl
 🍏> 1
@@ -184,4 +184,26 @@ KHOOR
 
 🍎> Alphabet
 %value-error
+```
+
+A dfn is a function item whose body stays source until the first call (D-67); the tree shows it as `{body}`, a dfn assignment as `←(F, {body})`, and inside a body a guard as `:(cond, expr)`. The lines of a dfn that spans lines are one statement (D-69).
+
+```apl
+🍏> F←{⍵+1}
+←(F, {⍵+1})
+
+🍏> F 3
+F(3)
+
+🍏> {⍵≤1: 1 ⋄ ⍵×∇ ⍵-1} 5
+{⍵≤1: 1 ⋄ ⍵×∇⍵−1}(5)
+
+🍏> FACT←{
+⍵≤1: 1
+⍵×∇ ⍵-1
+}
+←(FACT, {⍵≤1: 1 ⋄ ⍵×∇⍵−1})
+
+🍎> F 3
+4
 ```

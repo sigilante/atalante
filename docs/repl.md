@@ -28,6 +28,8 @@ The prompt is the apple of the session's mode. jojo opens with `🍎> ` (its `--
 
 In the tmux session **F5** sends `)TOGGLE`, **F6** `)GREEN`, **F7** `)RED`, so one key switches between the apple prompts.
 
+A line whose braces do not close is held until they do (D-69): type `SIGN←{`, the body lines, and `}` on a line of its own, and nothing prints until the closing brace, as with a `∇` definition.
+
 ## What a line costs
 
 Every evaluated line runs through the interpreter and through its emitted Nock, held equal; a mismatch prints `%emit-mismatch`. On this machine a README line answers in under a second (`tools/atlc.sh repl-test` types the README transcript in and times each line). The first boot of a jam compiles the kernel program under NockVM; the runtime checkpoints it, so later boots are fast.

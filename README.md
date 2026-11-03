@@ -1,6 +1,6 @@
 # ATaLante:  Golden APL
 
-**STATUS ~2026.10.28:  The project is at v0.1, implementing dialect v1.**
+**STATUS ~2026.11.03:  The project is at v0.2 in progress, implementing dialect v1 plus P8 (dfns with guards).**
 
 ![](./logo.jpg)
 
@@ -41,6 +41,31 @@ At the apple prompt:
 🍎> 5 DIV 6
 0.8333333333
 ```
+
+Dfns, with guards for control flow (D-63 to D-69):
+
+```apl
+🍎> DIV←{⍺÷⍵}
+🍎> 1 2 3 DIV 2
+0.5 1 1.5
+
+🍎> FACT←{⍵≤1: 1 ⋄ ⍵×∇ ⍵-1}
+🍎> FACT 5
+120
+
+🍎> {⍺+⍵}/1 2 3 4
+10
+
+🍎> SIGN←{
+⍵>0: 1
+⍵<0: ¯1
+0
+}
+🍎> SIGN ¯3
+¯1
+```
+
+A dfn's assignments are local to the call, `⍺` and `⍵` are its arguments, `∇` names the dfn itself, and the first statement that is not an assignment is the result.  A line whose braces do not close continues on the next line.
 
 From an input file (the Caesar cipher):
 
@@ -90,9 +115,9 @@ The prompt is the mode: `🍎>` evaluates, `🍏>` prints trees, and `)TOGGLE` (
 Every case under [`tests/atl/`](tests/atl/README.md) is a session transcript: input lines and the output each must print.  The runner evaluates each statement twice, through the interpreter and through the Nock it compiles to, and holds the two equal.
 
 ```
-tools/atlc.sh corpus        # 26 cases, 262 statements
-tools/atlc.sh lex           # 30 lexer vectors
-tools/atlc.sh parse         # 65 parser vectors
+tools/atlc.sh corpus        # 28 cases, 320 statements
+tools/atlc.sh lex           # 36 lexer vectors
+tools/atlc.sh parse         # 86 parser vectors
 tools/atlc.sh oracle        # 14 emission goldens against an independent Nockasm
 tools/atlc.sh kernel-test   # the kernel poked and peeked, 5 checks
 tools/atlc.sh repl-test     # the README typed at the live prompt, 25 lines
@@ -110,10 +135,10 @@ tools/atlc.sh repl-test     # the README typed at the live prompt, 25 lines
 
 NockVM jets integer arithmetic and nothing on floats, so real-valued work costs about 0.3 ms an operation.
 
-## What v1 holds back
+## What is held back
 
-- Arrays are flat (D-6).  Nested arrays such as `'sing' 'goddess' 'sing'` are v2.
-- A tradfn body is straight-line (D-32).  v2 adds dfns with guards; `→` and labels are omitted for good.
+- Arrays are flat (D-6).  Nested arrays such as `'sing' 'goddess' 'sing'` are P9.
+- Dfns have guards and nothing else for control flow (D-32, D-63); `→` and labels are omitted for good.  Dfn operators (`⍺⍺ ⍵⍵`), a default left argument (`⍺←`) and error guards (`::`) are on the roadmap.
 - No axis specification; `↑` and `↓` on rank at most 1; `⊥` and `⊤` on naturals; reductions and scans on rank at most 2.
 - Held back with reasons in D-44: `⌹ ⍎ ⍕ ⍷ ⍪ ≡`, dyadic `⍉`, `⌽` with axis.
 - Input is Unicode; the ASCII spellings `- * | ~` are canonical (D-9) and nothing else is transliterated (D-8).

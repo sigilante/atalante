@@ -1,0 +1,12 @@
+{⍵+1} 3
+⍝ expect: lbrace name:⍵ glyph:+ nat:1 rbrace nat:3
+F←{⍺÷⍵}
+⍝ expect: name:F assign lbrace name:⍺ glyph:÷ name:⍵ rbrace
+{⍵≤1: 1 ⋄ ⍵×∇ ⍵-1} 5
+⍝ expect: lbrace name:⍵ glyph:≤ nat:1 colon nat:1 diamond name:⍵ glyph:× del name:⍵ glyph:− nat:1 rbrace nat:5
+⍺⍵
+⍝ expect: name:⍺ name:⍵
+{{⍵+1} ⍵} 2
+⍝ expect: lbrace lbrace name:⍵ glyph:+ nat:1 rbrace name:⍵ rbrace nat:2
+{'it''s'⍳⍵} 's'
+⍝ expect: lbrace chr:it's glyph:⍳ name:⍵ rbrace chr:s

@@ -12,21 +12,32 @@
 //
 // The signature is a list of (name, class): 1 array, 2 monadic,
 // 3 dyadic, 4 ambivalent, 5 niladic. An unbound name is a VALUE ERROR
-// where it is read and legal where it is assigned (D-52).
+// where it is read and legal where it is assigned (D-52). The
+// statements of a `⋄` line thread the signature: each parses against
+// the one the statements before it leave (D-68). Inside a dfn body the
+// signature carries `∇` as an ambivalent function; that entry is what
+// lets `∇` stand as a function item and `cond: expr` as a guard (D-66).
+//
+// A dfn literal `{...}` is a function item whose body is kept as
+// SOURCE LINES and parsed on the first call (D-34, D-67); here only
+// the braces are matched and the lines cut at `nl` tokens (D-69).
 //
 // Refusals are values (as in lexer.jock); `dump` renders a tree in a
 // prefix form the parse corpus (tests/parse) pins: `f(x)`, `f(a, b)`,
-// `a[i;j]`, `←(n, v)`, `f/` `f.g` `∘.g` for derived functions.
+// `a[i;j]`, `←(n, v)`, `f/` `f.g` `∘.g` for derived functions,
+// `{body}` for a dfn and `:(cond, expr)` for a guard.
 import lexer;
 
 struct Lit { kind: @, vals: List<String> };               // 1 nat, 2 int, 3 real, 4 chr (D-10)
 struct Inner { f: Fn, g: Fn };
-enum Fn { prim(@), user(String), reduce(Fn), reduce1(Fn), scan(Fn), scan1(Fn), each(Fn), inner(Inner), outer(Fn) };
+struct Dfn { body: List<String> };                        // source lines (D-63)
+enum Fn { prim(@), user(String), reduce(Fn), reduce1(Fn), scan(Fn), scan1(Fn), each(Fn), inner(Inner), outer(Fn), dfn(Dfn), own };
 enum Ast {
   empty, elide, fnend,
   lit(Lit), name(String), nilad(String), sysvar(String),
   monad(Monad), dyad(Dyad), index(Index),
-  assign(Assign), iassign(IAssign), sysassign(Assign),
+  assign(Assign), iassign(IAssign), sysassign(Assign), fassign(FAssign),
+  guard(Guard),
   cmd(Cmd), header(Header), stmts(List<Ast>),
 };
 struct Monad { f: Fn, r: Ast };
@@ -34,6 +45,8 @@ struct Dyad { f: Fn, l: Ast, r: Ast };
 struct Index { a: Ast, ix: List<Ast> };
 struct Assign { nm: String, v: Ast };
 struct IAssign { nm: String, ix: List<Ast>, v: Ast };
+struct FAssign { nm: String, f: Fn };                     // F ← {…} (D-64)
+struct Guard { c: Ast, e: Ast };                          // cond: expr (D-66)
 struct Cmd { nm: String, args: List<String> };
 struct Header { nm: String, res: String, lft: String, rgt: String, locals: List<String> };   // "" = absent
 struct PErr { tag: String, col: @, hint: String };
@@ -57,8 +70,10 @@ func kindOf(t: lexer.Token) -> @ {
   match t.kind {
     .nat => 1, .int => 2, .real => 3, .chr => 4, .name => 5, .quad => 6, .cmd => 7, .glyph => 8,
     .lparen => 9, .rparen => 10, .lbrack => 11, .rbrack => 12, .semi => 13, .assign => 14, .del => 15, .diamond => 16,
+    .lbrace => 17, .rbrace => 18, .colon => 19, .nl => 20,
   }
 };
+func inBody(sig: List<(String, @)>) -> Bool { cls(sig, "∇") == 4 };   // parsing a dfn body (D-66)
 func isOp(cp: @) -> Bool { cp == 47 or cp == 92 or cp == 9023 or cp == 9024 or cp == 168 or cp == 46 or cp == 8728 };  // / \ ⌿ ⍀ ¨ . ∘
 func maxk(a: @, b: @) -> @ { if a > b { a } else { b } };
 func revT(xs: List<lexer.Token>, acc: List<lexer.Token>) -> List<lexer.Token> {
@@ -82,12 +97,55 @@ func isLit(a: Ast) -> Bool { match a { .lit(l) => true, _ => false, } };
 func isSysName(nm: String) -> Bool { nm == "IO" or nm == "PP" or nm == "TYPE" };   // D-60
 
 // --- token splitting ---------------------------------------------------------
-// statements on one line (D-7); parts in order
+// statements on one line (D-7); parts in order. A `⋄` inside braces
+// belongs to the dfn (D-63); a line end outside them separates
+// statements like `⋄` (D-69).
 func splitDiamond(ts: List<lexer.Token>, cur: List<lexer.Token>, acc: List<List<lexer.Token>>) -> List<List<lexer.Token>> {
+  splitDia(ts, 0, cur, acc)
+};
+func splitDia(ts: List<lexer.Token>, depth: @, cur: List<lexer.Token>, acc: List<List<lexer.Token>>) -> List<List<lexer.Token>> {
   match ts {
-    (t, rest) => if kindOf(t) == 16 { splitDiamond(rest, ~, (revT(cur, ~), acc)) } else { splitDiamond(rest, (t, cur), acc) },
+    (t, rest) => {
+      let k = kindOf(t);
+      if (k == 16 or k == 20) and depth == 0 { splitDia(rest, depth, ~, (revT(cur, ~), acc)) }
+      else if k == 17 { splitDia(rest, depth + 1, (t, cur), acc) }
+      else if k == 18 and depth > 0 { splitDia(rest, depth - 1, (t, cur), acc) }
+      else { splitDia(rest, depth, (t, cur), acc) }
+    },
     _ => revTT((revT(cur, ~), acc), ~),
   }
+};
+// a guard's colon: the first `:` at depth 0 (D-66); answers (found, left, right)
+func splitColon(ts: List<lexer.Token>, depth: @, cur: List<lexer.Token>) -> (Bool, List<lexer.Token>, List<lexer.Token>) {
+  match ts {
+    (t, rest) => {
+      let k = kindOf(t);
+      if k == 19 and depth == 0 { (true, revT(cur, ~), rest) }
+      else if k == 9 or k == 11 or k == 17 { splitColon(rest, depth + 1, (t, cur)) }
+      else if (k == 10 or k == 12 or k == 18) and depth > 0 { splitColon(rest, depth - 1, (t, cur)) }
+      else { splitColon(rest, depth, (t, cur)) }
+    },
+    _ => (false, revT(cur, ~), ~),
+  }
+};
+// the lines of a dfn body: cut at `nl` outside nested braces, each back to source
+func bodyLines(ts: List<lexer.Token>, depth: @, cur: List<lexer.Token>, acc: List<String>) -> List<String> {
+  match ts {
+    (t, rest) => {
+      let k = kindOf(t);
+      if k == 20 and depth == 0 { bodyLines(rest, depth, ~, pushLine(cur, acc)) }
+      else if k == 17 { bodyLines(rest, depth + 1, (t, cur), acc) }
+      else if k == 18 and depth > 0 { bodyLines(rest, depth - 1, (t, cur), acc) }
+      else { bodyLines(rest, depth, (t, cur), acc) }
+    },
+    _ => revS(pushLine(cur, acc), ~),
+  }
+};
+func pushLine(cur: List<lexer.Token>, acc: List<String>) -> List<String> {
+  match cur { (t, rest) => (lexer.unlex(revT(cur, ~)), acc), _ => acc, }
+};
+func revS(xs: List<String>, acc: List<String>) -> List<String> {
+  match xs { (h, t) => revS(t, (h, acc)), _ => acc, }
 };
 // after an opener: (inner, rest, closed); `open`/`close` are kind numbers
 func matchTo(ts: List<lexer.Token>, open: @, close: @, depth: @, acc: List<lexer.Token>) -> (List<lexer.Token>, List<lexer.Token>, Bool) {
@@ -240,6 +298,13 @@ func indexParts(parts: List<List<lexer.Token>>, sig: List<(String, @)>, acc: Lis
     _ => Asts.ok(revA(acc, ~)),
   }
 };
+// a dfn literal (D-63): the braces matched, the body kept as source lines
+func pushBrace(t: lexer.Token, rest: List<lexer.Token>, sig: List<(String, @)>, acc: List<Item>) -> Items {
+  match matchTo(rest, 17, 18, 0, ~) {
+    (inner, rest2, closed) => if not closed { sei(t.col, "unbalanced {{") }
+      else { items(rest2, sig, (funItem(Fn.dfn(Dfn( body: bodyLines(inner, 0, ~, ~) )), t.col), acc)) },
+  }
+};
 func pushBrack(t: lexer.Token, rest: List<lexer.Token>, sig: List<(String, @)>, acc: List<Item>) -> Items {
   match acc {
     (h, more) => match h {
@@ -276,7 +341,10 @@ func items(ts: List<lexer.Token>, sig: List<(String, @)>, acc: List<Item>) -> It
       12 => sei(t.col, "unbalanced ]"),
       13 => sei(t.col, "; outside brackets"),
       14 => items(rest, sig, (Item.asg(t.col), acc)),
-      15 => sei(t.col, "∇ must open a line"),
+      15 => if inBody(sig) { items(rest, sig, (funItem(Fn.own, t.col), acc)) } else { sei(t.col, "∇ must open a line") },
+      17 => pushBrace(t, rest, sig, acc),
+      18 => sei(t.col, "unbalanced }}"),
+      19 => if inBody(sig) { sei(t.col, "a guard takes one : (D-66)") } else { sei(t.col, "a guard belongs in a dfn body (D-66)") },
       _  => sei(t.col, "unexpected token"),
     },
     _ => Items.ok(acc),
@@ -290,10 +358,11 @@ func valenceOk(f: Fn, dyadic: Bool, sig: List<(String, @)>) -> Bool {
       let c = cls(sig, nm);
       if dyadic { c == 3 or c == 4 } else { c == 2 or c == 4 }
     },
-    _ => true,
+    _ => true,   // primitives, derived functions, dfns and ∇ are ambivalent (D-67)
   }
 };
 func userName(f: Fn) -> String { match f { .user(nm) => nm, _ => "", } };
+func isDfn(f: Fn) -> Bool { match f { .dfn(d) => true, _ => false, } };
 func applyMonad(x: IFun, v: Ast, more: List<Item>, sig: List<(String, @)>) -> Parsed {
   if valenceOk(x.f, false, sig) { extend(Ast.monad(Monad( f: x.f, r: v )), more, sig) }
   else { Parsed.err(pe("%valence-error", x.col, userName(x.f) + " is dyadic")) }
@@ -310,10 +379,34 @@ func build(its: List<Item>, sig: List<(String, @)>) -> Parsed {
   match its {
     (h, rest) => match h {
       .arr(x) => if x.unbound { Parsed.err(pe("%value-error", x.col, nameOf(x.a) + " is not defined")) } else { extend(x.a, rest, sig) },
-      .fun(x) => se(x.col, "a function needs a right argument"),
+      .fun(x) => fassign(x, rest),
       .asg(c) => se(c, "nothing to assign"),
     },
     _ => se(1, "empty expression"),
+  }
+};
+func fassignTo(nm: String, x: IFun, c: @, more: List<Item>) -> Parsed {
+  if not isDfn(x.f) { se(c, "only a dfn is assigned to a name (D-64)") }
+  else { match more { (h3, m3) => se(c, "a dfn assignment stands alone (D-64)"), _ => Parsed.ok(Ast.fassign(FAssign( nm: nm, f: x.f ))), } }
+};
+// a function as the rightmost item: `F ← {…}` names it (D-64); anything else lacks an argument
+func fassign(x: IFun, rest: List<Item>) -> Parsed {
+  match rest {
+    (h, more) => match h {
+      .asg(c) => match more {
+        (h2, more2) => match h2 {
+          .arr(y) => match y.a {
+            .name(nm) => fassignTo(nm, x, c, more2),
+            _ => se(c, "only a name takes a dfn (D-64)"),
+          },
+          .fun(y) => match y.f { .user(nm) => fassignTo(nm, x, c, more2), _ => se(c, "only a name takes a dfn (D-64)"), },
+          _ => se(c, "nothing to assign to"),
+        },
+        _ => se(c, "nothing to assign to"),
+      },
+      _ => se(x.col, "a function needs a right argument"),
+    },
+    _ => se(x.col, "a function needs a right argument"),
   }
 };
 func extend(v: Ast, rest: List<Item>, sig: List<(String, @)>) -> Parsed {
@@ -331,6 +424,10 @@ func extend(v: Ast, rest: List<Item>, sig: List<(String, @)>) -> Parsed {
       },
       .asg(c) => match more {
         (h2, more2) => match h2 {
+          .fun(y) => match y.f {
+            .user(nm) => extend(Ast.assign(Assign( nm: nm, v: v )), more2, sig),   // a function's name takes an array (D-64)
+            _ => se(c, "cannot assign to that"),
+          },
           .arr(y) => match y.a {
             .name(nm) => extend(Ast.assign(Assign( nm: nm, v: v )), more2, sig),
             .sysvar(nm) => extend(Ast.sysassign(Assign( nm: nm, v: v )), more2, sig),
@@ -417,26 +514,85 @@ func parseStmt(ts: List<lexer.Token>, sig: List<(String, @)>) -> Parsed {
   match ts {
     (t, rest) => match kindOf(t) {
       7  => Parsed.ok(Ast.cmd(Cmd( nm: t.text, args: texts(rest) ))),
-      15 => match rest { (t2, r2) => parseHeader(rest, t.col), _ => Parsed.ok(Ast.fnend), },
-      _  => parseExpr(ts, sig),
+      15 => if inBody(sig) { parseGuarded(ts, sig) } else { match rest { (t2, r2) => parseHeader(rest, t.col), _ => Parsed.ok(Ast.fnend), } },
+      _  => parseGuarded(ts, sig),
     },
     _ => Parsed.ok(Ast.empty),
   }
 };
+func parseGuarded(ts: List<lexer.Token>, sig: List<(String, @)>) -> Parsed {
+  if not inBody(sig) { parseExpr(ts, sig) }
+  else {
+    match splitColon(ts, 0, ~) {
+      (found, lft, rgt) => if not found { parseExpr(ts, sig) }
+        else {
+          match lft {
+            (l0, lr) => match rgt {
+              (r0, rr) => match parseExpr(lft, sig) {
+                .err(e) => Parsed.err(e),
+                .ok(c) => match parseExpr(rgt, sig) { .err(e) => Parsed.err(e), .ok(x) => Parsed.ok(Ast.guard(Guard( c: c, e: x ))), },
+              },
+              _ => se(1, "a guard needs an expression after : (D-66)"),
+            },
+            _ => se(1, "a guard needs a condition before : (D-66)"),
+          }
+        },
+    }
+  }
+};
+// the signature a statement leaves (D-52, D-68): an assignment binds an
+// array, a dfn assignment an ambivalent function, a header its valence
+func bind(sig: List<(String, @)>, nm: String, c: @) -> List<(String, @)> {
+  match sig {
+    ((n, k), t) => if n == nm { ((nm, c), t) } else { ((n, k), bind(t, nm, c)) },
+    _ => [(nm, c)],
+  }
+};
+func headerClass(h: Header) -> @ { if h.lft == "" { if h.rgt == "" { 5 } else { 2 } } else { 3 } };
+func bindsAll(xs: List<Ast>, sig: List<(String, @)>) -> List<(String, @)> {
+  match xs { (h, t) => bindsAll(t, binds(h, sig)), _ => sig, }
+};
+func binds(a: Ast, sig: List<(String, @)>) -> List<(String, @)> {
+  match a {
+    .assign(s) => binds(s.v, bind(sig, s.nm, 1)),
+    .fassign(s) => bind(sig, s.nm, 4),
+    .iassign(s) => binds(s.v, bindsAll(s.ix, sig)),
+    .sysassign(s) => binds(s.v, sig),
+    .guard(g) => binds(g.e, binds(g.c, sig)),
+    .monad(m) => binds(m.r, sig),
+    .dyad(d) => binds(d.l, binds(d.r, sig)),
+    .index(ix) => bindsAll(ix.ix, binds(ix.a, sig)),
+    .stmts(ss) => bindsAll(ss, sig),
+    .header(h) => bind(sig, h.nm, headerClass(h)),
+    _ => sig,
+  }
+};
+// ⋄-separated statements, each against the signature the ones before leave (D-68)
 func parseAll(parts: List<List<lexer.Token>>, sig: List<(String, @)>, acc: List<Ast>) -> Parsed {
   match parts {
-    (p, rest) => match parseStmt(p, sig) { .err(e) => Parsed.err(e), .ok(a) => parseAll(rest, sig, (a, acc)), },
+    (p, rest) => match parseStmt(p, sig) { .err(e) => Parsed.err(e), .ok(a) => parseAll(rest, binds(a, sig), (a, acc)), },
     _ => Parsed.ok(Ast.stmts(revA(acc, ~))),
   }
 };
-// one source line: a statement, or ⋄-separated statements (D-7)
+// one line's tokens: a statement, or ⋄-separated statements (D-7)
+func parseToks(ts: List<lexer.Token>, sig: List<(String, @)>) -> Parsed {
+  match splitDiamond(ts, ~, ~) {
+    (p, rest) => match rest { (p2, r2) => parseAll((p, rest), sig, ~), _ => parseStmt(p, sig), },
+    _ => Parsed.ok(Ast.empty),
+  }
+};
+// one source line
 func parseLine(line: String, sig: List<(String, @)>) -> Parsed {
   match lexer.tokens(line) {
     .err(e) => Parsed.err(pe(e.tag, e.col, e.hint)),
-    .ok(ts) => match splitDiamond(ts, ~, ~) {
-      (p, rest) => match rest { (p2, r2) => parseAll((p, rest), sig, ~), _ => parseStmt(p, sig), },
-      _ => Parsed.ok(Ast.empty),
-    },
+    .ok(ts) => parseToks(ts, sig),
+  }
+};
+// the net brace depth of a token run: positive while a dfn is open (D-69)
+func braceDepth(ts: List<lexer.Token>, depth: @) -> @ {
+  match ts {
+    (t, rest) => { let k = kindOf(t); braceDepth(rest, if k == 17 { depth + 1 } else if k == 18 and depth > 0 { depth - 1 } else { depth }) },
+    _ => depth,
   }
 };
 
@@ -455,6 +611,8 @@ func showFn(f: Fn) -> String {
     .each(g) => showFn(g) + "¨",
     .inner(i) => showFn(i.f) + "." + showFn(i.g),
     .outer(g) => "∘." + showFn(g),
+    .dfn(d) => "{{" + joinS(d.body, " ⋄ ") + "}}",
+    .own => "∇",
   }
 };
 func showAsts(xs: List<Ast>, sep: String) -> String {
@@ -484,6 +642,8 @@ func showAst(a: Ast) -> String {
     .assign(s) => "←(" + s.nm + ", " + showAst(s.v) + ")",
     .iassign(s) => "←(" + s.nm + "[" + showAsts(s.ix, ";") + "], " + showAst(s.v) + ")",
     .sysassign(s) => "←(⎕" + s.nm + ", " + showAst(s.v) + ")",
+    .fassign(s) => "←(" + s.nm + ", " + showFn(s.f) + ")",
+    .guard(g) => ":(" + showAst(g.c) + ", " + showAst(g.e) + ")",
     .cmd(c) => match c.args { (h, t) => ")" + c.nm + " " + joinS(c.args, " "), _ => ")" + c.nm, },
     .header(h) => showHeader(h),
     .stmts(ss) => showAsts(ss, " ⋄ "),
