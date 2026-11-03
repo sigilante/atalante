@@ -226,3 +226,13 @@ X[⍋(X)]
 🍎> 1+(1 2)(3 4)
 (2 3) (4 5)
 ```
+
+An axis in brackets belongs to the function before it, `f[k]` (D-82); a dfn may be the operand of `.` and `∘.` (D-91).
+
+```apl
+🍏> +/[1]M
++/[1](M)
+
+🍏> 1 2∘.{⍺×⍵}3
+∘.{⍺×⍵}(1 2, 3)
+```

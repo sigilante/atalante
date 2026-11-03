@@ -1,6 +1,6 @@
 # ATaLante:  Golden APL
 
-**STATUS ~2026.11.03:  The project is at v0.2 in progress, implementing dialect v1 plus P8 (dfns with guards) and P9 (nested arrays).**
+**STATUS ~2026.11.03:  The project is at v0.2 in progress, implementing dialect v1 plus P8 (dfns with guards), P9 (nested arrays) and P10 (the held-back primitives and axis specification).**
 
 ![](./logo.jpg)
 
@@ -91,7 +91,38 @@ ab
 cd
 ```
 
-An element of an array may be any array.  A strand of anything but numerals builds one, `⊂` encloses, `⊃` discloses and picks, `≡` is depth and match, `↑` is first, and `¨` applies a function to each element.  A nested array prints as the strand that builds it.
+An element of an array may be any array.  A strand of anything but numerals builds one, `⊂` encloses and partitions, `⊃` discloses and picks, `≡` is depth and match, `≢` tally and not-match, `↑` is first, and `¨` applies a function to each element.  A nested array prints as the strand that builds it.
+
+Axis specification and the primitives v1 held back (D-82 to D-91):
+
+```apl
+🍎> M ← 2 3⍴⍳6
+🍎> +/[1]M
+5 7 9
+
+🍎> 1 2⌽[2]M
+2 3 1
+6 4 5
+
+🍎> 2 1⍉M
+1 4
+2 5
+3 6
+
+🍎> 'an'⍷'banana'
+0 1 0 1 0 0
+
+🍎> 2⍕1.5 2.25
+1.50 2.25
+
+🍎> ⍎'+/3+⍳4'
+22
+
+🍎> 8 ¯11 ¯3⌹3 3⍴2 1 ¯1 ¯3 ¯1 2 ¯2 1 2
+2 3 ¯1
+```
+
+`[k]` names an axis after `⌽ ⊖ , / \` and after a reduction or scan; reductions, scans, replicate, expand, reverse, rotate, take and drop work on any rank; `⍪` tables and catenates on the first axis; `⊥ ⊤` take integers and reals; `⍕` formats to fixed point; `⍎` executes a line in the current environment; `⌹` inverts, solves and fits by least squares.
 
 From an input file (the Caesar cipher):
 
@@ -141,9 +172,9 @@ The prompt is the mode: `🍎>` evaluates, `🍏>` prints trees, and `)TOGGLE` (
 Every case under [`tests/atl/`](tests/atl/README.md) is a session transcript: input lines and the output each must print.  The runner evaluates each statement twice, through the interpreter and through the Nock it compiles to, and holds the two equal.
 
 ```
-tools/atlc.sh corpus        # 29 cases, 398 statements
-tools/atlc.sh lex           # 39 lexer vectors
-tools/atlc.sh parse         # 107 parser vectors
+tools/atlc.sh corpus        # 42 cases, 511 statements
+tools/atlc.sh lex           # 40 lexer vectors
+tools/atlc.sh parse         # 116 parser vectors
 tools/atlc.sh oracle        # 14 emission goldens against an independent Nockasm
 tools/atlc.sh kernel-test   # the kernel poked and peeked, 5 checks
 tools/atlc.sh repl-test     # the README typed at the live prompt, 28 lines
@@ -163,10 +194,8 @@ NockVM jets integer arithmetic and nothing on floats, so real-valued work costs 
 
 ## What is held back
 
-- Of nesting (D-6, D-70): partition `A⊂B`, `≢`, `⊃` of elements that are nested or of rank 2, reductions and scans over a nested array of rank 2, inner and outer products over nested arrays.  A nested array is a list of arrays on the Jock side, outside the Lagoon layout and the specialised gates (P11).
+- A nested array is a list of arrays on the Jock side, outside the Lagoon layout and the specialised gates (P11).  Partition takes a vector; `⍕` and `⍷` take rank at most 2; a fractional axis (laminate by `[k]`) is held back.
 - Dfns have guards and nothing else for control flow (D-32, D-63); `→` and labels are omitted for good.  Dfn operators (`⍺⍺ ⍵⍵`), a default left argument (`⍺←`) and error guards (`::`) are on the roadmap.
-- No axis specification; `↑` and `↓` on rank at most 1; `⊥` and `⊤` on naturals; reductions and scans on rank at most 2.
-- Held back with reasons in D-44: `⌹ ⍎ ⍕ ⍷ ⍪`, dyadic `⍉`, `⌽` with axis.
 - Input is Unicode; the ASCII spellings `- * | ~` are canonical (D-9) and nothing else is transliterated (D-8).
 - `⎕TYPE` is a reserved name (D-15): it parses, and reading or assigning it refuses with `%unimplemented`.
 

@@ -45,3 +45,7 @@ foo 3
 ⍝ expect: %value-error col:1 foo is not defined
 a ⎕IO
 ⍝ expect: strand(a, ⎕IO)
+(a b)(c)
+⍝ expect: strand(strand(a, b), c)
+(a b) c X
+⍝ expect: strand(strand(a, b), c, X)

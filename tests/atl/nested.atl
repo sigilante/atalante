@@ -138,12 +138,13 @@
 🍎> X+1
 ⍝ refuse: %domain-error
 🍎> X ∘.× X
-⍝ refuse: %unimplemented
+⍝ refuse: %domain-error
 🍎> 'ab' 'cd' ⍴ 1
 ⍝ refuse: %domain-error
 🍎> ⊃(1 2)('ab')
-⍝ refuse: %domain-error
+⍝ expect: 1 2
+⍝ expect: 'a' 'b'
 🍎> 'ab' ⊂ 'cd'
-⍝ refuse: %unimplemented
+⍝ refuse: %domain-error
 🍎> 7⊃X
 ⍝ refuse: %index-error

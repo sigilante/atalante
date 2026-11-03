@@ -2,3 +2,16 @@
 ⍝ expect: 11
 2 2 2 2⊤11
 ⍝ expect: 1 0 1 1
+🍎> 2 2 2⊤¯1
+⍝ expect: 1 1 1
+🍎> 10 10⊤1.5
+⍝ expect: 0 1.5
+🍎> 2 2⊤1 2 3
+⍝ expect: 0 1 1
+⍝ expect: 1 0 1
+🍎> 10⊥1.5 2
+⍝ expect: 17
+🍎> 2⊥1 ¯1
+⍝ expect: 1
+🍎> 0 2⊤5
+⍝ expect: 2 1

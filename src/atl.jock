@@ -86,8 +86,8 @@ func stepToks(ts: List<lexer.Token>, mode: @, s: Sess) -> (String, Sess) {
         else {
           match interp.runStmt(a, s.env) {
             (out, env2) => match emitted(a, s.env) {
-              (out2, env3) => if out == out2 and env2 == env3 { (out, mk(binds(a, s.sig), false, env2, s.green)) }
-                else { ("%emit-mismatch interpreter: " + out + " | emitter: " + out2, mk(binds(a, s.sig), false, env2, s.green)) },
+              (out2, env3) => if out == out2 and env2 == env3 { (out, mk(sigOf(env2), false, env2, s.green)) }
+                else { ("%emit-mismatch interpreter: " + out + " | emitter: " + out2, mk(sigOf(env2), false, env2, s.green)) },
             },
           }
         },

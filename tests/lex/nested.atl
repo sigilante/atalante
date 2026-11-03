@@ -4,3 +4,5 @@
 ⍝ expect: glyph:⊂ glyph:⊃ glyph:≡
 2⊃X
 ⍝ expect: nat:2 glyph:⊃ name:X
+≢X
+⍝ expect: glyph:≢ name:X

@@ -1,0 +1,23 @@
+🍎> ⍕123
+⍝ expect: 123
+🍎> ⍴⍕123
+⍝ expect: 3
+🍎> ⍴⍕2 3⍴⍳6
+⍝ expect: 2 5
+🍎> 2⍕1.5 2.25
+⍝ expect: 1.50 2.25
+🍎> 0⍕3.7
+⍝ expect: 4
+🍎> 2⍕2 2⍴1 10 100 ¯1.5
+⍝ expect:   1.00 10.00
+⍝ expect: 100.00 ¯1.50
+🍎> 8 2⍕1.5 22.25
+⍝ expect:     1.50   22.25
+🍎> 3 1⍕123.4
+⍝ refuse: %domain-error
+🍎> ⍕'ab' 'cd'
+⍝ expect: 'ab' 'cd'
+🍎> ⍴⍕'ab' 'cd'
+⍝ expect: 9
+🍎> 2⍕'ab'
+⍝ refuse: %domain-error

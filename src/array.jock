@@ -103,7 +103,7 @@ func pow10(n: @) -> @ { if n == 0 { 1 } else { 10 * pow10(n - 1) } };
 // --- promotion (D-11) ------------------------------------------------------------
 func toReal(a: Arr) -> Arr {
   match a.kind {
-    1 => if rank(a) == 0 or size(shape(a)) == 0 { mapArr(a, 3, natToReal) } else { Arr( kind: 3, ray: lagoon.change(a.ray, %i754, 6), items: ~ ) },   // +change: linear, +sun:rd's rounding; it crashes on a rank-0 ray (S-23)
+    1 => if rank(a) == 1 and size(shape(a)) > 0 { Arr( kind: 3, ray: lagoon.change(a.ray, %i754, 6), items: ~ ) } else { mapArr(a, 3, natToReal) },   // +change: linear, +sun:rd's rounding; it crashes on a rank-0 ray (S-23) and misreads a rank-2 ray (S-25), so only a vector takes it
     2 => mapArr(a, 3, intToReal),
     _ => a,
   }
@@ -171,7 +171,7 @@ func depth(a: Arr) -> @ { if isBox(a) { 1 + maxDepth(a.items, 0) } else if rank(
 func maxDepth(xs: List<Arr>, d: @) -> @ { match xs { (h, t) => maxDepth(t, maxk(d, depth(h))), _ => d, } };
 
 // --- display (D-45) ----------------------------------------------------------------
-func strLen(s: String) -> @ { s.len() };
+func strLen(s: String) -> @ { count(toCps(s.chars())) };
 func takeB(bs: List<Byte>, n: @) -> List<Byte> { if n == 0 { ~ } else { match bs { (h, t) => (h, takeB(t, n - 1)), _ => ~, } } };
 func dropB(bs: List<Byte>, n: @) -> List<Byte> { if n == 0 { bs } else { match bs { (h, t) => dropB(t, n - 1), _ => ~, } } };
 func zeros(n: @) -> String { if n == 0 { "" } else { "0" + zeros(n - 1) } };

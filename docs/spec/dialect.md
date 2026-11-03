@@ -1,6 +1,6 @@
 # ATL/APL — The Dialect
 
-**Status: v2 in progress (2026-11-03).** v1 is the approved Draft 1 of 2026-10-27 with the three rulings of 2026-10-28 (D-8 deferred to the §9 roadmap, D-15 and D-32 ruled). v2 opened on 2026-11-03 with P8: the maintainer approved seven items for dfns, written as D-63..D-69, and D-21, D-22, D-32, D-33, D-52 and D-62 carry the amendments. P9 the same day: the maintainer ruled D-6 for `%box`, scoped narrowly, written as D-70..D-77 with amendments to D-4, D-11, D-23, D-25, D-41..D-45. The other §9 items follow. Rules carry flat `D-n` ids, append-only. Each rule names the corpus vectors that pin it; `⟨none — UNPINNED⟩` marks a rule that has no vector yet. A rule without a vector is not a rule. No rule is OPEN; DEFERRED marks a continuation on the §9 roadmap.
+**Status: v2 in progress (2026-11-03).** v1 is the approved Draft 1 of 2026-10-27 with the three rulings of 2026-10-28 (D-8 deferred to the §9 roadmap, D-15 and D-32 ruled). v2 opened on 2026-11-03 with P8: the maintainer approved seven items for dfns, written as D-63..D-69, and D-21, D-22, D-32, D-33, D-52 and D-62 carry the amendments. P9 the same day: the maintainer ruled D-6 for `%box`, scoped narrowly, written as D-70..D-77 with amendments to D-4, D-11, D-23, D-25, D-41..D-45. Then the rest of §9 and P10: D-78..D-91 close nesting's held-back items and the held-back primitives with axis specification. Rules carry flat `D-n` ids, append-only. Each rule names the corpus vectors that pin it; `⟨none — UNPINNED⟩` marks a rule that has no vector yet. A rule without a vector is not a rule. No rule is OPEN; DEFERRED marks a continuation on the §9 roadmap.
 
 ATL/APL is the APL that Atalante compiles. It is Budd's compiler subset (Budd 1987, *An APL Compiler*) with the additions the README examples use, and it is specified here as a *language*, independent of its host. The host is Jock; the companion [`docs/plan.md`](../plan.md) fixes the order in which this spec is implemented.
 
@@ -64,6 +64,38 @@ ATL/APL is the APL that Atalante compiles. It is Budd's compiler subset (Budd 19
 
 **D-77 · Fill.** The prototype of an array is its first element with every leaf replaced by that leaf's fill, `0` for a number and a space for a character; the prototype of an empty array is `0`. Overtake, expand and `↑` of an empty array supply it. ⟨`atl/nested`⟩
 
+### Nesting, the rest (P9 closed, 2026-11-03)
+
+**D-78 · Partition.** `A⊂B`: `A` a vector of non-negative integers as long as `B` (a scalar extends), `B` a vector. An element of the result starts where `A` exceeds the count before it; a 0 drops `B`'s element. `1 1 2 2⊂'abcd'` is `'ab' 'cd'`; `1 0 1⊂'abc'` is `'a' 'c'`. Rank 2 is a RANK ERROR. ⟨`atl/partition`⟩
+
+**D-79 · Tally and not-match.** `≢B` is the length of `B`'s first axis, 1 for a scalar. `A≢B` is `∼A≡B`. ⟨`atl/tally`⟩
+
+**D-80 · Disclose, in full (amends D-73).** `⊃B` takes elements that are scalars or all of one rank `R`; the result has shape `(⍴B),S` with `S` the per-axis maximum, each element padded at the end of each axis with its fill, a scalar placed at the origin of its cell; nested elements make a box, padded with the prototype (D-77). ⟨`atl/disclose`⟩
+
+**D-81 · Boxes under the operators (amends D-72).** Along any axis the lines of a box fold under `f/` and `f\` as D-72 folds a vector. `∘.g` takes every pair of elements, `f.g` every row of `A` against every column of `B`, elements whole; the results take D-70's normal form. ⟨`atl/box-operators`⟩
+
+### Axis specification and the held-back primitives (P10, 2026-11-03)
+
+**D-82 · Axis specification `[k]`.** A numeral in `⎕IO`, in brackets after `⌽ ⊖ , / \ ⌿ ⍀` and after a derived `f/ f\ f⌿ f⍀`: `⌽[k]B` reverses along axis `k`, `A⌽[k]B` rotates, `A,[k]B` catenates, `f/[k]B` reduces, `f\[k]B` scans, `A/[k]B` replicates, `A\[k]B` expands. `k` is integral and within the rank, else an AXIS ERROR; a fractional axis (laminate) is held back, `⍪` covers the common case. ⟨`atl/axis`⟩
+
+**D-83 · Past rank 2 (amends D-42, D-43).** Reduction, scan, replicate, expand, reverse and rotate work along the last axis, the first with `⌿ ⍀ ⊖`, or the named one, of an array of any rank. `A⌽B` takes a scalar or one count per line, an array of the shape of `B` without that axis. `A↑B` and `A↓B` take one count per leading axis of `B`; fewer counts than axes leave the trailing axes whole; a scalar `B` is treated as having that many axes of length 1. ⟨`atl/rank3`, `atl/take-drop-rotate`⟩
+
+**D-84 · Table and first-axis catenate.** `⍪B` is `B` as a matrix: a scalar 1×1, a vector n×1, a matrix itself, a higher rank its first axis by the rest. `A⍪B` catenates on the first axis; a vector against a matrix is one row, two vectors are two rows, a scalar extends. ⟨`atl/table`⟩
+
+**D-85 · Dyadic transpose.** `A⍉B`: `A` a vector of axes in `⎕IO`, one per axis of `B`, naming every result axis at least once; result axis `j` has the length of the shortest axis of `B` that `A` maps to it, and a repeated axis takes the diagonal. `(⍳⍴⍴B)⍉B` is `B`, `2 1⍉M` is `⍉M`, `1 1⍉M` is the diagonal. ⟨`atl/transpose`⟩
+
+**D-86 · Decode and encode on integers and reals (amends D-42).** `A⊥B` evaluates the polynomial in the join kind of `A` and `B`, a scalar radix extending, `B` a scalar or vector. `A⊤B` encodes with floor and residue (APL2's rule), so negative and real values encode as they do there: `2 2 2⊤¯1` is `1 1 1`, `10 10⊤1.5` is `0 1.5`; `B` a scalar gives a vector, a vector gives a `(⍴A),(⍴B)` matrix; a 0 radix takes what remains. ⟨`atl/encode-decode`⟩
+
+**D-87 · Find.** `A⍷B` is a Boolean of `B`'s shape, 1 where a copy of `A` begins, elements compared by match (D-73); `A` of rank at most that of `B`, both at most rank 2; a scalar `A` is `A=B` by match. ⟨`atl/find`⟩
+
+**D-88 · Format.** `⍕B` is `B`'s display (D-45, D-76) as a character array: a vector for rank at most 1 and for a box of rank at most 1, a matrix for rank 2, one row per line of the display; a character array is itself. `D⍕B` prints each number with `D` decimals in fixed point, columns right-aligned to the widest; `W D⍕B` gives each column width `W`, and a number that does not fit is a DOMAIN ERROR. Negatives carry `¯`. ⟨`atl/format`⟩
+
+**D-89 · Execute.** `⍎B` runs the character vector `B` as a line in the current environment, through the compiler, and is the line's value; its assignments persist. A line without a value (a system command, a `∇` header, nothing) is a DOMAIN ERROR; a refusal in the line is the refusal. ⟨`atl/execute`⟩
+
+**D-90 · Matrix divide.** `⌹B` inverts a square matrix. `A⌹B` solves `B X = A` for square `B` and gives the least-squares solution when `B` has more rows than columns (through the normal equations); `A` a vector is one column, a matrix several. Gaussian elimination with partial pivoting over reals; the result is `%real`; a singular `B` is a DOMAIN ERROR. ⟨`atl/solve`⟩
+
+**D-91 · Dfn operands (amends D-63).** The operand of `.` and `∘.` may be a dfn: `∘.{⍺×⍵}`, `+.{⍺×⍵}`. ⟨`atl/dfn-operands`, `parse/operators`⟩
+
 ## 4. Syntax and evaluation
 
 **D-20 · Right-to-left; a function takes everything to its right.** `2×3+4` is 14. A dyadic function's left argument is the single array immediately to its left. Parentheses group. ⟨`parse/readme`, `parse/operators`⟩
@@ -119,7 +151,7 @@ Dyadic: `+ − × ÷ ⌈ ⌊ ∣ ⋆ ⍟ ○ !` and `< ≤ = ≥ > ≠ ∨ ∧ �
 
 **D-43 · Operators (v1).** `f/` reduce last axis, `f⌿` first axis; `f\`, `f⍀` scan; `f.g` inner product; `∘.g` outer product; `f¨` each (over a flat array, each is the scalar map; AMENDED 2026-11-03: over a box, D-74). Identity elements for reduce over empty come from `ast.md`'s table. ⟨`atl/reduce-scan`, `atl/outer-inner`, `atl/axes`, `atl/readme-red`⟩
 
-**D-44 · Held back from v1, with the reason.** `⌹` matrix divide (needs Lagoon or a float linear solver); `⍎` execute (needs the compiler in the runtime, plan P6 makes it cheap); `⍕` format (monadic only, for display, D-45); `⍷` find; `⍪` table/laminate; `≡` match and depth (ENTERED 2026-11-03 as D-73); `⍉` dyadic; `⌽` with axis `[k]`. Each enters with its three vectors or stays out.
+**D-44 · Held back from v1, with the reason.** `⌹` matrix divide (needs Lagoon or a float linear solver); `⍎` execute (needs the compiler in the runtime, plan P6 makes it cheap); `⍕` format (monadic only, for display, D-45); `⍷` find; `⍪` table/laminate; `≡` match and depth (ENTERED 2026-11-03 as D-73); `⍉` dyadic; `⌽` with axis `[k]`. Each enters with its three vectors or stays out. ENTERED 2026-11-03 as P10: all of them, D-82..D-90, each with its vectors.
 
 **D-45 · Display.** Vectors print space-separated on one line; a matrix prints one row per line, columns right-aligned; higher ranks print planes separated by a blank line. Numbers print with `⎕PP` 10 significant digits, exponent form past `1E10` (`2.642213044E60` as in the README). `%real` whose value is integral prints without a point. Negative numbers print with `¯`, never `-`. Character arrays print raw, without quotes. AMENDED 2026-11-03: a box prints as its strand (D-76). ⟨`atl/power-log`, `atl/display`, `atl/residue-sign`⟩
 
@@ -149,7 +181,7 @@ Dyadic: `+ − × ÷ ⌈ ⌊ ∣ ⋆ ⍟ ○ !` and `< ≤ = ≥ > ≠ ∨ ∧ �
 
 Ordered as phases P8 onward in [`docs/roadmap.md`](../roadmap.md).
 
-What P9 held back of nesting: `A⊂B` partition, `≢`, `⊃` of nested or rank-2 elements, reduction and scan over a box of rank 2, inner and outer products over boxes, a `%box` Lagoon layout (D-72, D-73, roadmap P11); dfn operators, `⍺←` and `::` (D-63); dyadic `⍉`, axis specification `[k]`, `⍎`, `⍕` dyadic, `⌹`, `⍷`, `⍪`; derived-function operands; an ASCII input pre-pass (D-8, deferred); `⎕TYPE`'s meaning (D-15, the name is reserved); packed Lagoon erasure and SoftBLAS jets (plan P7).
+A `%box` Lagoon layout (roadmap P11); a fractional axis (laminate by `[k]`, D-82); partition of rank 2 (D-78); `⍕` of rank 3 and above (D-88); dfn operators, `⍺←` and `::` (D-63); an ASCII input pre-pass (D-8, deferred); `⎕TYPE`'s meaning (D-15, the name is reserved); packed Lagoon erasure and SoftBLAS jets (plan P7).
 
 ## References
 

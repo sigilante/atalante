@@ -54,6 +54,8 @@ enum Evs { err(EErr), ok((List<array.Arr>, Env)) };
 enum Parts { err(EErr), ok((List<List<@>>, List<@>, Env)) };
 enum DfnR { err(EErr), ok((List<parse.Ast>, List<List<(*, *)>>, Bool, array.Arr, Env)) };
 enum StepR { err(EErr), next(Env), done((array.Arr, Env)) };
+enum ScanR { err(EErr), ok(((List<array.Arr>, List<List<@>>), Env)) };
+enum EncR { err(EErr), ok((List<List<array.Arr>>, Env)) };
 
 func fail(tag: String, hint: String) -> Ev { Ev.err(EErr( tag: tag, hint: hint )) };
 func noHeader() -> parse.Header { parse.Header( nm: "", res: "", lft: "", rgt: "", locals: ~ ) };
@@ -406,6 +408,7 @@ func applyMonad(f: parse.Fn, a: array.Arr, env: Env) -> Ev {
     .user(nm) => callNamed(nm, false, array.scalar(1, 0), a, env),
     .dfn(d) => callDfn("", d, false, array.scalar(1, 0), a, env),
     .own => callOwn(false, array.scalar(1, 0), a, env),
+    .axis(x) => axisMonad(x.f, x.k, a, env),
   }
 };
 // a name of function class: a local dfn, a global dfn, or a tradfn (D-64, D-65)
@@ -434,6 +437,7 @@ func applyDyad(f: parse.Fn, a: array.Arr, b: array.Arr, env: Env) -> Ev {
     .user(nm) => callNamed(nm, true, a, b, env),
     .dfn(d) => callDfn("", d, true, a, b, env),
     .own => callOwn(true, a, b, env),
+    .axis(x) => axisDyad(x.f, x.k, a, b, env),
   }
 };
 // --- pervasion and each (D-72, D-74): f on every element, the results in normal form ----
@@ -486,6 +490,218 @@ func natVec(a: array.Arr) -> (Bool, List<@>) {
   if a.kind == 1 and array.rank(a) <= 1 { (true, array.vals(a)) } else { (false, ~) }
 };
 
+// --- axes (D-82, D-83): the lines of an array along one axis ----------------------------------
+// An operation along axis k reads each LINE (the positions along k for one
+// index of the other axes), rewrites it, and the lines go back by position.
+// A box takes the same path on its index ray (D-70), so every function here
+// works on a List<@> of values or element numbers.
+func axisOf(k: @, r: @, env: Env) -> (Bool, @) { if k >= env.io and (k - env.io) < r { (true, k - env.io) } else { (false, 0) } };
+func withoutAt(xs: List<@>, k: @) -> List<@> { array.catL(array.takeL(xs, k), array.dropL(xs, k + 1)) };
+func insertAt(xs: List<@>, k: @, v: @) -> List<@> { if k == 0 { (v, xs) } else { match xs { (h, t) => (h, insertAt(t, k - 1, v)), _ => [v], } } };
+func rangesOf(shp: List<@>) -> List<List<@>> { match shp { (d, t) => (array.iotaL(d, 0), rangesOf(t)), _ => ~, } };
+func lineAt(st: @, step: @, len: @) -> List<@> { if len == 0 { ~ } else { (st, lineAt(st + step, step, len - 1)) } };
+// the lines along axis k as position lists, outer index slowest
+func axisLines(shp: List<@>, k: @) -> List<List<@>> {
+  let outer = array.cartesian(rangesOf(withoutAt(shp, k)));
+  linesFrom(outer, shp, k, array.nth(shp, k), array.size(array.dropL(shp, k + 1)))
+};
+func linesFrom(outer: List<List<@>>, shp: List<@>, k: @, len: @, step: @) -> List<List<@>> {
+  match outer { (ix, rest) => (lineAt(array.flatIx(shp, insertAt(ix, k, 0)), step, len), linesFrom(rest, shp, k, len, step)), _ => ~, }
+};
+func nthLL(xss: List<List<@>>, i: @) -> List<@> { match xss { (h, t) => if i == 0 { h } else { nthLL(t, i - 1) }, _ => ~, } };
+func gatherLines(vs: List<@>, lines: List<List<@>>) -> List<List<@>> { match lines { (l, rest) => (gatherAt(vs, l), gatherLines(vs, rest)), _ => ~, } };
+// the ravel of shape shp2 whose lines along k are `lines`, in outer order
+func fromLines(shp2: List<@>, k: @, lines: List<List<@>>) -> List<@> { fromLinesAt(shp2, k, withoutAt(shp2, k), lines, 0, array.size(shp2)) };
+func fromLinesAt(shp2: List<@>, k: @, rest: List<@>, lines: List<List<@>>, p: @, n: @) -> List<@> {
+  if p == n { ~ } else {
+    let ix = array.unflatIx(shp2, p);
+    (array.nth(nthLL(lines, array.flatIx(rest, withoutAt(ix, k))), array.nth(ix, k)), fromLinesAt(shp2, k, rest, lines, p + 1, n))
+  }
+};
+// an array of a's kind with axis k rewritten to the given lines of a new length
+func rebuildAxis(a: array.Arr, k: @, len2: @, lines: List<List<@>>) -> array.Arr {
+  let shp2 = setNth(array.shape(a), k, len2);
+  mk(a.kind, shp2, fromLines(shp2, k, lines))
+};
+func unbox(a: array.Arr) -> array.Arr { if array.isBox(a) { array.ixArr(a) } else { a } };
+func rebox(a: array.Arr, r: array.Arr) -> array.Arr { if array.isBox(a) { array.regather(a, r) } else { r } };
+// the elements along one line, as arrays
+func lineItems(a: array.Arr, pos: List<@>) -> List<array.Arr> {
+  if array.isBox(a) { array.pickItems(a, gatherAt(array.vals(a), pos)) } else { array.scalarsOf(a.kind, gatherAt(array.vals(a), pos)) }
+};
+func revLines(ls: List<List<@>>) -> List<List<@>> { match ls { (l, rest) => (array.revL(l, ~), revLines(rest)), _ => ~, } };
+func reverseAxis(a: array.Arr, k: @) -> array.Arr {
+  let x = unbox(a);
+  rebox(a, rebuildAxis(x, k, array.nth(array.shape(x), k), revLines(gatherLines(array.vals(x), axisLines(array.shape(x), k)))))
+};
+// counts as signed (negative, magnitude) pairs from a natural or integer array
+func intCounts(a: array.Arr) -> (Bool, List<(Bool, @)>) {
+  match a.kind { 1 => (true, natSigned(array.vals(a))), 2 => (true, intSigned(array.vals(a))), _ => (false, ~), }
+};
+func natSigned(xs: List<@>) -> List<(Bool, @)> { match xs { (h, t) => ((false, h), natSigned(t)), _ => ~, } };
+func intSigned(xs: List<@>) -> List<(Bool, @)> { match xs { (h, t) => ((array.isNeg(h), lagoon.tabs(h)), intSigned(t)), _ => ~, } };
+func repPair(c: (Bool, @), n: @) -> List<(Bool, @)> { if n == 0 { ~ } else { (c, repPair(c, n - 1)) } };
+func countPairs(xs: List<(Bool, @)>) -> @ { match xs { (h, t) => 1 + countPairs(t), _ => 0, } };
+func rotBy(neg: Bool, mag: @, n: @) -> @ { if n == 0 { 0 } else if neg { (n - (mag % n)) % n } else { mag % n } };
+func rotLines(ls: List<List<@>>, cs: List<(Bool, @)>, n: @) -> List<List<@>> {
+  match ls { (l, rest) => match cs { ((neg, mag), ct) => (rotateL(l, rotBy(neg, mag, n)), rotLines(rest, ct, n)), _ => ~, }, _ => ~, }
+};
+// A⌽[k]B: a scalar count or one per line, in the shape of B without the axis
+func rotateAxis(a: array.Arr, b: array.Arr, k: @, env: Env) -> Ev {
+  match intCounts(a) {
+    (ok, cs) => if not ok { dom("the left argument of rotate is an integer") }
+    else {
+      let x = unbox(b);
+      let shp = array.shape(x);
+      let lines = axisLines(shp, k);
+      let nl = array.countLL(lines);
+      let counts = if array.size(array.shape(a)) == 1 { repPair(match cs { (c, t) => c, _ => (false, 0), }, nl) } else { cs };
+      if countPairs(counts) != nl { fail("%length-error", "one rotation per line") }
+      else if array.rank(a) > 0 and array.size(array.shape(a)) != 1 and array.shape(a) != withoutAt(shp, k) { fail("%rank-error", "the counts take the shape of the right argument without the axis") }
+      else { okv(rebox(b, rebuildAxis(x, k, array.nth(shp, k), rotLines(gatherLines(array.vals(x), lines), counts, array.nth(shp, k)))), env) }
+    },
+  }
+};
+// A/[k]B and A\[k]B along any axis: the counts against the axis length
+func repAxis(a: array.Arr, b: array.Arr, k: @, expandIt: Bool, env: Env) -> Ev {
+  match natVec(a) {
+    (ok, cs0) => if not ok { dom("the left argument of / and \\ is a vector of non-negative integers") }
+    else {
+      let x = unbox(b);
+      let shp = array.shape(x);
+      let len = array.nth(shp, k);
+      let cs = if array.rank(a) == 0 { array.repL(array.first(a), if expandIt { len } else { len }) } else { cs0 };
+      let need = if expandIt { countNonzero(cs) } else { array.count(cs) };
+      if need != len { fail("%length-error", if expandIt { "the nonzero counts and the axis differ" } else { "the counts and the axis differ" }) }
+      else {
+        let lines = gatherLines(array.vals(x), axisLines(shp, k));
+        let fill = if array.isBox(b) { 0 } else { array.fillOf(b.kind) };
+        let len2 = if expandIt { sumL(cs) + (array.count(cs) - need) } else { sumL(cs) };
+        let lines2 = if expandIt { expRows(lines, cs, fill) } else { repRows(lines, cs) };
+        okv(rebox(b, rebuildAxis(x, k, len2, lines2)), env)
+      }
+    },
+  }
+};
+// f/[k]B and f\[k]B: each line folds (D-81, D-83)
+func reduceAxis(f: parse.Fn, a: array.Arr, k: @, env: Env) -> Ev {
+  let shp = array.shape(a);
+  if array.rank(a) == 1 and not array.isBox(a) {
+    match reduceL(f, a.kind, array.vals(a), env) { .err(e) => Ev.err(e), .ok(r) => match r { (v, env2) => okv(array.enclose(v), env2), }, }
+  } else {
+    match reduceLines(f, a, axisLines(shp, k), env, ~) {
+      .err(e) => Ev.err(e),
+      .ok(r) => match r { (vs, env2) => okv(array.normalize(withoutAt(shp, k), vs), env2), },
+    }
+  }
+};
+func reduceLines(f: parse.Fn, a: array.Arr, lines: List<List<@>>, env: Env, acc: List<array.Arr>) -> Evs {
+  match lines {
+    (l, rest) => match reduceItems(f, lineItems(a, l), env) { .err(e) => Evs.err(e), .ok(r) => match r { (v, env2) => reduceLines(f, a, rest, env2, (v, acc)), }, },
+    _ => Evs.ok((array.revA(acc, ~), env)),
+  }
+};
+func scanAxis(f: parse.Fn, a: array.Arr, k: @, env: Env) -> Ev {
+  let shp = array.shape(a);
+  let lines = axisLines(shp, k);
+  match scanLines(f, a, lines, env, ~, 1, ~) {
+    .err(e) => Ev.err(e),
+    .ok(r) => match r { (res, env2) => match res {
+      (items, numbered) => okv(array.regather(array.boxOf([array.countA(items)], items), mk(1, shp, fromLines(shp, k, numbered))), env2),
+    }, },
+  }
+};
+// every line's scan results, numbered from n in line order: (the results, the numbered lines)
+func scanLines(f: parse.Fn, a: array.Arr, lines: List<List<@>>, env: Env, acc: List<array.Arr>, n: @, nacc: List<List<@>>) -> ScanR {
+  match lines {
+    (l, rest) => {
+      let xs = lineItems(a, l);
+      let len = array.countA(xs);
+      match scanItems(f, xs, 0, len, env, ~) {
+        .err(e) => ScanR.err(e),
+        .ok(r) => match r { (vs, env2) => scanLines(f, a, rest, env2, array.catA(acc, vs), n + len, (array.iotaL(len, n), nacc)), },
+      }
+    },
+    _ => ScanR.ok(((acc, revLL(nacc, ~)), env)),
+  }
+};
+// A,[k]B: the lines joined; a scalar or an argument one rank lower takes the shape of the other with axis k of length 1
+func catenateAxis(a0: array.Arr, b0: array.Arr, k: @, env: Env) -> Ev {
+  if array.isBox(a0) or array.isBox(b0) or ((a0.kind == 4) != (b0.kind == 4)) { catenateItems(a0, b0, k, env) }
+  else {
+    let j = joinKind(a0, b0);
+    let a = array.promote(a0, j);
+    let b = array.promote(b0, j);
+    let ra = array.rank(a);
+    let rb = array.rank(b);
+    let r = array.maxk(ra, rb);
+    if k >= r { fail("%axis-error", "no such axis") }
+    else {
+      let a2 = fitAxis(a, b, k, r);
+      let b2 = fitAxis(b, a, k, r);
+      let sa = array.shape(a2);
+      let sb = array.shape(b2);
+      if array.rank(a2) != r or array.rank(b2) != r { fail("%rank-error", "ranks differ by more than one") }
+      else if withoutAt(sa, k) != withoutAt(sb, k) { fail("%length-error", "shapes differ off the axis") }
+      else {
+        let la = gatherLines(array.vals(a2), axisLines(sa, k));
+        let lb = gatherLines(array.vals(b2), axisLines(sb, k));
+        okv(rebuildAxis(a2, k, array.nth(sa, k) + array.nth(sb, k), catPairs(la, lb)), env)
+      }
+    }
+  }
+};
+func catPairs(xs: List<List<@>>, ys: List<List<@>>) -> List<List<@>> {
+  match xs { (x, xt) => match ys { (y, yt) => (array.catL(x, y), catPairs(xt, yt)), _ => ~, }, _ => ~, }
+};
+// a scalar, or an argument of rank r-1, as rank r with axis k of length 1 against the other's shape
+func fitAxis(a: array.Arr, other: array.Arr, k: @, r: @) -> array.Arr {
+  if array.rank(a) == r { a }
+  else if array.rank(a) == 0 { array.spread(a, insertAt(withoutAt(array.shape(other), k), k, 1)) }
+  else if array.rank(a) + 1 == r { mk(a.kind, insertAt(array.shape(a), k, 1), array.vals(a)) }
+  else { a }
+};
+// catenation of elements (D-72): the two index rays numbered end to end
+func catenateItems(a: array.Arr, b: array.Arr, k: @, env: Env) -> Ev {
+  let ia = array.itemsOf(a);
+  let ib = array.itemsOf(b);
+  let na = array.countA(ia);
+  let nb = array.countA(ib);
+  let ra = mk(1, array.shape(a), array.iotaL(na, 1));
+  let rb = mk(1, array.shape(b), array.iotaL(nb, na + 1));
+  match catenateAxis(ra, rb, k, env) {
+    .err(e) => Ev.err(e),
+    .ok(r) => match r { (v, env2) => okv(array.regather(array.boxOf([na + nb], array.catA(ia, ib)), v), env2), },
+  }
+};
+func axisMonad(f: parse.Fn, k0: @, a: array.Arr, env: Env) -> Ev {
+  match axisOf(k0, array.rank(a), env) {
+    (ok, k) => if not ok { fail("%axis-error", "axis {k0} is outside the rank") }
+    else { match f {
+      .prim(cp) => if cp == 9021 or cp == 8854 { okv(reverseAxis(a, k), env) } else { nyi("axis specification on monadic " + lexerText(cp)) },
+      .reduce(g) => reduceAxis(g, a, k, env),
+      .reduce1(g) => reduceAxis(g, a, k, env),
+      .scan(g) => scanAxis(g, a, k, env),
+      .scan1(g) => scanAxis(g, a, k, env),
+      _ => nyi("axis specification on that function"),
+    } },
+  }
+};
+func axisDyad(f: parse.Fn, k0: @, a: array.Arr, b: array.Arr, env: Env) -> Ev {
+  let r = array.maxk(array.rank(a), array.rank(b));
+  match axisOf(k0, r, env) {
+    (ok, k) => if not ok { fail("%axis-error", "axis {k0} is outside the rank") }
+    else { match f {
+      .prim(cp) => if cp == 9021 or cp == 8854 { rotateAxis(a, b, k, env) }
+        else if cp == 44 { catenateAxis(a, b, k, env) }
+        else if cp == 47 or cp == 9023 { repAxis(a, b, k, false, env) }
+        else if cp == 92 or cp == 9024 { repAxis(a, b, k, true, env) }
+        else { nyi("axis specification on dyadic " + lexerText(cp)) },
+      _ => nyi("axis specification on that function"),
+    } },
+  }
+};
+
 // --- monadic structural functions (D-42) --------------------------------------------------
 func monadStruct(cp: @, a: array.Arr, env: Env) -> Ev {
   if array.isBox(a) { monadBox(cp, a, env) } else { monadSimple(cp, a, env) }
@@ -508,6 +724,11 @@ func monadBox(cp: @, a: array.Arr, env: Env) -> Ev {
     8593 => okv(array.firstItem(a), env),                                                       // ↑
     8801 => okv(sc(1, array.depth(a)), env),                                                    // ≡
     9075 => dom("⍳ takes a non-negative integer scalar"),
+    8802 => okv(sc(1, tally(a)), env),                                                          // ≢
+    9066 => okv(table(a), env),                                                                 // ⍪
+    9045 => formatArr(a, env),                                                                  // ⍕
+    9038 => dom("⍎ takes a character vector"),
+    9017 => dom("⌹ takes a numeric matrix"),
     _    => nyi("monadic " + lexerText(cp) + " on a nested array"),
   }
 };
@@ -531,6 +752,11 @@ func monadSimple(cp: @, a: array.Arr, env: Env) -> Ev {
     8835 => okv(a, env),                                                                        // ⊃ of a simple array
     8593 => okv(array.firstItem(a), env),                                                       // ↑ first
     8801 => okv(sc(1, array.depth(a)), env),                                                    // ≡ depth
+    8802 => okv(sc(1, tally(a)), env),                                                          // ≢ tally (D-79)
+    9066 => okv(table(a), env),                                                                 // ⍪ table (D-84)
+    9045 => formatArr(a, env),                                                                  // ⍕ (D-88)
+    9038 => execute(a, env),                                                                    // ⍎ (D-89)
+    9017 => solve(identityOf(a), a, true, env),                                                 // ⌹ inverse (D-90)
     _    => nyi("monadic " + lexerText(cp)),
   }
 };
@@ -632,12 +858,28 @@ func leavesAll(xs: List<array.Arr>) -> List<array.Arr> { match xs { (h, t) => ar
 // disclose (D-73): simple scalar or vector elements of one class, padded to the longest
 func disclose(a: array.Arr, env: Env) -> Ev {
   let xs = array.itemsOf(a);
-  if not simpleRank1(xs) { nyi("⊃ of a nested array whose elements are nested or of rank 2 and above") }
-  else if not array.oneClassAll(xs) { dom("⊃ of mixed characters and numbers") }
+  let r = maxRank(xs, 0);
+  if not ranksOk(xs, r) { fail("%rank-error", "⊃ takes elements of one rank, or scalars") }
   else {
-    let l = maxLen(xs, 0);
-    let k = array.maxKindA(xs, 1);
-    okv(mk(k, array.catL(array.shape(a), [l]), padAll(xs, k, l)), env)
+    let shp2 = maxShape(xs, array.repL(0, r));
+    match padEach(xs, r, shp2, env, ~) {
+      .err(e) => Ev.err(e),
+      .ok(p) => match p { (padded, env2) => okv(array.normalize(array.catL(array.shape(a), shp2), itemsOfAll(padded)), env2), },
+    }
+  }
+};
+func itemsOfAll(xs: List<array.Arr>) -> List<array.Arr> { match xs { (h, t) => array.catA(array.itemsOf(h), itemsOfAll(t)), _ => ~, } };
+func maxRank(xs: List<array.Arr>, m: @) -> @ { match xs { (h, t) => maxRank(t, array.maxk(m, array.rank(h))), _ => m, } };
+func ranksOk(xs: List<array.Arr>, r: @) -> Bool { match xs { (h, t) => if array.rank(h) == r or array.rank(h) == 0 { ranksOk(t, r) } else { false }, _ => true, } };
+func maxShape(xs: List<array.Arr>, m: List<@>) -> List<@> { match xs { (h, t) => maxShape(t, if array.rank(h) == 0 { zipMax1(m) } else { zipMaxL(m, array.shape(h)) }), _ => m, } };
+func zipMax1(m: List<@>) -> List<@> { match m { (h, t) => (array.maxk(h, 1), zipMax1(t)), _ => ~, } };
+func zipMaxL(m: List<@>, s: List<@>) -> List<@> { match m { (h, t) => match s { (h2, t2) => (array.maxk(h, h2), zipMaxL(t, t2)), _ => ~, }, _ => ~, } };
+// every element taken up to the common shape, so its leaves lie in one cell; a leaf list per element
+func padEach(xs: List<array.Arr>, r: @, shp2: List<@>, env: Env, acc: List<array.Arr>) -> Evs {
+  match xs {
+    (h, t) => if r == 0 { padEach(t, r, shp2, env, (h, acc)) }
+      else { match takeDropN(vec(1, shp2), h, true, env) { .err(e) => Evs.err(e), .ok(p) => match p { (v, env2) => padEach(t, r, shp2, env2, (v, acc)), }, } },
+    _ => Evs.ok((array.revA(acc, ~), env)),
   }
 };
 func simpleRank1(xs: List<array.Arr>) -> Bool { match xs { (h, t) => if array.isBox(h) or array.rank(h) > 1 { false } else { simpleRank1(t) }, _ => true, } };
@@ -676,7 +918,12 @@ func dyadBox(cp: @, a: array.Arr, b: array.Arr, env: Env) -> Ev {
     44   => catenate(a, b, env),                                                                // A,B
     8801 => okv(sc(1, b2n(matchArr(a, b))), env),                                               // A≡B
     8835 => pick(a, b, env),                                                                    // A⊃B
-    8834 => nyi("partition"),                                                                   // A⊂B
+    8834 => partition(a, b, env),                                                               // A⊂B
+    8802 => okv(sc(1, 1 - b2n(matchArr(a, b))), env),                                           // A≢B
+    9079 => find(a, b, env),                                                                    // A⍷B
+    9066 => tableCat(a, b, env),                                                                // A⍪B
+    9045 => dom("⍕ with a left argument formats numbers"),
+    9017 => dom("⌹ takes numeric arrays"),
     8867 => okv(a, env),                                                                        // A⊣B
     8866 => okv(b, env),                                                                        // A⊢B
     8869 => dom("⊥ and ⊤ take simple numbers"),
@@ -705,7 +952,15 @@ func dyadSimple(cp: @, a: array.Arr, b: array.Arr, env: Env) -> Ev {
     8866 => okv(b, env),                                                                        // A⊢B
     8835 => pick(a, b, env),                                                                    // A⊃B (D-73)
     8801 => okv(sc(1, b2n(matchArr(a, b))), env),                                               // A≡B
-    8834 => nyi("partition"),                                                                   // A⊂B
+    8802 => okv(sc(1, 1 - b2n(matchArr(a, b))), env),                                           // A≢B (D-79)
+    8834 => partition(a, b, env),                                                               // A⊂B (D-78)
+    9079 => find(a, b, env),                                                                    // A⍷B (D-87)
+    9066 => tableCat(a, b, env),                                                                // A⍪B (D-84)
+    9033 => transposeBy(a, b, env),                                                             // A⍉B (D-85)
+    9045 => formatBy(a, b, env),                                                                // A⍕B (D-88)
+    9017 => solve(a, b, false, env),                                                            // A⌹B (D-90)
+    9023 => compressFirst(a, b, env),                                                           // A⌿B
+    9024 => expandFirst(a, b, env),                                                             // A⍀B
     _    => nyi("dyadic " + lexerText(cp)),
   }
 };
@@ -792,7 +1047,7 @@ func catenate(a0: array.Arr, b0: array.Arr, env: Env) -> Ev {
     }
     else if ra == 2 and rb <= 1 { catColumn(a, b, true, k, env) }
     else if rb == 2 and ra <= 1 { catColumn(b, a, false, k, env) }
-    else { nyi("catenating rank 3 and above") }
+    else { catenateAxis(a, b, array.maxk(ra, rb) - 1, env) }
   }
 };
 // elements catenated (D-72): the two index rays, A's numbered first, move
@@ -827,23 +1082,8 @@ func catColumn(m: array.Arr, v: array.Arr, after: Bool, k: @, env: Env) -> Ev {
 };
 func rotateL(xs: List<@>, by: @) -> List<@> { array.catL(array.dropL(xs, by), array.takeL(xs, by)) };
 func rotate(a: array.Arr, b: array.Arr, first: Bool, env: Env) -> Ev {
-  match intArg(a) {
-    (ok, neg, mag) => if not ok { dom("the left argument of rotate is an integer scalar") }
-    else if array.rank(b) == 0 or array.size(array.shape(b)) == 0 { okv(b, env) }
-    else {
-      let shp = array.shape(b);
-      if first {
-        let n = array.firstDim(shp);
-        let by = if n == 0 { 0 } else if neg { (n - (mag % n)) % n } else { mag % n };
-        let rowlen = array.size(shp) / n;
-        okv(mk(b.kind, shp, array.flatten(rotLL(array.chunks(array.vals(b), rowlen), by))), env)
-      } else {
-        let n = array.lastDim(shp);
-        let by = if n == 0 { 0 } else if neg { (n - (mag % n)) % n } else { mag % n };
-        okv(mk(b.kind, shp, array.flatten(rotRows(array.chunks(array.vals(b), n), by))), env)
-      }
-    },
-  }
+  if array.rank(b) == 0 { if array.size(array.shape(a)) == 1 { okv(b, env) } else { fail("%rank-error", "a scalar rotates by a scalar") } }
+  else { rotateAxis(a, b, if first { 0 } else { array.rank(b) - 1 }, env) }
 };
 func rotRows(rows: List<List<@>>, by: @) -> List<List<@>> { match rows { (r, rest) => (rotateL(r, by), rotRows(rest, by)), _ => ~, } };
 func rotLL(rows: List<List<@>>, by: @) -> List<List<@>> {
@@ -851,8 +1091,7 @@ func rotLL(rows: List<List<@>>, by: @) -> List<List<@>> {
 };
 func takeDrop(a: array.Arr, b0: array.Arr, take: Bool, env: Env) -> Ev {
   match intArg(a) {
-    (ok, neg, mag) => if not ok { dom("the left argument of ↑ and ↓ is an integer scalar") }
-    else if array.rank(b0) > 1 { nyi("take and drop on rank 2 and above") }
+    (ok, neg, mag) => if not ok or array.rank(b0) > 1 { takeDropN(a, b0, take, env) }
     else {
       let b = if array.rank(b0) == 0 { vec(b0.kind, [array.first(b0)]) } else { b0 };
       let vs = array.vals(b);
@@ -873,11 +1112,54 @@ func takeDrop(a: array.Arr, b0: array.Arr, take: Bool, env: Env) -> Ev {
     },
   }
 };
+// one count per leading axis (D-83): the result cell at ix reads the source at ix shifted, or a fill
+func takeDropN(a: array.Arr, b0: array.Arr, take: Bool, env: Env) -> Ev {
+  match intCounts(a) {
+    (ok, cs) => if not ok or array.rank(a) > 1 { dom("the left argument of ↑ and ↓ is an integer vector") }
+    else {
+      let nc = countPairs(cs);
+      let b1 = if array.rank(b0) == 0 { rebox(b0, mk(unbox(b0).kind, array.repL(1, nc), array.vals(unbox(b0)))) } else { b0 };
+      let b = unbox(b1);
+      let shp = array.shape(b);
+      if nc > array.rank(b) { fail("%rank-error", "more counts than axes") }
+      else {
+        let full = catC(cs, if take { natSigned(array.dropL(shp, nc)) } else { natSigned(array.repL(0, array.rank(b) - nc)) });
+        let shp2 = if take { takeShape(full, shp) } else { dropShape(full, shp) };
+        let n = array.size(shp2);
+        let fill = if array.isBox(b1) { 0 } else { array.fillOf(b.kind) };
+        okv(rebox(b1, mk(b.kind, shp2, takeCells(full, shp, shp2, array.vals(b), take, fill, 0, n))), env)
+      }
+    },
+  }
+};
+func catC(a: List<(Bool, @)>, b: List<(Bool, @)>) -> List<(Bool, @)> { match a { (h, t) => (h, catC(t, b)), _ => b, } };
+func takeShape(cs: List<(Bool, @)>, shp: List<@>) -> List<@> { match cs { ((neg, m), t) => (m, takeShape(t, array.dropL(shp, 1))), _ => ~, } };
+func dropShape(cs: List<(Bool, @)>, shp: List<@>) -> List<@> {
+  match cs { ((neg, m), t) => match shp { (d, ds) => (if m >= d { 0 } else { d - m }, dropShape(t, ds)), _ => ~, }, _ => ~, }
+};
+func takeCells(cs: List<(Bool, @)>, shp: List<@>, shp2: List<@>, vs: List<@>, take: Bool, fill: @, p: @, n: @) -> List<@> {
+  if p == n { ~ } else {
+    match sourceIx(cs, shp, array.unflatIx(shp2, p), take, ~) {
+      (inside, ix) => (if inside { array.nth(vs, array.flatIx(shp, ix)) } else { fill }, takeCells(cs, shp, shp2, vs, take, fill, p + 1, n)),
+    }
+  }
+};
+// the source index of a result index, axis by axis: (in range, index)
+func sourceIx(cs: List<(Bool, @)>, shp: List<@>, ix: List<@>, take: Bool, acc: List<@>) -> (Bool, List<@>) {
+  match cs {
+    ((neg, m), ct) => match shp { (d, ds) => match ix { (i, it) => {
+      let r = if take { if neg { if m > d { if i < (m - d) { (false, 0) } else { (true, i - (m - d)) } } else { (true, i + (d - m)) } } else { if i < d { (true, i) } else { (false, 0) } } }
+              else { if neg { (true, i) } else { (true, i + m) } };
+      match r { (ok, j) => if ok { sourceIx(ct, ds, it, take, (j, acc)) } else { (false, ~) }, }
+    }, _ => (true, array.revL(acc, ~)), }, _ => (true, array.revL(acc, ~)), },
+    _ => (true, array.revL(acc, ~)),
+  }
+};
 // A/B along the last axis:  counts in A, one per column of B, or a scalar for every column
 func compress(a: array.Arr, b: array.Arr, env: Env) -> Ev {
   match natVec(a) {
     (ok, counts0) => if not ok { dom("the left argument of / is a vector of non-negative integers") }
-    else if array.rank(b) > 2 { nyi("replicate on rank 3 and above") }
+    else if array.rank(b) > 2 { repAxis(a, b, array.rank(b) - 1, false, env) }
     else {
       let ncols = if array.rank(b) == 0 { 1 } else { array.lastDim(array.shape(b)) };
       let counts = if array.rank(a) == 0 { array.repL(array.first(a), ncols) } else { counts0 };
@@ -902,7 +1184,7 @@ func repRow(r: List<@>, counts: List<@>) -> List<@> {
 func expand(a: array.Arr, b: array.Arr, env: Env) -> Ev {
   match natVec(a) {
     (ok, counts) => if not ok { dom("the left argument of \\ is a vector of non-negative integers") }
-    else if array.rank(b) > 2 { nyi("expand on rank 3 and above") }
+    else if array.rank(b) > 2 { repAxis(a, b, array.rank(b) - 1, true, env) }
     else {
       let need = countNonzero(counts);
       let ncols = if array.rank(b) == 0 { 1 } else { array.lastDim(array.shape(b)) };
@@ -929,8 +1211,8 @@ func expRow(r: List<@>, counts: List<@>, fill: @) -> List<@> {
   }
 };
 func decode(a: array.Arr, b: array.Arr, env: Env) -> Ev {
-  if a.kind != 1 or b.kind != 1 { nyi("⊥ beyond natural numbers") }
-  else if array.rank(b) > 1 { nyi("⊥ on rank 2 and above") }
+  if array.rank(b) > 1 { nyi("⊥ on rank 2 and above") }
+  else if a.kind != 1 or b.kind != 1 { decodeAny(a, b, env) }
   else {
     let bs = array.vals(b);
     let n = array.count(bs);
@@ -944,14 +1226,358 @@ func decodeL(radix: List<@>, ds: List<@>, acc: @) -> @ {
   match ds { (d, rest) => match radix { (r, rrest) => decodeL(rrest, rest, acc * r + d), _ => acc, }, _ => acc, }
 };
 func encode(a: array.Arr, b: array.Arr, env: Env) -> Ev {
-  if a.kind != 1 or b.kind != 1 { nyi("⊤ beyond natural numbers") }
-  else if array.size(array.shape(b)) != 1 { nyi("⊤ of a non-scalar") }
+  if a.kind != 1 or b.kind != 1 or array.size(array.shape(b)) != 1 or array.rank(b) > 1 { encodeAny(a, b, env) }
   else { okv(vec(1, array.revL(encodeL(array.revL(array.vals(a), ~), array.first(b)), ~)), env) }
 };
 // radix from the last digit backwards
 func encodeL(radixRev: List<@>, x: @) -> List<@> {
   match radixRev { (r, rest) => if r == 0 { (x, encodeL(rest, 0)) } else { (x % r, encodeL(rest, x / r)) }, _ => ~, }
 };
+
+// ⊥ with integers or reals (D-86): Horner over scalar arrays, the radix extended
+func decodeAny(a: array.Arr, b: array.Arr, env: Env) -> Ev {
+  if a.kind == 4 or b.kind == 4 or array.isBox(a) or array.isBox(b) { dom("⊥ takes numbers") }
+  else {
+    let ds = array.itemsOf(b);
+    let n = array.countA(ds);
+    let rs = if array.size(array.shape(a)) == 1 { repA(array.firstItem(a), n) } else { array.itemsOf(a) };
+    if array.countA(rs) != n { fail("%length-error", "radix and digits differ") }
+    else { horner(rs, ds, sc(1, 0), env) }
+  }
+};
+func horner(rs: List<array.Arr>, ds: List<array.Arr>, acc: array.Arr, env: Env) -> Ev {
+  match ds {
+    (d, dt) => match rs { (r, rt) => match dyadPrim(215, acc, r, env) {
+      .err(e) => Ev.err(e),
+      .ok(p) => match p { (m, env2) => match dyadPrim(43, m, d, env2) { .err(e) => Ev.err(e), .ok(q) => match q { (v, env3) => horner(rt, dt, v, env3), }, }, },
+    }, _ => okv(acc, env), },
+    _ => okv(acc, env),
+  }
+};
+// ⊤ with integers or reals, or a vector right argument (D-86): floor and residue, the last radix first
+func encodeAny(a: array.Arr, b: array.Arr, env: Env) -> Ev {
+  if a.kind == 4 or b.kind == 4 or array.isBox(a) or array.isBox(b) { dom("⊤ takes numbers") }
+  else if array.rank(a) > 1 or array.rank(b) > 1 { nyi("⊤ on rank 2 and above") }
+  else {
+    let rs = array.revA(array.itemsOf(a), ~);
+    let na = array.countA(rs);
+    match encodeAll(rs, array.itemsOf(b), env, ~) {
+      .err(e) => Ev.err(e),
+      .ok(r) => match r { (cols, env2) =>
+        if array.rank(b) == 0 { okv(array.normalize([na], match cols { (c, t) => c, _ => ~, }), env2) }
+        else { okv(array.normalize([na, array.size(array.shape(b))], rowsOfCols(cols, 0, na)), env2) }, },
+    }
+  }
+};
+func encodeAll(rs: List<array.Arr>, xs: List<array.Arr>, env: Env, acc: List<List<array.Arr>>) -> EncR {
+  match xs {
+    (x, xt) => match encDigits(rs, x, env, ~) { .err(e) => EncR.err(e), .ok(r) => match r { (ds, env2) => encodeAll(rs, xt, env2, (ds, acc)), }, },
+    _ => EncR.ok((revAA(acc, ~), env)),
+  }
+};
+func revAA(xs: List<List<array.Arr>>, acc: List<List<array.Arr>>) -> List<List<array.Arr>> { match xs { (h, t) => revAA(t, (h, acc)), _ => acc, } };
+// the digits of x for the reversed radix, built last digit first so they come out in order
+func encDigits(rs: List<array.Arr>, x: array.Arr, env: Env, acc: List<array.Arr>) -> Evs {
+  match rs {
+    (r, rt) => if matchArr(r, sc(1, 0)) { encDigits(rt, sc(1, 0), env, (x, acc)) }
+      else { match dyadPrim(8739, r, x, env) {
+        .err(e) => Evs.err(e),
+        .ok(p) => match p { (d, env2) => match dyadPrim(8722, x, d, env2) {
+          .err(e) => Evs.err(e),
+          .ok(q) => match q { (diff, env3) => match dyadPrim(247, diff, r, env3) {
+            .err(e) => Evs.err(e),
+            .ok(u) => match u { (quot, env4) => match monadPrim(8970, quot, env4) {
+              .err(e) => Evs.err(e),
+              .ok(w) => match w { (x2, env5) => encDigits(rt, x2, env5, (d, acc)), },
+            }, },
+          }, },
+        }, },
+      } },
+    _ => Evs.ok((acc, env)),
+  }
+};
+func rowsOfCols(cols: List<List<array.Arr>>, i: @, na: @) -> List<array.Arr> {
+  if i == na { ~ } else { array.catA(colA(cols, i), rowsOfCols(cols, i + 1, na)) }
+};
+// --- nesting, the rest (D-78..D-80) --------------------------------------------------------------
+func tally(a: array.Arr) -> @ { if array.rank(a) == 0 { 1 } else { array.firstDim(array.shape(a)) } };
+// A⊂B: a new element where the count rises, a 0 drops the element
+func partition(a: array.Arr, b: array.Arr, env: Env) -> Ev {
+  match natVec(a) {
+    (ok, cs0) => if not ok { dom("the left argument of ⊂ is a vector of non-negative integers") }
+    else if array.rank(b) > 1 { fail("%rank-error", "⊂ partitions a vector") }
+    else {
+      let xs = array.itemsOf(b);
+      let n = array.countA(xs);
+      let cs = if array.rank(a) == 0 { array.repL(array.first(a), n) } else { cs0 };
+      if array.count(cs) != n { fail("%length-error", "one count per element") }
+      else { let gs = partGroups(cs, xs, 0, ~, ~); okv(array.normalize([array.countA(gs)], gs), env) }
+    },
+  }
+};
+// prev: the count before; cur: the open group's elements reversed; acc: the finished groups reversed
+func partGroups(cs: List<@>, xs: List<array.Arr>, prev: @, cur: List<array.Arr>, acc: List<array.Arr>) -> List<array.Arr> {
+  match cs {
+    (c, ct) => match xs { (x, xt) =>
+      if c == 0 { partGroups(ct, xt, 0, ~, closeGroup(cur, acc)) }
+      else if c > prev { partGroups(ct, xt, c, [x], closeGroup(cur, acc)) }
+      else { partGroups(ct, xt, c, (x, cur), acc) }, _ => array.revA(closeGroup(cur, acc), ~), },
+    _ => array.revA(closeGroup(cur, acc), ~),
+  }
+};
+func closeGroup(cur: List<array.Arr>, acc: List<array.Arr>) -> List<array.Arr> {
+  match cur { (h, t) => { let g = array.revA(cur, ~); (array.normalize([array.countA(g)], g), acc) }, _ => acc, }
+};
+// ⍪B: a matrix of the first axis by the rest
+func table(a: array.Arr) -> array.Arr {
+  let x = unbox(a);
+  let shp = array.shape(x);
+  let shp2 = if array.rank(x) == 0 { [1, 1] } else if array.rank(x) == 1 { [array.firstDim(shp), 1] } else { [array.firstDim(shp), array.size(shp) / array.firstDim(shp)] };
+  rebox(a, mk(x.kind, shp2, array.vals(x)))
+};
+// A⍪B: on the first axis; vectors and scalars as rows
+func tableCat(a: array.Arr, b: array.Arr, env: Env) -> Ev {
+  if array.rank(a) <= 1 and array.rank(b) <= 1 {
+    let n = array.maxk(array.size(array.shape(a)), array.size(array.shape(b)));
+    let la = if array.rank(a) == 0 { n } else { array.size(array.shape(a)) };
+    let lb = if array.rank(b) == 0 { n } else { array.size(array.shape(b)) };
+    if la != lb { fail("%length-error", "the rows differ in length") } else { catenateAxis(asRow(a, n), asRow(b, n), 0, env) }
+  } else { catenateAxis(a, b, 0, env) }
+};
+func asRow(x: array.Arr, n: @) -> array.Arr {
+  if array.rank(x) == 0 { array.spread(x, [1, n]) } else { rebox(x, mk(unbox(x).kind, [1, n], array.vals(unbox(x)))) }
+};
+// A⍉B (D-85): result axis j is every axis of B that A maps to it; a repeat is the diagonal
+func transposeBy(a: array.Arr, b: array.Arr, env: Env) -> Ev {
+  match natVec(a) {
+    (ok, axes0) => if not ok { dom("the left argument of ⍉ is a vector of axes") }
+    else {
+      let axes = shiftIo(if array.rank(a) == 0 { array.repL(array.first(a), array.rank(b)) } else { axes0 }, env.io);
+      let shp = array.shape(b);
+      if array.count(axes) != array.rank(b) { fail("%length-error", "one axis per axis of the right argument") }
+      else if not array.allL(axes, lambda (j: @) -> Bool { j < 4294967295 }) { fail("%axis-error", "an axis below ⎕IO") }
+      else {
+        let r = if array.rank(b) == 0 { 0 } else { 1 + maxL(axes, 0) };
+        if not coversAll(axes, 0, r) { dom("every result axis must be named") }
+        else {
+          let shp2 = minShape(axes, shp, 0, r);
+          let x = unbox(b);
+          okv(rebox(b, mk(x.kind, shp2, transposeCells(axes, shp, shp2, array.vals(x), 0, array.size(shp2)))), env)
+        }
+      }
+    },
+  }
+};
+func maxL(xs: List<@>, m: @) -> @ { match xs { (h, t) => maxL(t, array.maxk(m, h)), _ => m, } };
+func coversAll(axes: List<@>, j: @, r: @) -> Bool { if j == r { true } else if array.anyL(axes, lambda (x: @) -> Bool { x == j }) { coversAll(axes, j + 1, r) } else { false } };
+func minShape(axes: List<@>, shp: List<@>, j: @, r: @) -> List<@> { if j == r { ~ } else { (minOver(axes, shp, j, 4294967295), minShape(axes, shp, j + 1, r)) } };
+func minOver(axes: List<@>, shp: List<@>, j: @, m: @) -> @ {
+  match axes { (x, xt) => match shp { (d, dt) => minOver(xt, dt, j, if x == j and d < m { d } else { m }), _ => m, }, _ => m, }
+};
+func transposeCells(axes: List<@>, shp: List<@>, shp2: List<@>, vs: List<@>, p: @, n: @) -> List<@> {
+  if p == n { ~ } else {
+    let ix2 = array.unflatIx(shp2, p);
+    (array.nth(vs, array.flatIx(shp, pickAxes(axes, ix2))), transposeCells(axes, shp, shp2, vs, p + 1, n))
+  }
+};
+// A⍷B (D-87): 1 where a copy of A begins, both as matrices
+func pickAxes(axes: List<@>, ix2: List<@>) -> List<@> { match axes { (x, t) => (array.nth(ix2, x), pickAxes(t, ix2)), _ => ~, } };
+func find(a: array.Arr, b: array.Arr, env: Env) -> Ev {
+  if array.rank(a) > 2 or array.rank(b) > 2 { nyi("⍷ on rank 3 and above") }
+  else if array.rank(a) > array.rank(b) { fail("%rank-error", "the pattern outranks the array") }
+  else {
+    let ia = array.itemsOf(a);
+    let ib = array.itemsOf(b);
+    match matDims(a) { (pr, pc) => match matDims(b) { (br, bc) =>
+      okv(mk(1, array.shape(b), findCells(ia, pr, pc, ib, br, bc, 0, br * bc)), env), }, }
+  }
+};
+func matDims(a: array.Arr) -> (@, @) {
+  match array.rank(a) { 0 => (1, 1), 1 => (1, array.firstDim(array.shape(a))), _ => (array.firstDim(array.shape(a)), array.lastDim(array.shape(a))), }
+};
+func findCells(ia: List<array.Arr>, pr: @, pc: @, ib: List<array.Arr>, br: @, bc: @, p: @, n: @) -> List<@> {
+  if p == n { ~ } else {
+    let i = p / bc;
+    let j = p % bc;
+    let hit = i + pr <= br and j + pc <= bc and findAt(ia, pr, pc, ib, bc, i, j, 0, pr * pc);
+    (b2n(hit), findCells(ia, pr, pc, ib, br, bc, p + 1, n))
+  }
+};
+func findAt(ia: List<array.Arr>, pr: @, pc: @, ib: List<array.Arr>, bc: @, i: @, j: @, q: @, m: @) -> Bool {
+  if q == m { true } else {
+    let di = q / pc;
+    let dj = q % pc;
+    if matchArr(array.nthA(ia, q), array.nthA(ib, (i + di) * bc + (j + dj))) { findAt(ia, pr, pc, ib, bc, i, j, q + 1, m) } else { false }
+  }
+};
+// --- format (D-88) ------------------------------------------------------------------------------
+func toUni(cs: List<@>) -> List<UniChar> { match cs { (c, t) => (c as! UniChar, toUni(t)), _ => ~, } };
+func splitNl(cs: List<@>, cur: List<@>, acc: List<List<@>>) -> List<List<@>> {
+  match cs { (c, t) => if c == 10 { splitNl(t, ~, (array.revL(cur, ~), acc)) } else { splitNl(t, (c, cur), acc) }, _ => revLL((array.revL(cur, ~), acc), ~), }
+};
+func maxLenL(xss: List<List<@>>, m: @) -> @ { match xss { (h, t) => maxLenL(t, array.maxk(m, array.count(h))), _ => m, } };
+func padRows(xss: List<List<@>>, w: @) -> List<List<@>> { match xss { (h, t) => (array.catL(h, array.repL(32, w - array.count(h))), padRows(t, w)), _ => ~, } };
+// a display text as a character array: one row per line
+func charsOf(text: String) -> array.Arr {
+  let rows = splitNl(cps(text), ~, ~);
+  match rows {
+    (r, rest) => match rest { (r2, rest2) => { let w = maxLenL(rows, 0); mk(4, [array.countLL(rows), w], array.flatten(padRows(rows, w))) }, _ => vec(4, r), },
+    _ => vec(4, ~),
+  }
+};
+func formatArr(a: array.Arr, env: Env) -> Ev {
+  if a.kind == 4 { okv(a, env) }
+  else if array.rank(a) > 2 { nyi("⍕ on rank 3 and above") }
+  else { okv(charsOf(array.format(a, env.pp)), env) }
+};
+func roundNat(f: Float64) -> @ { lagoon.tabs(array.sToInt(lagoon.rflo(hoon.radd(f, 0.5)) ?? 0)) };
+func fracText(frac: @, d: @) -> String { if d == 0 { "" } else { "." + array.zeros(d - array.ndigits(frac)) + array.fmtNat(frac) } };
+// a number in fixed point with d decimals
+func fmtFixed(k: @, x: @, d: @) -> String {
+  match k {
+    1 => array.fmtNat(x) + fracText(0, d),
+    2 => (if array.isNeg(x) { "¯" } else { "" }) + array.fmtNat(lagoon.tabs(x)) + fracText(0, d),
+    _ => {
+      let neg = array.realIsNeg(x);
+      let mag = if neg { negR(x) } else { x };
+      let scaled = roundNat(hoon.rmul(array.freal(mag), array.freal(array.natToReal(array.pow10(d)))));
+      let p = array.pow10(d);
+      (if neg { "¯" } else { "" }) + array.fmtNat(scaled / p) + fracText(scaled % p, d)
+    },
+  }
+};
+func fmtFixedAll(k: @, xs: List<@>, d: @) -> List<String> { match xs { (h, t) => (fmtFixed(k, h, d), fmtFixedAll(k, t, d)), _ => ~, } };
+func fitWidth(cells: List<String>, w: @) -> (Bool, List<String>) {
+  match cells {
+    (c, t) => if array.strLen(c) > w { (false, ~) } else { match fitWidth(t, w) { (ok, rest) => (ok, (array.spaces(w - array.strLen(c)) + c, rest)), } },
+    _ => (true, ~),
+  }
+};
+func formatBy(a: array.Arr, b: array.Arr, env: Env) -> Ev {
+  match natVec(a) {
+    (ok, spec) => if not ok or array.count(spec) > 2 or array.count(spec) == 0 { dom("the left argument of ⍕ is D or W D") }
+    else if b.kind == 4 or array.isBox(b) { dom("⍕ with a left argument formats numbers") }
+    else if array.rank(b) > 2 { nyi("⍕ on rank 3 and above") }
+    else {
+      let d = array.lastL(spec);
+      let cells = fmtFixedAll(b.kind, array.vals(b), d);
+      let cols = if array.rank(b) == 2 { array.lastDim(array.shape(b)) } else { countS(cells) };
+      let rows = array.chunk(cells, cols);
+      if array.count(spec) == 2 {
+        match fitWidth(cells, array.firstDim(spec)) {
+          (fits, padded) => if not fits { dom("a number does not fit the width") }
+            else { okv(charsOf(array.joinS(array.fmtRows(array.chunk(padded, cols), ~, ""), "\n")), env) },
+        }
+      } else { okv(charsOf(array.joinS(array.fmtRows(rows, array.widths(rows, ~), " "), "\n")), env) }
+    },
+  }
+};
+// --- execute (D-89) -----------------------------------------------------------------------------
+func execute(a: array.Arr, env: Env) -> Ev {
+  if a.kind != 4 or array.rank(a) > 1 { dom("⍎ takes a character vector") }
+  else {
+    match parse.parseLine(utf8(toUni(array.vals(a))), sigOf(env)) {
+      .err(e) => fail(e.tag, "col:{e.col} " + e.hint),
+      .ok(t) => execAst(t, env),
+    }
+  }
+};
+func execAst(t: parse.Ast, env: Env) -> Ev {
+  match t {
+    .stmts(ss) => execStmts(ss, env),
+    .empty => dom("the executed line has no value"),
+    .elide => dom("the executed line has no value"),
+    .fnend => dom("the executed line has no value"),
+    .cmd(c) => dom("the executed line has no value"),
+    .header(h) => dom("the executed line has no value"),
+    .fassign(s) => dom("the executed line has no value"),
+    .guard(g) => dom("the executed line has no value"),
+    _ => evalAst(t, env),
+  }
+};
+// the statements before the last run as the session would, their output kept; the last is the value
+func execStmts(ss: List<parse.Ast>, env: Env) -> Ev {
+  match ss {
+    (h, t) => match t {
+      (h2, t2) => match runStmt(h, env) { (out, env2) => execStmts(t, pushOut(env2, out)), },
+      _ => execAst(h, env),
+    },
+    _ => dom("the executed line has no value"),
+  }
+};
+// --- matrix divide (D-90): Gauss-Jordan with partial pivoting over reals -----------------------------
+func identityOf(b: array.Arr) -> array.Arr {
+  let n = array.firstDim(array.shape(b));
+  mk(1, [n, n], identCells(0, n * n, n))
+};
+func identCells(p: @, n2: @, n: @) -> List<@> { if p == n2 { ~ } else { (if (p / n) == (p % n) { 1 } else { 0 }, identCells(p + 1, n2, n)) } };
+func solve(a: array.Arr, b: array.Arr, inverse: Bool, env: Env) -> Ev {
+  if a.kind == 4 or b.kind == 4 or array.isBox(a) or array.isBox(b) { dom("⌹ takes numeric arrays") }
+  else if array.rank(b) != 2 or array.rank(a) > 2 { fail("%rank-error", "⌹ takes a matrix") }
+  else {
+    let m = array.firstDim(array.shape(b));
+    let n = array.lastDim(array.shape(b));
+    let p = if array.rank(a) == 2 { array.lastDim(array.shape(a)) } else { 1 };
+    let ar = if array.rank(a) == 2 { array.firstDim(array.shape(a)) } else { array.size(array.shape(a)) };
+    if ar != m { fail("%length-error", "the rows of the two arguments differ") }
+    else if m < n { dom("⌹ needs at least as many rows as columns") }
+    else {
+      let brows = array.chunks(array.vals(array.toReal(b)), n);
+      let arows = array.chunks(array.vals(array.toReal(a)), p);
+      let bt = array.colsOf(brows, n, 0);
+      let sq = if m == n { brows } else { mmulF(bt, array.colsOf(brows, n, 0)) };
+      let rhs = if m == n { arows } else { mmulF(bt, array.colsOf(arows, p, 0)) };
+      match gaussJordan(catPairs(sq, rhs), 0, n) {
+        (ok, rows) => if not ok { dom("the matrix is singular") }
+          else {
+            let xs = array.flatten(dropCols(rows, n));
+            if array.rank(a) == 1 { okv(vec(3, xs), env) } else { okv(mk(3, [n, p], xs), env) }
+          },
+      }
+    }
+  }
+};
+func dotF(xs: List<@>, ys: List<@>) -> @ { foldK(addK, 3, zipK(mulK, 3, xs, ys)) };
+func mmulF(rows: List<List<@>>, cols: List<List<@>>) -> List<List<@>> { match rows { (r, rest) => (dotRowF(r, cols), mmulF(rest, cols)), _ => ~, } };
+func dotRowF(r: List<@>, cols: List<List<@>>) -> List<@> { match cols { (c, rest) => (dotF(r, c), dotRowF(r, rest)), _ => ~, } };
+func dropCols(rows: List<List<@>>, n: @) -> List<List<@>> { match rows { (r, rest) => (array.dropL(r, n), dropCols(rest, n)), _ => ~, } };
+func absF(x: @) -> @ { if array.realIsNeg(x) { negR(x) } else { x } };
+// the row at or below c with the largest magnitude in column c
+func pivotOf(rows: List<List<@>>, c: @, i: @, best: @, bestMag: @) -> (@, @) {
+  match rows {
+    (r, rest) => if i < c { pivotOf(rest, c, i + 1, best, bestMag) }
+      else { let mag = absF(array.nth(r, c)); if hoon.rgth(array.freal(mag), array.freal(bestMag)) { pivotOf(rest, c, i + 1, i, mag) } else { pivotOf(rest, c, i + 1, best, bestMag) } },
+    _ => (best, bestMag),
+  }
+};
+func swapRows(rows: List<List<@>>, i: @, j: @) -> List<List<@>> {
+  let ri = nthLL(rows, i);
+  let rj = nthLL(rows, j);
+  setNthLL(setNthLL(rows, i, rj), j, ri)
+};
+func setNthLL(rows: List<List<@>>, i: @, r: List<@>) -> List<List<@>> { match rows { (h, t) => if i == 0 { (r, t) } else { (h, setNthLL(t, i - 1, r)) }, _ => ~, } };
+func scaleRow(r: List<@>, by: @) -> List<@> { match r { (x, t) => (array.fbits(hoon.rdiv(array.freal(x), array.freal(by))), scaleRow(t, by)), _ => ~, } };
+func subRow(r: List<@>, pr: List<@>, f: @) -> List<@> {
+  match r { (x, t) => match pr { (y, pt) => (array.fbits(hoon.rsub(array.freal(x), hoon.rmul(array.freal(f), array.freal(y)))), subRow(t, pt, f)), _ => ~, }, _ => ~, }
+};
+func eliminate(rows: List<List<@>>, pr: List<@>, c: @, i: @, skip: @) -> List<List<@>> {
+  match rows { (r, rest) => (if i == skip { r } else { subRow(r, pr, array.nth(r, c)) }, eliminate(rest, pr, c, i + 1, skip)), _ => ~, }
+};
+func gaussJordan(rows: List<List<@>>, c: @, n: @) -> (Bool, List<List<@>>) {
+  if c == n { (true, rows) }
+  else {
+    match pivotOf(rows, c, 0, c, 0) {
+      (pi, mag) => if realZero(mag) { (false, rows) }
+        else {
+          let sw = swapRows(rows, c, pi);
+          let pr = scaleRow(nthLL(sw, c), array.nth(nthLL(sw, c), c));
+          gaussJordan(eliminate(setNthLL(sw, c, pr), pr, c, 0, c), c + 1, n)
+        },
+    }
+  }
+};
+func compressFirst(a: array.Arr, b: array.Arr, env: Env) -> Ev { if array.rank(b) == 0 { compress(a, b, env) } else { repAxis(a, b, 0, false, env) } };
+func expandFirst(a: array.Arr, b: array.Arr, env: Env) -> Ev { if array.rank(b) == 0 { expand(a, b, env) } else { repAxis(a, b, 0, true, env) } };
 
 // --- operators (D-43) --------------------------------------------------------------------------
 func identity(f: parse.Fn) -> (Bool, array.Arr) {
@@ -982,21 +1608,7 @@ func foldRight(f: parse.Fn, k: @, restRev: List<@>, acc: array.Arr, env: Env) ->
 };
 func reduce(f: parse.Fn, a: array.Arr, first: Bool, env: Env) -> Ev {
   let r = array.rank(a);
-  if array.isBox(a) { reduceBox(f, a, env) }
-  else if r == 0 { okv(a, env) }
-  else if r == 1 { reduceL(f, a.kind, array.vals(a), env) }
-  else if r == 2 {
-    let shp = array.shape(a);
-    let nrows = array.firstDim(shp);
-    let ncols = array.lastDim(shp);
-    let rows = array.chunks(array.vals(a), ncols);
-    let groups = if first { array.colsOf(rows, ncols, 0) } else { rows };
-    match reduceEach(f, a.kind, groups, env, ~) {
-      .err(e) => Ev.err(e),
-      .ok(rs) => match rs { (scalars, env2) => okv(gather(scalars), env2), },
-    }
-  }
-  else { nyi("reduction on rank 3 and above") }
+  if r == 0 { okv(a, env) } else { reduceAxis(f, a, if first { 0 } else { r - 1 }, env) }
 };
 func reduceEach(f: parse.Fn, k: @, groups: List<List<@>>, env: Env, acc: List<array.Arr>) -> Evs {
   match groups {
@@ -1017,23 +1629,7 @@ func scanL(f: parse.Fn, k: @, xs: List<@>, i: @, n: @, env: Env, acc: List<array
 };
 func scan(f: parse.Fn, a: array.Arr, first: Bool, env: Env) -> Ev {
   let r = array.rank(a);
-  if array.isBox(a) { scanBox(f, a, env) }
-  else if r == 0 { okv(a, env) }
-  else if r == 1 { match scanL(f, a.kind, array.vals(a), 0, array.count(array.vals(a)), env, ~) { .err(e) => Ev.err(e), .ok(rs) => match rs { (scalars, env2) => okv(gather(scalars), env2), }, } }
-  else if r == 2 {
-    let shp = array.shape(a);
-    let ncols = array.lastDim(shp);
-    let rows = array.chunks(array.vals(a), ncols);
-    let groups = if first { array.colsOf(rows, ncols, 0) } else { rows };
-    match scanEach(f, a.kind, groups, env, ~) {
-      .err(e) => Ev.err(e),
-      .ok(rs) => match rs { (scalars, env2) => {
-        let g = gather(scalars);
-        if first { okv(transposeArr(mk(g.kind, [ncols, array.firstDim(shp)], array.vals(g))), env2) } else { okv(mk(g.kind, shp, array.vals(g)), env2) }
-      }, },
-    }
-  }
-  else { nyi("scan on rank 3 and above") }
+  if r == 0 { okv(a, env) } else { scanAxis(f, a, if first { 0 } else { r - 1 }, env) }
 };
 func scanEach(f: parse.Fn, k: @, groups: List<List<@>>, env: Env, acc: List<array.Arr>) -> Evs {
   match groups {
@@ -1077,7 +1673,7 @@ func scanItems(f: parse.Fn, xs: List<array.Arr>, i: @, n: @, env: Env, acc: List
 };
 // A ∘.g B:  every a against every b, shape A ++ shape B
 func outer(g: parse.Fn, a: array.Arr, b: array.Arr, env: Env) -> Ev {
-  if array.isBox(a) or array.isBox(b) { nyi("outer product over a nested array") } else { outerSimple(g, a, b, env) }
+  if array.isBox(a) or array.isBox(b) { outerItems(g, a, b, env) } else { outerSimple(g, a, b, env) }
 };
 func outerSimple(g: parse.Fn, a: array.Arr, b: array.Arr, env: Env) -> Ev {
   let avs = array.vals(a);
@@ -1094,10 +1690,69 @@ func outerSimple(g: parse.Fn, a: array.Arr, b: array.Arr, env: Env) -> Ev {
     }
   }
 };
+func outerItems(g: parse.Fn, a: array.Arr, b: array.Arr, env: Env) -> Ev {
+  let ib = array.itemsOf(b);
+  match outerRows(g, array.itemsOf(a), ib, env, ~) {
+    .err(e) => Ev.err(e),
+    .ok(r) => match r { (vs, env2) => okv(array.normalize(array.catL(array.shape(a), array.shape(b)), vs), env2), },
+  }
+};
+func outerRows(g: parse.Fn, xs: List<array.Arr>, ys: List<array.Arr>, env: Env, acc: List<array.Arr>) -> Evs {
+  match xs {
+    (x, xt) => match outerRow(g, x, ys, env, ~) { .err(e) => Evs.err(e), .ok(r) => match r { (vs, env2) => outerRows(g, xt, ys, env2, array.catA(acc, vs)), }, },
+    _ => Evs.ok((acc, env)),
+  }
+};
+func outerRow(g: parse.Fn, x: array.Arr, ys: List<array.Arr>, env: Env, acc: List<array.Arr>) -> Evs {
+  match ys {
+    (y, yt) => match applyDyad(g, x, y, env) { .err(e) => Evs.err(e), .ok(r) => match r { (v, env2) => outerRow(g, x, yt, env2, (v, acc)), }, },
+    _ => Evs.ok((array.revA(acc, ~), env)),
+  }
+};
+// A f.g B over elements: rows of A against columns of B, g pairwise then f over the products
+func innerItems(f: parse.Fn, g: parse.Fn, a: array.Arr, b: array.Arr, env: Env) -> Ev {
+  let ra = array.rank(a);
+  let rb = array.rank(b);
+  if ra > 2 or rb > 2 { nyi("inner product on rank 3 and above") }
+  else {
+    let ia = array.itemsOf(a);
+    let ib = array.itemsOf(b);
+    let arows = if ra == 2 { chunksA(ia, array.lastDim(array.shape(a))) } else { [ia] };
+    let bcols = if rb == 2 { colsA(chunksA(ib, array.lastDim(array.shape(b))), array.lastDim(array.shape(b)), 0) } else { [ib] };
+    match innerRowsA(f, g, arows, bcols, env, ~) {
+      .err(e) => Ev.err(e),
+      .ok(rs) => match rs { (vs, env2) => {
+        let shp = array.catL(if ra == 2 { [array.firstDim(array.shape(a))] } else { ~ }, if rb == 2 { [array.lastDim(array.shape(b))] } else { ~ });
+        okv(array.normalize(shp, vs), env2)
+      }, },
+    }
+  }
+};
+func chunksA(xs: List<array.Arr>, n: @) -> List<List<array.Arr>> { match xs { (h, t) => (array.takeA(xs, n), chunksA(array.dropA(xs, n), n)), _ => ~, } };
+func colA(rows: List<List<array.Arr>>, j: @) -> List<array.Arr> { match rows { (r, rest) => (array.nthA(r, j), colA(rest, j)), _ => ~, } };
+func colsA(rows: List<List<array.Arr>>, ncols: @, j: @) -> List<List<array.Arr>> { if j == ncols { ~ } else { (colA(rows, j), colsA(rows, ncols, j + 1)) } };
+func innerRowsA(f: parse.Fn, g: parse.Fn, arows: List<List<array.Arr>>, bcols: List<List<array.Arr>>, env: Env, acc: List<array.Arr>) -> Evs {
+  match arows {
+    (r, rest) => match innerRowA(f, g, r, bcols, env, ~) { .err(e) => Evs.err(e), .ok(rs) => match rs { (vs, env2) => innerRowsA(f, g, rest, bcols, env2, array.catA(acc, vs)), }, },
+    _ => Evs.ok((acc, env)),
+  }
+};
+func innerRowA(f: parse.Fn, g: parse.Fn, r: List<array.Arr>, bcols: List<List<array.Arr>>, env: Env, acc: List<array.Arr>) -> Evs {
+  match bcols {
+    (c, rest) => match zipEach(g, r, c, env, ~) {
+      .err(e) => Evs.err(e),
+      .ok(p) => match p { (prods, env2) => match reduceItems(f, prods, env2) {
+        .err(e) => Evs.err(e),
+        .ok(q) => match q { (v, env3) => innerRowA(f, g, r, rest, env3, (v, acc)), },
+      }, },
+    },
+    _ => Evs.ok((array.revA(acc, ~), env)),
+  }
+};
 func spreadEach(xs: List<@>, n: @) -> List<@> { match xs { (h, t) => array.catL(array.repL(h, n), spreadEach(t, n)), _ => ~, } };
 // A f.g B for ranks up to 2:  rows of A against columns of B, g then f/
 func inner(f: parse.Fn, g: parse.Fn, a: array.Arr, b: array.Arr, env: Env) -> Ev {
-  if array.isBox(a) or array.isBox(b) { nyi("inner product over a nested array") } else { innerSimple(f, g, a, b, env) }
+  if array.isBox(a) or array.isBox(b) { innerItems(f, g, a, b, env) } else { innerSimple(f, g, a, b, env) }
 };
 func innerSimple(f: parse.Fn, g: parse.Fn, a: array.Arr, b: array.Arr, env: Env) -> Ev {
   let ra = array.rank(a);
