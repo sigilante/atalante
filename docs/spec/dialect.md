@@ -181,7 +181,7 @@ Dyadic: `+ − × ÷ ⌈ ⌊ ∣ ⋆ ⍟ ○ !` and `< ≤ = ≥ > ≠ ∨ ∧ �
 
 Ordered as phases P8 onward in [`docs/roadmap.md`](../roadmap.md).
 
-A `%box` Lagoon layout (roadmap P11); a fractional axis (laminate by `[k]`, D-82); partition of rank 2 (D-78); `⍕` of rank 3 and above (D-88); dfn operators, `⍺←` and `::` (D-63); an ASCII input pre-pass (D-8, deferred); `⎕TYPE`'s meaning (D-15, the name is reserved); packed Lagoon erasure and SoftBLAS jets (plan P7).
+A fractional axis (laminate by `[k]`, D-82); partition of rank 2 (D-78); `⍕` of rank 3 and above (D-88); dfn operators, `⍺←` and `::` (D-63); an ASCII input pre-pass (D-8, deferred); `⎕TYPE`'s meaning (D-15, the name is reserved); packed Lagoon erasure and SoftBLAS jets (plan P7).
 
 ## References
 
