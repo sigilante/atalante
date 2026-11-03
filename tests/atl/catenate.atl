@@ -9,6 +9,6 @@
 ⍝ expect: 1 2 5 5
 ⍝ expect: 3 4 5 5
 1 2,'a'
-⍝ refuse: %nested-unsupported
+⍝ expect: 1 2 'a'
 ⍴1 2,3 4 5
 ⍝ expect: 5

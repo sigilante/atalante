@@ -1,6 +1,6 @@
 # Atalante — Roadmap
 
-**Status: P8 landed 2026-11-03; the rest is for the maintainer's ordering.** v0.1.1 implements dialect v1 in full ([release notes](release-v0.1.md)). This file carries what comes after, in the plan's shape: numbered phases from P8, each with its scope, the rules it closes, a mechanical exit test, and what it waits on. The order below is a dependency order and a recommendation; the maintainer rules it. A phase lands as the P0–P7 phases did ([plan.md §3](plan.md)): with its vectors, recorded in the plan with numbers, and the spec's rules pinned.
+**Status: P8 and P9 landed 2026-11-03; the rest is for the maintainer's ordering.** v0.1.1 implements dialect v1 in full ([release notes](release-v0.1.md)). This file carries what comes after, in the plan's shape: numbered phases from P8, each with its scope, the rules it closes, a mechanical exit test, and what it waits on. The order below is a dependency order and a recommendation; the maintainer rules it. A phase lands as the P0–P7 phases did ([plan.md §3](plan.md)): with its vectors, recorded in the plan with numbers, and the spec's rules pinned.
 
 Two facts fix most of the order. Nested arrays change the array model every structural function sits on, so they precede the primitives that need them (`⍷ ⍪ ≡`, dyadic `⍕`). Dfns need `⍺ ⍵` and guards in the parser before the emitter can see them, so they are a phase of their own and come first, since nothing else depends on them and they are what the v1 tradfn programmer reaches for next.
 
@@ -13,10 +13,11 @@ Two facts fix most of the order. Nested arrays change the array model every stru
 **P9 — Nested arrays (D-6).** The `%box` element kind: a strand of character vectors, `⊂` enclose, `⊃` disclose and pick, `≡` depth, display of nested arrays. The ruled-out alternative, a rank-2 character matrix idiom, is revisited here before the kind enters. Every v1 primitive keeps its value on flat arrays, and the corpus is the regression test for that.
 *Exit:* the README's `X ← 'sing' 'goddess' 'sing' 'of' 'the' 'rage'`, `⍋X`, `X[⍋X]` as the 2024 README printed them; v1 corpus unchanged; `≡` on flat and nested vectors.
 *Waits on:* P8 is independent; the array model's Lagoon layout (plan §1.1) has no boxed kind, so `%box` is a Jock-side list of rays until P11.
+**LANDED 2026-11-03** as D-70..D-77 ([plan §3](plan.md)); the maintainer ruled for `%box`, scoped narrowly. Left for a later phase: `A⊂B` partition, `≢`, `⊃` of nested or rank-2 elements, reductions and scans over a box of rank 2, inner and outer products over boxes, the `%box` layout (P11).
 
 **P10 — The held-back primitives (D-44) and axis specification.** `⍷` find, `⍪` table and laminate, dyadic `⍉`, `⌽` and `⊖` with axis, `f/[k]` and `f\[k]` on an axis, `↑ ↓` past rank 1, `⊥ ⊤` past naturals, reductions and scans past rank 2, dyadic `⍕` format, derived-function operands to operators, `⍎` execute through the compiler in the runtime (plan P6 made it cheap), `⌹` matrix divide on a float solver.
 *Exit:* three vectors per glyph, as D-41 required; `⍎` of each README line equals the line typed; `⌹` on a 3×3 system against a hand-checked answer.
-*Waits on:* P9 for `⍷ ⍪ ≡` on nested arguments; `⌹` waits on P11's float path.
+*Waits on:* `⌹` waits on P11's float path; P9 has landed, so `⍷ ⍪` take nested arguments from the start.
 
 **P12 — The deferred rulings.** D-8, an ASCII input pre-pass with its own table and vectors (`iota` for `⍳` and the like), never a grammar change. D-15, what `⎕TYPE` names once the array model has more than bloq 6: a storage width or a default literal kind. S-24, the column a green-prompt refusal blames: the rightmost unbound name, as evaluation order would.
 *Exit:* a corpus case typed in ASCII gives the Unicode case's output; `⎕TYPE` vectors for whichever meaning is ruled; S-24's refusal blames column 25 on the README sieve with R unbound.

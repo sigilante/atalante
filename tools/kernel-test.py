@@ -61,7 +61,7 @@ def main(out_jam, lines_file, expect_file):
         texts = [cord(e[1]) for e in lst(effs) if e[0] == int.from_bytes(b"markdown", "little")]
         printed.append("\n".join(t for t in texts if t != " "))
     store = lst(peek[0])
-    arrays = {cord(nm): ray_vals(arr[1]) for nm, arr in store}
+    arrays = {cord(nm): ray_vals(arr[1][0]) for nm, arr in store}   # an array is [kind ray items] (D-70)
     want_lines, want_peeks = [], []
     for ln in open(expect_file, encoding="utf-8").read().split("\n"):
         if ln.startswith("peek "):

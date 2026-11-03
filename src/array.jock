@@ -1,21 +1,26 @@
-// array.jock — the ATL array model over Lagoon rays (D-10..D-13, D-25, D-45).
+// array.jock — the ATL array model over Lagoon rays (D-10..D-13, D-25, D-45, D-70, D-76, D-77).
 //
 // An ATL array is a Lagoon ray plus ATL's own kind tag: 1 nat, 2 int,
-// 3 real, 4 char (D-10). The ray's kind carries the storage class
-// (%uint, %int2, %i754 --- chars are %uint codepoints) and every ray is
-// bloq 6, so promotion between kinds (D-11) never changes the width.
+// 3 real, 4 char (D-10), 5 box (D-70). The ray's kind carries the storage
+// class (%uint, %int2, %i754 --- chars are %uint codepoints) and every ray
+// is bloq 6, so promotion between kinds (D-11) never changes the width.
+// A box is the INDEX RAY of its shape (a %uint ray numbering its elements
+// 1..n in ravel order, 0 standing for a fill) over `items`, the elements
+// themselves in ravel order; a simple array has no items. A structural
+// function runs on the index ray as on any natural array and `regather`
+// turns the moved numbers back into elements (D-72).
 // Lagoon is reached through the `lagoon` package (pkg/lagoon-core.hoon):
 // construction, reading back, and the same-shape elementwise arms;
 // scalar extension (D-25), the kind lattice and display (D-45) are
 // ATL's and live here.
 import lagoon;
 
-struct Arr { kind: @, ray: lagoon.Ray };
+struct Arr { kind: @, ray: lagoon.Ray, items: List<Arr> };
 
 // --- construction and reading --------------------------------------------------
 func lagKind(k: @) -> Term { match k { 2 => %int2, 3 => %i754, _ => %uint, } };
 func metaOf(k: @, shp: List<@>) -> lagoon.Meta { lagoon.Meta( shape: shp, bloq: 6, kind: lagKind(k), tail: 0 ) };
-func make(k: @, shp: List<@>, vs: List<@>) -> Arr { Arr( kind: k, ray: lagoon.from(metaOf(k, shp), vs) ) };
+func make(k: @, shp: List<@>, vs: List<@>) -> Arr { Arr( kind: k, ray: lagoon.from(metaOf(k, shp), vs), items: ~ ) };
 func scalar(k: @, v: @) -> Arr { make(k, ~, [v]) };
 func shape(a: Arr) -> List<@> { a.ray.meta.shape };
 func vals(a: Arr) -> List<@> { lagoon.ravel(a.ray) };
@@ -98,17 +103,17 @@ func pow10(n: @) -> @ { if n == 0 { 1 } else { 10 * pow10(n - 1) } };
 // --- promotion (D-11) ------------------------------------------------------------
 func toReal(a: Arr) -> Arr {
   match a.kind {
-    1 => if rank(a) == 0 or size(shape(a)) == 0 { mapArr(a, 3, natToReal) } else { Arr( kind: 3, ray: lagoon.change(a.ray, %i754, 6) ) },   // +change: linear, +sun:rd's rounding; it crashes on a rank-0 ray (S-23)
+    1 => if rank(a) == 0 or size(shape(a)) == 0 { mapArr(a, 3, natToReal) } else { Arr( kind: 3, ray: lagoon.change(a.ray, %i754, 6), items: ~ ) },   // +change: linear, +sun:rd's rounding; it crashes on a rank-0 ray (S-23)
     2 => mapArr(a, 3, intToReal),
     _ => a,
   }
 };
-func toInt(a: Arr) -> Arr { match a.kind { 1 => Arr( kind: 2, ray: relabel(a.ray, %int2) ), _ => a, } };
+func toInt(a: Arr) -> Arr { match a.kind { 1 => Arr( kind: 2, ray: relabel(a.ray, %int2), items: ~ ), _ => a, } };
 func promote(a: Arr, k: @) -> Arr { match k { 3 => toReal(a), 2 => toInt(a), _ => a, } };
 func maxk(a: @, b: @) -> @ { if a > b { a } else { b } };
 
 // --- scalar extension (D-25):  (a', b', tag);  tag "" when the shapes agree
-func spread(a: Arr, shp: List<@>) -> Arr { Arr( kind: a.kind, ray: lagoon.fill(metaOf(a.kind, shp), first(a)) ) };
+func spread(a: Arr, shp: List<@>) -> Arr { Arr( kind: a.kind, ray: lagoon.fill(metaOf(a.kind, shp), first(a)), items: a.items ) };
 func extend(a: Arr, b: Arr) -> (Arr, Arr, String) {
   if shape(a) == shape(b) { (a, b, "") }
   else if size(shape(a)) == 1 { (spread(a, shape(b)), b, "") }
@@ -116,6 +121,54 @@ func extend(a: Arr, b: Arr) -> (Arr, Arr, String) {
   else if rank(a) == rank(b) { (a, b, "%length-error") }
   else { (a, b, "%rank-error") }
 };
+
+// --- boxes (D-70, D-77) -------------------------------------------------------------
+func isBox(a: Arr) -> Bool { a.kind == 5 };
+func isSimpleScalar(a: Arr) -> Bool { a.kind != 5 and rank(a) == 0 };
+func classOf(a: Arr) -> @ { if a.kind == 4 { 1 } else { 0 } };     // 0 numeric, 1 character
+func countA(xs: List<Arr>) -> @ { match xs { (h, t) => 1 + countA(t), _ => 0, } };
+func nthA(xs: List<Arr>, i: @) -> Arr { match xs { (h, t) => if i == 0 { h } else { nthA(t, i - 1) }, _ => scalar(1, 0), } };
+func takeA(xs: List<Arr>, n: @) -> List<Arr> { if n == 0 { ~ } else { match xs { (h, t) => (h, takeA(t, n - 1)), _ => ~, } } };
+func dropA(xs: List<Arr>, n: @) -> List<Arr> { if n == 0 { xs } else { match xs { (h, t) => dropA(t, n - 1), _ => ~, } } };
+func catA(a: List<Arr>, b: List<Arr>) -> List<Arr> { match a { (h, t) => (h, catA(t, b)), _ => b, } };
+func revA(xs: List<Arr>, acc: List<Arr>) -> List<Arr> { match xs { (h, t) => revA(t, (h, acc)), _ => acc, } };
+func allSimpleScalars(xs: List<Arr>) -> Bool { match xs { (h, t) => if isSimpleScalar(h) { allSimpleScalars(t) } else { false }, _ => true, } };
+func oneClass(xs: List<Arr>, c: @) -> Bool { match xs { (h, t) => if classOf(h) == c { oneClass(t, c) } else { false }, _ => true, } };
+func maxKindA(xs: List<Arr>, k: @) -> @ { match xs { (h, t) => maxKindA(t, maxk(k, h.kind)), _ => k, } };
+func firstValsA(xs: List<Arr>, k: @) -> List<@> { match xs { (h, t) => (first(promote(h, k)), firstValsA(t, k)), _ => ~, } };
+// a box of the given shape over elements in ravel order
+func boxOf(shp: List<@>, xs: List<Arr>) -> Arr { Arr( kind: 5, ray: lagoon.from(metaOf(1, shp), iotaL(countA(xs), 1)), items: xs ) };
+// D-70's normal form: all simple scalars of one class make a simple array
+func oneClassAll(xs: List<Arr>) -> Bool { match xs { (h, t) => oneClass(t, classOf(h)), _ => true, } };
+func normalize(shp: List<@>, xs: List<Arr>) -> Arr {
+  if allSimpleScalars(xs) and oneClassAll(xs) {
+    let k = maxKindA(xs, 1);
+    make(k, shp, firstValsA(xs, k))
+  } else { boxOf(shp, xs) }
+};
+func enclose(a: Arr) -> Arr { if isSimpleScalar(a) { a } else { boxOf(~, [a]) } };
+func scalarsOf(k: @, vs: List<@>) -> List<Arr> { match vs { (v, t) => (scalar(k, v), scalarsOf(k, t)), _ => ~, } };
+// the elements in ravel order, each an array
+func itemsOf(a: Arr) -> List<Arr> { if isBox(a) { pickItems(a, vals(a)) } else { scalarsOf(a.kind, vals(a)) } };
+// the elements the index numbers name;  0 is the prototype
+func pickItems(a: Arr, ixs: List<@>) -> List<Arr> {
+  match ixs { (i, t) => (if i == 0 { proto(a) } else { nthA(a.items, i - 1) }, pickItems(a, t)), _ => ~, }
+};
+// a box's index ray as a natural array;  a structural function runs on it
+func ixArr(a: Arr) -> Arr { Arr( kind: 1, ray: a.ray, items: ~ ) };
+// the moved index ray back to elements, in normal form
+func regather(a: Arr, ix: Arr) -> Arr { normalize(shape(ix), pickItems(a, vals(ix))) };
+func firstItem(a: Arr) -> Arr { match itemsOf(a) { (h, t) => h, _ => proto(a), } };
+// the prototype (D-77): the first element's type, 0 when empty
+func proto(a: Arr) -> Arr {
+  if isBox(a) { match a.items { (h, t) => typeOf(h), _ => scalar(1, 0), } } else { scalar(a.kind, fillOf(a.kind)) }
+};
+func typeOf(a: Arr) -> Arr {
+  if isBox(a) { boxOf(shape(a), typeAll(itemsOf(a))) } else { make(a.kind, shape(a), repL(fillOf(a.kind), size(shape(a)))) }
+};
+func typeAll(xs: List<Arr>) -> List<Arr> { match xs { (h, t) => (typeOf(h), typeAll(t)), _ => ~, } };
+func depth(a: Arr) -> @ { if isBox(a) { 1 + maxDepth(a.items, 0) } else if rank(a) == 0 { 0 } else { 1 } };
+func maxDepth(xs: List<Arr>, d: @) -> @ { match xs { (h, t) => maxDepth(t, maxk(d, depth(h))), _ => d, } };
 
 // --- display (D-45) ----------------------------------------------------------------
 func strLen(s: String) -> @ { s.len() };
@@ -220,7 +273,57 @@ func fmtPlanes(k: @, cells: List<String>, rows: @, cols: @) -> String {
     _ => "",
   }
 };
+// --- display of a box (D-76): the strand that builds it ------------------------------
+func quoted(cs: List<@>) -> String { "'" + joinS(quoteEach(cs), "") + "'" };
+func quoteEach(cs: List<@>) -> List<String> { match cs { (c, t) => (if c == 39 { "''" } else { utf8([c as! UniChar]) }, quoteEach(t)), _ => ~, } };
+func shapeText(shp: List<@>) -> String { joinS(fmtAll(1, shp, 10), " ") };
+// a simple ravel as source: numbers spaced, characters quoted, none as ⍳0
+func ravelText(a: Arr, pp: @) -> String {
+  if a.kind == 4 { quoted(vals(a)) }
+  else { match vals(a) { (h, t) => joinS(fmtAll(a.kind, vals(a), pp), " "), _ => "⍳0", } }
+};
+// one element as it stands in a strand
+func fmtItem(a: Arr, pp: @) -> String {
+  let r = rank(a);
+  if isBox(a) {
+    if r == 0 { "(⊂" + fmtItem(firstItem(a), pp) + ")" }
+    else if r == 1 { "(" + fmtStrand(itemsOf(a), pp) + ")" }
+    else { "(" + shapeText(shape(a)) + "⍴" + fmtStrand(itemsOf(a), pp) + ")" }
+  }
+  else if r == 0 { if a.kind == 4 { quoted(vals(a)) } else { fmtElem(a.kind, first(a), pp) } }
+  else if r == 1 {
+    if a.kind == 4 { quoted(vals(a)) }
+    else if size(shape(a)) == 1 { "(," + fmtElem(a.kind, first(a), pp) + ")" }
+    else { "(" + ravelText(a, pp) + ")" }
+  }
+  else { "(" + shapeText(shape(a)) + "⍴" + ravelText(a, pp) + ")" }
+};
+func fmtStrand(xs: List<Arr>, pp: @) -> String { joinS(fmtItems(xs, pp), " ") };
+func fmtItems(xs: List<Arr>, pp: @) -> List<String> { match xs { (h, t) => (fmtItem(h, pp), fmtItems(t, pp)), _ => ~, } };
+func fmtBoxRows(xs: List<Arr>, cols: @, pp: @) -> List<String> {
+  match xs { (h, t) => (fmtStrand(takeA(xs, cols), pp), fmtBoxRows(dropA(xs, cols), cols, pp)), _ => ~, }
+};
+func fmtBoxPlanes(xs: List<Arr>, rows: @, cols: @, pp: @) -> String {
+  match xs {
+    (h, t) => {
+      let n = rows * cols;
+      let here = joinS(fmtBoxRows(takeA(xs, n), cols, pp), "\n");
+      match dropA(xs, n) { (h2, t2) => here + "\n\n" + fmtBoxPlanes(dropA(xs, n), rows, cols, pp), _ => here, }
+    },
+    _ => "",
+  }
+};
+func fmtBox(a: Arr, pp: @) -> String {
+  let r = rank(a);
+  let xs = itemsOf(a);
+  if r == 0 { "⊂" + fmtItem(firstItem(a), pp) }
+  else if r == 1 { fmtStrand(xs, pp) }
+  else { match last2(shape(a)) { (rows, cols) => if r == 2 { joinS(fmtBoxRows(xs, cols, pp), "\n") } else { fmtBoxPlanes(xs, rows, cols, pp) }, } }
+};
 func format(a: Arr, pp: @) -> String {
+  if isBox(a) { fmtBox(a, pp) } else { formatSimple(a, pp) }
+};
+func formatSimple(a: Arr, pp: @) -> String {
   let cells = fmtAll(a.kind, vals(a), pp);
   let r = rank(a);
   if r == 0 { joinS(cells, "") }

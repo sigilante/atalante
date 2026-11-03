@@ -1,0 +1,47 @@
+⍝ sig: a:a b:a c:a X:a
+'sing' 'goddess'
+⍝ expect: strand('sing', 'goddess')
+a b
+⍝ expect: strand(a, b)
+1 2 'a'
+⍝ expect: strand(1, 2, 'a')
+'ab' 1 2
+⍝ expect: strand('ab', 1, 2)
+'a' 'b'
+⍝ expect: strand('a', 'b')
+a b + c
+⍝ expect: +(strand(a, b), c)
+(1 2)(3 4)
+⍝ expect: strand(1 2, 3 4)
+1 2 (3 4)
+⍝ expect: strand(1, 2, 3 4)
+a 1 2
+⍝ expect: strand(a, 1, 2)
+a b[1]
+⍝ expect: strand(a, b[1])
+(a b)[1]
+⍝ expect: strand(a, b)[1]
+⊂'ab'
+⍝ expect: ⊂('ab')
+2⊃X
+⍝ expect: ⊃(2, X)
+≡X
+⍝ expect: ≡(X)
+X ≡ ⌽X
+⍝ expect: ≡(X, ⌽(X))
+↑X
+⍝ expect: ↑(X)
+⍋'sing' 'goddess' 'sing'
+⍝ expect: ⍋(strand('sing', 'goddess', 'sing'))
+X[⍋X]
+⍝ expect: X[⍋(X)]
+Y ← 'sing' 'goddess'
+⍝ expect: ←(Y, strand('sing', 'goddess'))
+⍳¨1 2 3
+⍝ expect: ⍳¨(1 2 3)
+3 foo
+⍝ expect: %value-error col:3 foo is not defined
+foo 3
+⍝ expect: %value-error col:1 foo is not defined
+a ⎕IO
+⍝ expect: strand(a, ⎕IO)

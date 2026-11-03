@@ -1,6 +1,6 @@
 # ATaLante:  Golden APL
 
-**STATUS ~2026.11.03:  The project is at v0.2 in progress, implementing dialect v1 plus P8 (dfns with guards).**
+**STATUS ~2026.11.03:  The project is at v0.2 in progress, implementing dialect v1 plus P8 (dfns with guards) and P9 (nested arrays).**
 
 ![](./logo.jpg)
 
@@ -67,6 +67,32 @@ Dfns, with guards for control flow (D-63 to D-69):
 
 A dfn's assignments are local to the call, `⍺` and `⍵` are its arguments, `∇` names the dfn itself, and the first statement that is not an assignment is the result.  A line whose braces do not close continues on the next line.
 
+Nested arrays (D-70 to D-77):
+
+```apl
+🍎> X ← 'sing' 'goddess' 'sing' 'of' 'the' 'rage'
+🍎> ⍋X
+2 4 6 1 3 5
+
+🍎> X[⍋X]
+'goddess' 'of' 'rage' 'sing' 'sing' 'the'
+
+🍎> 1+(1 2)(3 4)
+(2 3) (4 5)
+
+🍎> ⍴¨X
+(,4) (,7) (,4) (,2) (,3) (,4)
+
+🍎> ≡X
+2
+
+🍎> ⊃'ab' 'cd'
+ab
+cd
+```
+
+An element of an array may be any array.  A strand of anything but numerals builds one, `⊂` encloses, `⊃` discloses and picks, `≡` is depth and match, `↑` is first, and `¨` applies a function to each element.  A nested array prints as the strand that builds it.
+
 From an input file (the Caesar cipher):
 
 ```apl
@@ -115,12 +141,12 @@ The prompt is the mode: `🍎>` evaluates, `🍏>` prints trees, and `)TOGGLE` (
 Every case under [`tests/atl/`](tests/atl/README.md) is a session transcript: input lines and the output each must print.  The runner evaluates each statement twice, through the interpreter and through the Nock it compiles to, and holds the two equal.
 
 ```
-tools/atlc.sh corpus        # 28 cases, 320 statements
-tools/atlc.sh lex           # 36 lexer vectors
-tools/atlc.sh parse         # 86 parser vectors
+tools/atlc.sh corpus        # 29 cases, 398 statements
+tools/atlc.sh lex           # 39 lexer vectors
+tools/atlc.sh parse         # 107 parser vectors
 tools/atlc.sh oracle        # 14 emission goldens against an independent Nockasm
 tools/atlc.sh kernel-test   # the kernel poked and peeked, 5 checks
-tools/atlc.sh repl-test     # the README typed at the live prompt, 25 lines
+tools/atlc.sh repl-test     # the README typed at the live prompt, 28 lines
 ```
 
 ## What a line costs
@@ -137,10 +163,10 @@ NockVM jets integer arithmetic and nothing on floats, so real-valued work costs 
 
 ## What is held back
 
-- Arrays are flat (D-6).  Nested arrays such as `'sing' 'goddess' 'sing'` are P9.
+- Of nesting (D-6, D-70): partition `A⊂B`, `≢`, `⊃` of elements that are nested or of rank 2, reductions and scans over a nested array of rank 2, inner and outer products over nested arrays.  A nested array is a list of arrays on the Jock side, outside the Lagoon layout and the specialised gates (P11).
 - Dfns have guards and nothing else for control flow (D-32, D-63); `→` and labels are omitted for good.  Dfn operators (`⍺⍺ ⍵⍵`), a default left argument (`⍺←`) and error guards (`::`) are on the roadmap.
 - No axis specification; `↑` and `↓` on rank at most 1; `⊥` and `⊤` on naturals; reductions and scans on rank at most 2.
-- Held back with reasons in D-44: `⌹ ⍎ ⍕ ⍷ ⍪ ≡`, dyadic `⍉`, `⌽` with axis.
+- Held back with reasons in D-44: `⌹ ⍎ ⍕ ⍷ ⍪`, dyadic `⍉`, `⌽` with axis.
 - Input is Unicode; the ASCII spellings `- * | ~` are canonical (D-9) and nothing else is transliterated (D-8).
 - `⎕TYPE` is a reserved name (D-15): it parses, and reading or assigning it refuses with `%unimplemented`.
 

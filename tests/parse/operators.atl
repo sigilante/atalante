@@ -22,4 +22,4 @@ M F.×M
 -3
 ⍝ expect: −(3)
 ¯3 1.5E2 'ab'
-⍝ refuse: %nested-unsupported
+⍝ expect: strand(¯3, 1.5E2, 'ab')

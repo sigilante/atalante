@@ -36,3 +36,8 @@ R←A÷B
 ⍝ expect: KHOOR
 🍎> Alphabet
 ⍝ refuse: %value-error
+🍎> X ← 'sing' 'goddess' 'sing' 'of' 'the' 'rage'
+🍎> ⍋X
+⍝ expect: 2 4 6 1 3 5
+🍎> X[⍋X]
+⍝ expect: 'goddess' 'of' 'rage' 'sing' 'sing' 'the'

@@ -235,6 +235,9 @@ def main(argv):
                     print(f"      expected: {exp!r}")
                     print(f"      actual:   {act!r}")
         else:
+            for ok, inp, exp, act in res:
+                if not ok:
+                    print(f"FAIL  {inp}\n      expected: {exp!r}\n      actual:   {act!r}")
             status = "pass" if npass == len(res) else "FAIL"
             print(f"{name:<22} {npass:>3}/{len(res):<3} {status}")
     print(f"{'total':<22} {total_pass:>3}/{total:<3} {len(cases) - failed_cases}/{len(cases)} cases")

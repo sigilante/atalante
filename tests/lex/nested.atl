@@ -1,0 +1,6 @@
+'sing' 'goddess' 'sing'
+⍝ expect: chr:sing chr:goddess chr:sing
+⊂⊃≡
+⍝ expect: glyph:⊂ glyph:⊃ glyph:≡
+2⊃X
+⍝ expect: nat:2 glyph:⊃ name:X

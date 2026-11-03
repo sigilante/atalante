@@ -1,0 +1,149 @@
+🍎> X ← 'sing' 'goddess' 'sing' 'of' 'the' 'rage'
+🍎> X
+⍝ expect: 'sing' 'goddess' 'sing' 'of' 'the' 'rage'
+🍎> ⍋X
+⍝ expect: 2 4 6 1 3 5
+🍎> X[⍋X]
+⍝ expect: 'goddess' 'of' 'rage' 'sing' 'sing' 'the'
+🍎> ⍴X
+⍝ expect: 6
+🍎> ≡X
+⍝ expect: 2
+🍎> ≡'abc'
+⍝ expect: 1
+🍎> ≡5
+⍝ expect: 0
+🍎> ≡(1 2)('ab' (3 4))
+⍝ expect: 3
+🍎> 1 2 'a'
+⍝ expect: 1 2 'a'
+🍎> 'a' 'b'
+⍝ expect: ab
+🍎> (1 2)(3 4)
+⍝ expect: (1 2) (3 4)
+🍎> 1+(1 2)(3 4)
+⍝ expect: (2 3) (4 5)
+🍎> (1 2)(3 4)+(10 20)(30 40)
+⍝ expect: (11 22) (33 44)
+🍎> -(1 2)(3 4)
+⍝ expect: (¯1 ¯2) (¯3 ¯4)
+🍎> (1 2)(3 4)=(1 2)(3 5)
+⍝ expect: (1 1) (1 0)
+🍎> ⊂1 2
+⍝ expect: ⊂(1 2)
+🍎> ⊂5
+⍝ expect: 5
+🍎> ⊂⊂1 2
+⍝ expect: ⊂(⊂(1 2))
+🍎> ≡⊂⊂1 2
+⍝ expect: 3
+🍎> ⊃⊂1 2
+⍝ expect: 1 2
+🍎> ⊃'ab' 'cd'
+⍝ expect: ab
+⍝ expect: cd
+🍎> ⍴⊃X
+⍝ expect: 6 7
+🍎> ⊃(1 2)(3 4 5)
+⍝ expect: 1 2 0
+⍝ expect: 3 4 5
+🍎> 2⊃X
+⍝ expect: goddess
+🍎> 2 1⊃(1 2)(3 4)
+⍝ expect: 3
+🍎> 2⊃1 2 3
+⍝ expect: 2
+🍎> ↑X
+⍝ expect: sing
+🍎> ↑⍳0
+⍝ expect: 0
+🍎> X ≡ X
+⍝ expect: 1
+🍎> X ≡ ⌽X
+⍝ expect: 0
+🍎> 1 2 3 ≡ 1 2 3
+⍝ expect: 1
+🍎> 'ab' ≡ 'ab'
+⍝ expect: 1
+🍎> 1 ≡ 'a'
+⍝ expect: 0
+🍎> ∊(1 2)(3 4)
+⍝ expect: 1 2 3 4
+🍎> ∊X
+⍝ expect: singgoddesssingoftherage
+🍎> ⍳¨1 2 3
+⍝ expect: (,1) (1 2) (1 2 3)
+🍎> ⍴¨X
+⍝ expect: (,4) (,7) (,4) (,2) (,3) (,4)
+🍎> +/¨(1 2)(3 4 5)
+⍝ expect: 3 12
+🍎> {⍵×2}¨(1 2)(3 4)
+⍝ expect: (2 4) (6 8)
+🍎> (1 2)(3 4),¨5
+⍝ expect: (1 2 5) (3 4 5)
+🍎> X ⍳ ⊂'of'
+⍝ expect: 4
+🍎> X⍳'of' 'the'
+⍝ expect: 4 5
+🍎> X ⍳ 5
+⍝ expect: 7
+🍎> (⊂'of')∊X
+⍝ expect: 1
+🍎> ⌽X
+⍝ expect: 'rage' 'the' 'of' 'sing' 'goddess' 'sing'
+🍎> 2↑X
+⍝ expect: 'sing' 'goddess'
+🍎> ¯2↑X
+⍝ expect: 'the' 'rage'
+🍎> 3↑'ab' 'c'
+⍝ expect: 'ab' 'c' '  '
+🍎> 2↓X
+⍝ expect: 'sing' 'of' 'the' 'rage'
+🍎> 1 0 1 0 1 0/X
+⍝ expect: 'sing' 'sing' 'the'
+🍎> 1 0 1\'ab' 'cd'
+⍝ expect: 'ab' '  ' 'cd'
+🍎> 2 3⍴X
+⍝ expect: 'sing' 'goddess' 'sing'
+⍝ expect: 'of' 'the' 'rage'
+🍎> ⍉2 2⍴(1 2)(3 4)(5 6)(7 8)
+⍝ expect: (1 2) (5 6)
+⍝ expect: (3 4) (7 8)
+🍎> X,⊂'and'
+⍝ expect: 'sing' 'goddess' 'sing' 'of' 'the' 'rage' 'and'
+🍎> 1 2,'a'
+⍝ expect: 1 2 'a'
+🍎> ,/'ab' 'cd'
+⍝ expect: ⊂'abcd'
+🍎> +/(1 2)(3 4)
+⍝ expect: ⊂(4 6)
+🍎> ,\'ab' 'cd'
+⍝ expect: 'ab' 'abcd'
+🍎> Y ← 1 2 3
+🍎> Y[2] ← 'a'
+🍎> Y
+⍝ expect: 1 'a' 3
+🍎> Y[2] ← 2
+🍎> Y
+⍝ expect: 1 2 3
+🍎> X[1] ← ⊂'hymn'
+🍎> X
+⍝ expect: 'hymn' 'goddess' 'sing' 'of' 'the' 'rage'
+🍎> ⍒X
+⍝ expect: 5 3 6 4 1 2
+🍎> ⍋1 'a' 2
+⍝ expect: 1 3 2
+🍎> ⍋(1 2)(1 1)(1)
+⍝ expect: 3 2 1
+🍎> X+1
+⍝ refuse: %domain-error
+🍎> X ∘.× X
+⍝ refuse: %unimplemented
+🍎> 'ab' 'cd' ⍴ 1
+⍝ refuse: %domain-error
+🍎> ⊃(1 2)('ab')
+⍝ refuse: %domain-error
+🍎> 'ab' ⊂ 'cd'
+⍝ refuse: %unimplemented
+🍎> 7⊃X
+⍝ refuse: %index-error

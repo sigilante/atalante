@@ -207,3 +207,22 @@ F(3)
 🍎> F 3
 4
 ```
+
+A strand of anything but numerals is `strand(a, b)` (D-71); it binds tighter than a function. A nested array prints as the strand that builds it (D-76).
+
+```apl
+🍏> X ← 'sing' 'goddess' 'sing'
+←(X, strand('sing', 'goddess', 'sing'))
+
+🍏> X[⍋X]
+X[⍋(X)]
+
+🍏> 1+(1 2)(3 4)
++(1, strand(1 2, 3 4))
+
+🍏> a b + c
++(strand(a, b), c)
+
+🍎> 1+(1 2)(3 4)
+(2 3) (4 5)
+```

@@ -1,13 +1,13 @@
 # ATL/APL — The Dialect
 
-**Status: v2 in progress (2026-11-03).** v1 is the approved Draft 1 of 2026-10-27 with the three rulings of 2026-10-28 (D-8 deferred to the §9 roadmap, D-15 and D-32 ruled). v2 opened on 2026-11-03 with P8: the maintainer approved seven items for dfns, written as D-63..D-69, and D-21, D-22, D-32, D-33, D-52 and D-62 carry the amendments. `%box` nesting and the other §9 items follow. Rules carry flat `D-n` ids, append-only. Each rule names the corpus vectors that pin it; `⟨none — UNPINNED⟩` marks a rule that has no vector yet. A rule without a vector is not a rule. No rule is OPEN; DEFERRED marks a continuation on the §9 roadmap.
+**Status: v2 in progress (2026-11-03).** v1 is the approved Draft 1 of 2026-10-27 with the three rulings of 2026-10-28 (D-8 deferred to the §9 roadmap, D-15 and D-32 ruled). v2 opened on 2026-11-03 with P8: the maintainer approved seven items for dfns, written as D-63..D-69, and D-21, D-22, D-32, D-33, D-52 and D-62 carry the amendments. P9 the same day: the maintainer ruled D-6 for `%box`, scoped narrowly, written as D-70..D-77 with amendments to D-4, D-11, D-23, D-25, D-41..D-45. The other §9 items follow. Rules carry flat `D-n` ids, append-only. Each rule names the corpus vectors that pin it; `⟨none — UNPINNED⟩` marks a rule that has no vector yet. A rule without a vector is not a rule. No rule is OPEN; DEFERRED marks a continuation on the §9 roadmap.
 
 ATL/APL is the APL that Atalante compiles. It is Budd's compiler subset (Budd 1987, *An APL Compiler*) with the additions the README examples use, and it is specified here as a *language*, independent of its host. The host is Jock; the companion [`docs/plan.md`](../plan.md) fixes the order in which this spec is implemented.
 
 ## 1. Principles
 
 1. **Classical APL where it costs nothing.** Right-to-left evaluation, strand notation, scalar extension, `⎕IO`. A programmer who knows APL2 or Dyalog types ATL without looking anything up until they reach nested arrays.
-2. **Flat, typed arrays.** An ATL array has a shape and one element kind. Nested arrays are v2 (D-6). This is what makes Budd's rank and type inference possible, and what makes the array layout Lagoon-compatible.
+2. **Flat, typed arrays.** An ATL array has a shape and one element kind. A simple array is flat and Lagoon-shaped, which is what makes Budd's rank and type inference possible; a nested array is a `%box` over a list of arrays (D-6, D-70), apart from the lattice and the gates, and nothing simple pays for it.
 3. **Every primitive has a vector.** The symbol inventory in the 2024 tree's `desk/sur/atalante.hoon` (history, b721975) is the checklist; a glyph enters the implemented language only with a positive vector, a negative vector and an error-class vector.
 4. **Errors are tagged, positioned and classical.** APL's five error classes are the tags (D-40). A refusal renders like a Jock refusal: tag, column, the line with a caret.
 5. **Compiled, not interpreted.** A statement becomes a Nock formula before it runs (D-50). The interpreter that exists during development is the oracle for the compiler, never the product.
@@ -20,11 +20,11 @@ ATL/APL is the APL that Atalante compiles. It is Budd's compiler subset (Budd 19
 
 **D-3 · Numeric literals.** `¯` (U+00AF) is the negative sign and part of the literal; `−` is the subtraction function. Forms: `12`, `¯3`, `1.5`, `.5` is refused, `1E6`, `1.5E¯3`. A literal with `.` or `E` is Float64; a literal with `¯` and no `.`/`E` is Int; otherwise Nat (D-10). ⟨`lex/numerals`, `lex/numeral-errors`⟩
 
-**D-4 · Strands.** Two or more literals separated by spaces form one vector: `4 5 6 7`. A strand of mixed numeric kinds promotes to the join (D-11). Names do not strand in v1: `a b` is a SYNTAX ERROR, not a two-element vector (this is the nested-array question, D-6). ⟨`parse/readme`, `parse/refusals`⟩
+**D-4 · Strands.** Two or more literals separated by spaces form one vector: `4 5 6 7`. A strand of mixed numeric kinds promotes to the join (D-11). AMENDED 2026-11-03: any adjacent array items strand (D-71); `a b` is the two-element vector. ⟨`parse/readme`, `parse/refusals`, `parse/nested`⟩
 
 **D-5 · Character literals.** `'abc'` is a character vector; `'a'` is a character scalar; `''` is the empty character vector; `''''` is one quote. Elements are codepoints. ⟨`lex/strings-system`⟩
 
-**D-6 · Nested arrays are v2.** RULED 2026-10-27: v1 is flat. The README's `X ← 'sing' 'goddess' 'sing'` needs a boxed element kind; v1 refuses a strand of character vectors with `%nested-unsupported`. v2 revisits a `%box` kind (APL2 nesting) against a rank-2 character matrix idiom. Nothing in v1 may preclude either. ⟨`parse/refusals`, `parse/operators`⟩
+**D-6 · Nested arrays.** RULED 2026-10-27: v1 is flat; the README's `X ← 'sing' 'goddess' 'sing'` needs a boxed element kind, and v1 refuses it with `%nested-unsupported`. RULED 2026-11-03: the `%box` kind, scoped narrowly, over the rank-2 character matrix idiom, because `⍋X` on the README's `X` needs element-wise comparison the idiom cannot give; the idiom stays reachable as `⊃X`. D-70..D-77 are the rules. ⟨`atl/nested`, `parse/nested`⟩
 
 **D-7 · Comments and separators.** `⍝` comments to end of line. `⋄` separates statements on one line. A newline ends a statement except inside a `∇` definition. ⟨`lex/names-glyphs`, `lex/strings-system`⟩
 
@@ -36,7 +36,7 @@ ATL/APL is the APL that Atalante compiles. It is Budd's compiler subset (Budd 19
 
 **D-10 · Four element kinds, one Bool convention.** `%nat` (Jock `@`), `%int` (Jock `Int`, ZigZag), `%real` (Float64), `%char` (codepoint). Booleans are `%nat` 0 and 1, as in APL; there is no separate Bool kind. ⟨`atl/vector-add`, `atl/residue-sign`, `atl/power-log`, `atl/display`⟩
 
-**D-11 · The kind lattice is `%nat ⊂ %int ⊂ %real`; `%char` is apart.** A dyadic scalar function on two numeric kinds computes in the join. `%char` meets a numeric only at `=` and `≠`, and at `⍳` (index-of), `∊`, `⍋`, `⍒`. Anything else is a DOMAIN ERROR. ⟨`atl/residue-sign`, `atl/power-log`, `atl/errors`⟩
+**D-11 · The kind lattice is `%nat ⊂ %int ⊂ %real`; `%char` is apart.** A dyadic scalar function on two numeric kinds computes in the join. `%char` meets a numeric only at `=` and `≠`, and at `⍳` (index-of), `∊`, `⍋`, `⍒`. Anything else is a DOMAIN ERROR. AMENDED 2026-11-03: `%box` (D-70) is apart from the lattice too; a scalar function reaches into it (D-72) and meets the lattice at the leaves. ⟨`atl/residue-sign`, `atl/power-log`, `atl/errors`⟩
 
 **D-12 · Result kinds are fixed per function, not inferred from values.** `÷`, `⍟`, `○`, `⋆` with a non-`%nat` exponent, and monadic `÷` answer `%real`. `⌊` and `⌈` on `%real` answer `%int`. Comparisons and the Booleans answer `%nat`. `−` on two `%nat` answers `%int` (never a crash on `3−5`). Everything else answers the join. This rule is what lets the inferencer type a statement without running it. ⟨`atl/power-log` (`2⋆10` → 1024), `atl/residue-sign` (`3−5` → ¯2), `atl/tradfn-div`⟩
 
@@ -46,6 +46,24 @@ ATL/APL is the APL that Atalante compiles. It is Budd's compiler subset (Budd 19
 
 **D-15 · RULED 2026-10-28 · `⎕TYPE` is a reserved name.** The 2024 README set `⎕TYPE ← 'UINT8'`. Whether the name declares a storage width (Lagoon `bloq`) or a default literal kind is a v2 decision, taken when the array model gains more than bloq 6. In v1 the name is reserved: it lexes and parses as a system name (D-60), and reading or assigning it refuses with `%unimplemented`. ⟨`atl/errors`⟩
 
+### Nested arrays (P9, 2026-11-03)
+
+**D-70 · The `%box` kind.** An element of an array may be any array: the fifth element kind, `%box`, holds one. A box has a shape like any array; its elements are arrays. Two normal forms keep every value unique: an array whose elements are all simple scalars of one class (numeric, or character) is simple, never a box; and a box scalar holding a simple scalar is that scalar (`⊂5` is `5`). A simple array of mixed characters and numbers, `1 'a' 2`, is a box of scalars. The Lagoon layout holds no box (roadmap P11): a box is the index ray of its shape over a Jock list of its elements in ravel order, and every structural function runs on that ray. ⟨`atl/nested`, `parse/nested`⟩
+
+**D-71 · Strands (amends D-4).** Adjacent array items strand into a vector, one element per item: numerals, character literals, names, parenthesised expressions and indexed names. A numeral is one item, so `1 2 'a'` has three elements. A strand of numerals alone is D-4's simple vector; any other strand is the vector of its items' values, each enclosed, flattened by D-70 when every item is a simple scalar. A strand binds tighter than a function: `a b + c` is `(a b)+c`. An unbound name in a strand is a VALUE ERROR at its column. ⟨`parse/nested`, `atl/nested`, `parse/refusals` (an unbound name)⟩
+
+**D-72 · Pervasion and permutation.** A scalar function (D-41) reaches into boxes: it applies element by element, D-25 at every level, and each level takes D-70's normal form; `1+(1 2)(3 4)` is `(2 3) (4 5)`. A structural function moves elements whole: `, ⌽ ⊖ ⍉ ⍴ ↑ ↓ / \` and bracket indexing permute a box as they permute a simple array, their left argument stays simple, and overtake and expand fill with the prototype (D-77). `A⍳B` and `A∊B` compare elements by match (D-73). `A,B` with a box on either side, or characters on one side and numbers on the other, catenates the elements into a box, flattened by D-70. `f/` and `f\` over a box vector fold its elements, each result enclosed; over a box of higher rank they are held back, as are `f.g` and `∘.g` over any box. ⟨`atl/nested`⟩
+
+**D-73 · Enclose, disclose, first, pick, depth, match, enlist.** `⊂B` encloses: a simple scalar is its own enclosure, anything else becomes a box scalar. `⊃B` discloses a box whose elements are simple scalars or vectors of one class into the simple array of shape `(⍴B),L`, `L` the longest element, each padded with its fill; on a simple array it is the identity. `↑B` is the first element, disclosed (`↑'ab' 'cd'` is `'ab'`), and the prototype of an empty array. `A⊃B` picks: `A` a scalar index in `⎕IO`, or a vector of indices followed through nested boxes; the element, disclosed. `≡B` is depth: 0 for a simple scalar, 1 for a simple array, one more than the deepest element for a box. `A≡B` is match: 1 when the shapes agree and every element matches (numbers match across kinds, a character never matches a number, a box never matches a simple array), else 0. `∊B` enlists: the vector of every leaf in ravel order, a box of scalars when the leaves mix classes. Held back: `A⊂B` partition, `⊃` of a box whose elements are boxes or of rank 2 or more, `≢`. ⟨`atl/nested`⟩
+
+**D-74 · Each (amends D-43).** `f¨B` applies `f` to each element of `B` and encloses each result; the result has `B`'s shape and takes D-70's normal form, so `⍳¨1 2 3` is `(,1) (1 2) (1 2 3)` and `{⍵×2}¨1 2 3` is still `2 4 6`. `A f¨B` pairs elements under D-25. Over a simple array a scalar function under each is the scalar map, and the v1 vectors hold. ⟨`atl/nested`, `atl/dfns`⟩
+
+**D-75 · Order.** `⍋` and `⍒` on a box vector sort by a total order on arrays: a simple array before a box; among simple arrays, numbers before characters, then the ravels in lexicographic order with a proper prefix first, then the shapes; among boxes, the elements in lexicographic order by this same order, then the shapes. The sort is stable (D-42). The README's `⍋X` is `2 4 6 1 3 5`. ⟨`atl/nested`⟩
+
+**D-76 · Display of a box (amends D-45).** A box prints as the strand that builds it, so its display is ATL source: a numeric scalar bare, a character scalar or vector in quotes with a quote doubled, a numeric vector in parentheses (`(1 2)`; `(,5)` for one element; `(⍳0)` for none), a box element in parentheses as a strand, a simple array of rank 2 or more as `(shape⍴ravel)`; one space between elements. A box scalar prints as `⊂` before its element. A box of rank 2 prints one row per line, a higher rank its planes separated by a blank line, with no column alignment. `X[⍋X]` prints `'goddess' 'of' 'rage' 'sing' 'sing' 'the'`, as the 2024 README did. ⟨`atl/nested`, `atl/readme-red`⟩
+
+**D-77 · Fill.** The prototype of an array is its first element with every leaf replaced by that leaf's fill, `0` for a number and a space for a character; the prototype of an empty array is `0`. Overtake, expand and `↑` of an empty array supply it. ⟨`atl/nested`⟩
+
 ## 4. Syntax and evaluation
 
 **D-20 · Right-to-left; a function takes everything to its right.** `2×3+4` is 14. A dyadic function's left argument is the single array immediately to its left. Parentheses group. ⟨`parse/readme`, `parse/operators`⟩
@@ -54,11 +72,11 @@ ATL/APL is the APL that Atalante compiles. It is Budd's compiler subset (Budd 19
 
 **D-22 · Monadic or dyadic is decided by what stands to the left.** A function with an array (or a parenthesised expression, or a name bound to an array) on its left is dyadic; otherwise monadic. A name's valence is looked up in the store at compile time (D-52); a dfn, and a name bound to one, is ambivalent (D-64, D-67). ⟨`parse/readme`, `parse/operators`, `parse/refusals`, `parse/dfns`⟩
 
-**D-23 · Bracket indexing.** `X[i]`, `M[i;j]`, `M[i;]`, `M[;j]`. Indices are arrays; the result shape is the catenation of the index shapes. An index outside `⎕IO`-based bounds is an INDEX ERROR. Indexed assignment `X[i] ← v` is v1. ⟨`parse/indexing` (parsing only)⟩
+**D-23 · Bracket indexing.** `X[i]`, `M[i;j]`, `M[i;]`, `M[;j]`. Indices are arrays; the result shape is the catenation of the index shapes. An index outside `⎕IO`-based bounds is an INDEX ERROR. Indexed assignment `X[i] ← v` is v1. AMENDED 2026-11-03: on a box the elements move whole (D-72), so `X[⍋X]` on the README's `X` is the sorted strand; an indexed assignment whose value or target is a box, or that puts characters among numbers, leaves a box. ⟨`parse/indexing` (parsing only), `atl/nested`⟩
 
 **D-24 · Assignment `←` is an expression whose value is its right side.** At the top level a statement whose last act is an assignment prints nothing. Variables are global unless localised in a `∇` header (D-31). ⟨`parse/readme`, `parse/statements`, `atl/indexing` (indexed assignment), `atl/readme-red`⟩
 
-**D-25 · Scalar extension.** A scalar or one-element vector extends to the other argument's shape. Otherwise shapes must match exactly; a rank mismatch is a RANK ERROR, a length mismatch a LENGTH ERROR. ⟨`atl/vector-add`, `atl/errors`⟩
+**D-25 · Scalar extension.** A scalar or one-element vector extends to the other argument's shape. Otherwise shapes must match exactly; a rank mismatch is a RANK ERROR, a length mismatch a LENGTH ERROR. AMENDED 2026-11-03: a box scalar extends like any scalar, and the rule applies again inside each pair of elements (D-72). ⟨`atl/vector-add`, `atl/errors`, `atl/nested`⟩
 
 ## 5. Functions
 
@@ -99,11 +117,11 @@ Dyadic: `+ − × ÷ ⌈ ⌊ ∣ ⋆ ⍟ ○ !` and `< ≤ = ≥ > ≠ ∨ ∧ �
 **D-42 · Structural functions (v1).**
 `⍳B` index generator; `A⍳B` index-of; `⍴B` shape; `A⍴B` reshape (cyclic fill); `,B` ravel; `A,B` catenate on last axis; `⌽B`/`A⌽B` reverse/rotate last axis; `⊖`/`A⊖B` first axis; `⍉B` transpose (reverse axes); `A↑B` take, `A↓B` drop (negative counts from the end); `⍋B`, `⍒B` grade (stable); `A∊B` membership; `A/B` compress, `A\B` expand (Boolean left, replicate counts in v1 too); `A⊥B` decode, `A⊤B` encode; `A?B` deal; `⊣`, `⊢` left and right. ⟨`atl/reshape`, `atl/take-drop-rotate`, `atl/grade`, `atl/compress-member`, `atl/encode-decode`, `atl/catenate`, `atl/sieve`, `atl/axes`⟩
 
-**D-43 · Operators (v1).** `f/` reduce last axis, `f⌿` first axis; `f\`, `f⍀` scan; `f.g` inner product; `∘.g` outer product; `f¨` each (over a flat array, each is the scalar map; it earns its keep in v2). Identity elements for reduce over empty come from `ast.md`'s table. ⟨`atl/reduce-scan`, `atl/outer-inner`, `atl/axes`, `atl/readme-red`⟩
+**D-43 · Operators (v1).** `f/` reduce last axis, `f⌿` first axis; `f\`, `f⍀` scan; `f.g` inner product; `∘.g` outer product; `f¨` each (over a flat array, each is the scalar map; AMENDED 2026-11-03: over a box, D-74). Identity elements for reduce over empty come from `ast.md`'s table. ⟨`atl/reduce-scan`, `atl/outer-inner`, `atl/axes`, `atl/readme-red`⟩
 
-**D-44 · Held back from v1, with the reason.** `⌹` matrix divide (needs Lagoon or a float linear solver); `⍎` execute (needs the compiler in the runtime, plan P6 makes it cheap); `⍕` format (monadic only, for display, D-45); `⍷` find; `⍪` table/laminate; `≡` match and depth (match is cheap, depth is nested-only); `⍉` dyadic; `⌽` with axis `[k]`. Each enters with its three vectors or stays out.
+**D-44 · Held back from v1, with the reason.** `⌹` matrix divide (needs Lagoon or a float linear solver); `⍎` execute (needs the compiler in the runtime, plan P6 makes it cheap); `⍕` format (monadic only, for display, D-45); `⍷` find; `⍪` table/laminate; `≡` match and depth (ENTERED 2026-11-03 as D-73); `⍉` dyadic; `⌽` with axis `[k]`. Each enters with its three vectors or stays out.
 
-**D-45 · Display.** Vectors print space-separated on one line; a matrix prints one row per line, columns right-aligned; higher ranks print planes separated by a blank line. Numbers print with `⎕PP` 10 significant digits, exponent form past `1E10` (`2.642213044E60` as in the README). `%real` whose value is integral prints without a point. Negative numbers print with `¯`, never `-`. Character arrays print raw, without quotes. ⟨`atl/power-log`, `atl/display`, `atl/residue-sign`⟩
+**D-45 · Display.** Vectors print space-separated on one line; a matrix prints one row per line, columns right-aligned; higher ranks print planes separated by a blank line. Numbers print with `⎕PP` 10 significant digits, exponent form past `1E10` (`2.642213044E60` as in the README). `%real` whose value is integral prints without a point. Negative numbers print with `¯`, never `-`. Character arrays print raw, without quotes. AMENDED 2026-11-03: a box prints as its strand (D-76). ⟨`atl/power-log`, `atl/display`, `atl/residue-sign`⟩
 
 ## 7. Compilation model
 
@@ -131,7 +149,7 @@ Dyadic: `+ − × ÷ ⌈ ⌊ ∣ ⋆ ⍟ ○ !` and `< ≤ = ≥ > ≠ ∨ ∧ �
 
 Ordered as phases P8 onward in [`docs/roadmap.md`](../roadmap.md).
 
-Nested arrays or their ruled-out alternative (D-6); dfn operators, `⍺←` and `::` (D-63); dyadic `⍉`, axis specification `[k]`, `⍎`, `⍕` dyadic, `⌹`, `⍷`, `⍪`, `≡`; derived-function operands; an ASCII input pre-pass (D-8, deferred); `⎕TYPE`'s meaning (D-15, the name is reserved); packed Lagoon erasure and SoftBLAS jets (plan P7).
+What P9 held back of nesting: `A⊂B` partition, `≢`, `⊃` of nested or rank-2 elements, reduction and scan over a box of rank 2, inner and outer products over boxes, a `%box` Lagoon layout (D-72, D-73, roadmap P11); dfn operators, `⍺←` and `::` (D-63); dyadic `⍉`, axis specification `[k]`, `⍎`, `⍕` dyadic, `⌹`, `⍷`, `⍪`; derived-function operands; an ASCII input pre-pass (D-8, deferred); `⎕TYPE`'s meaning (D-15, the name is reserved); packed Lagoon erasure and SoftBLAS jets (plan P7).
 
 ## References
 

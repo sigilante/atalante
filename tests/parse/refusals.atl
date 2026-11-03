@@ -1,8 +1,4 @@
 ⍝ sig: a:a b:a M:m D:d
-a b
-⍝ expect: %syntax-error col:1 arrays do not strand in v1 (D-4)
-'sing' 'goddess'
-⍝ expect: %nested-unsupported col:8 nested arrays are v2 (D-6)
 foo
 ⍝ expect: %value-error col:1 foo is not defined
 1 2 3 ÷
