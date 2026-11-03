@@ -7,7 +7,7 @@
 ::  still write `/+ math` and `(exp:rd:math ...)` / `~(exp rd:math [%n rtol])`.
 ::
 =<  math
-~%  %non  +  ~  :: nest non in hex for now
+~%  %non  ..ut  ~  :: nest non in hex for now
 |%
 ::    $rounding-mode:  the four IEEE modes the @r precision doors accept
 +$  rounding-mode  ?(%n %u %d %z)

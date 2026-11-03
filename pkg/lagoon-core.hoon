@@ -27,8 +27,8 @@
 =/  wravel   |=(a=ray:lagoon ^-((list @) (ravel:la a)))
 =/  wgetitem  |=([a=ray:lagoon d=(list @)] ^-(@ (get-item:la a d)))
 ::  --- rays:  elementwise, same meta both sides (Lagoon asserts it).  The
-::  comparisons are not exported:  +bin-op walks the ravel with +snag
-::  (quadratic, S-22), and a Jock zip over the ravel is exact and linear.
+::  comparisons are not exported:  a Jock zip over the ravel is exact and
+::  linear (+bin-op was quadratic before numerics #94, S-22).
 =/  wadd     |=([a=ray:lagoon b=ray:lagoon] ^-(ray:lagoon (add:la a b)))
 =/  wsub     |=([a=ray:lagoon b=ray:lagoon] ^-(ray:lagoon (sub:la a b)))
 =/  wmul     |=([a=ray:lagoon b=ray:lagoon] ^-(ray:lagoon (mul:la a b)))
@@ -36,8 +36,9 @@
 =/  wchange  |=([a=ray:lagoon k=kind:lagoon b=@] ^-(ray:lagoon (change:la a k b)))
 ::  --- rays:  structure (P7's specialised gates reach these).  The reductions
 ::  (cumsum, max, min) and dot/mmul are not exported:  measured at ~1.6 ms per
-::  element through +reel under NockVM against ~10 µs for a Jock fold with
-::  jetted arithmetic (S-22), and set-item is a rebuild per element.
+::  element through +reel under a NockVM without float jets against ~10 µs for
+::  a Jock fold with jetted arithmetic (S-22, closed upstream by numerics #94),
+::  and set-item is a rebuild per element.
 ::  Not exported, because no ATL path can use them bit-exactly:  div (APL's
 ::  0÷0), mod (APL's sign rule), pow-n (repeated multiplication rounds
 ::  differently from exp(b·log a)), prod (its fold starts from the integer

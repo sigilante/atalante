@@ -1,4 +1,4 @@
-~%  %non  +  ~  :: jet registration; nest non in hex (cf /lib/unum, /lib/math)
+~%  %non  ..ut  ~  :: jet registration; nest non in hex (cf /lib/unum, /lib/math)
 |%
 ::  Two's-complement signed integers, MODULAR (operations wrap mod 2^width
 ::  rather than crashing on overflow -- a deliberate divergence from a

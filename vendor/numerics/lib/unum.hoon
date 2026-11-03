@@ -35,7 +35,7 @@
 ::  gates of the same name.  Internal integer arithmetic therefore uses the
 ::  ^-prefixed forms (^add/^sub/^mul/^div) to reach the standard library.
 ::
-~%  %non  +  ~  :: nest non in hex for now (jet chapter, see /lib/math)
+~%  %non  ..ut  ~  :: nest non in hex for now (jet chapter, see /lib/math)
 |%
 ::  G-layer (decoded) representation of a posit, mirroring the stdlib float +$fn
 ::  (`[%f s=? e=@s a=@u]`):  value = (sign) a * 2^e, with a an integer

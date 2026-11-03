@@ -7,7 +7,9 @@ is one command and every patch is a rule, not a hand edit.
 
 The three rules (vendor/NUMERICS.txt):
   1. trailing `::` comments are stripped from /+ /- /= import lines.
-  2. `..part` becomes `+` in ~% jet parents (hoon-138 has no +part).
+  2. `..part` becomes `..ut` in ~% jet parents: hoon-138 has no +part, and
+     `..ut` is the parent the NockApp jet harness registers under, so the jet
+     path is `k.138/one/two/tri/qua/pen/non/lagoon/<arm>` (P11).
   3. every @r literal is rewritten as a plain decimal with a fractional
      part and no exponent: honk sets the sign bit of a positive @r
      literal whose decimal exponent is >= 0 (`.~1` -> -1.0, `.~1.5e2`
@@ -45,7 +47,7 @@ def patch(text):
     for line in text.split("\n"):
         if re.match(r"^/[-+=]", line):
             line = re.sub(r"^(/[-+=].*?\S)\s+::.*$", r"\1", line)
-        line = line.replace("..part", "+")
+        line = line.replace("..part", "..ut")
         line = LIT.sub(fix_lit, line)
         out.append(line)
     return "\n".join(out)
@@ -67,9 +69,11 @@ def main():
         "patches, applied by the script (so a re-vendor re-applies them):\n"
         "  1. trailing '::' comments stripped from /+ /- /= import lines --- honk's import\n"
         "     parser reads the whole line as the import.\n"
-        "  2. '..part' -> '+' in the ~% jet-registration parents --- hoon-138 has no +part.\n"
-        "     This changes the jet label PARENT; SoftBLAS jets on the vere fork would need\n"
-        "     the original spelling (NockVM has no float jets either way).\n"
+        "  2. '..part' -> '..ut' in the ~% jet-registration parents --- hoon-138 has no +part,\n"
+        "     and '..ut' is the parent numerics' NockApp jet harness (lagoon/nockapp) spells,\n"
+        "     so the jet path is k.138/one/two/tri/qua/pen/non/lagoon/<arm> and the Rust\n"
+        "     lagoon-jets and hoon-float-jets register against this tree (P11). SoftBLAS\n"
+        "     jets on the vere fork would need the original spelling.\n"
         f"  3. every @r literal ({n} of them) rewritten as a plain decimal with a fractional\n"
         "     part and no exponent. honk sets the SIGN BIT of a positive @r literal whose\n"
         "     decimal exponent is >= 0: .~1 -> -1.0, .1 -> -1.0, .~~1 -> -1.0, .~1.5e2 ->\n"

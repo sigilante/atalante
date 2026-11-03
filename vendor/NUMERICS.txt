@@ -1,4 +1,4 @@
-numerics pin: the numerics checkout at 4727063e319c508dab9813c5c179ef3f275628b3 (vendored by tools/vendor-numerics.py)
+numerics pin: the numerics checkout at 9eb9500b75684ce76c606877a754c5bab18e2c31 (vendored by tools/vendor-numerics.py)
 files:
   sur/lagoon.hoon  <- lagoon/desk/sur/lagoon.hoon
   lib/lagoon.hoon  <- lagoon/desk/lib/lagoon.hoon
@@ -10,10 +10,12 @@ files:
 patches, applied by the script (so a re-vendor re-applies them):
   1. trailing '::' comments stripped from /+ /- /= import lines --- honk's import
      parser reads the whole line as the import.
-  2. '..part' -> '+' in the ~% jet-registration parents --- hoon-138 has no +part.
-     This changes the jet label PARENT; SoftBLAS jets on the vere fork would need
-     the original spelling (NockVM has no float jets either way).
-  3. every @r literal (1504 of them) rewritten as a plain decimal with a fractional
+  2. '..part' -> '..ut' in the ~% jet-registration parents --- hoon-138 has no +part,
+     and '..ut' is the parent numerics' NockApp jet harness (lagoon/nockapp) spells,
+     so the jet path is k.138/one/two/tri/qua/pen/non/lagoon/<arm> and the Rust
+     lagoon-jets and hoon-float-jets register against this tree (P11). SoftBLAS
+     jets on the vere fork would need the original spelling.
+  3. every @r literal (1500 of them) rewritten as a plain decimal with a fractional
      part and no exponent. honk sets the SIGN BIT of a positive @r literal whose
      decimal exponent is >= 0: .~1 -> -1.0, .1 -> -1.0, .~~1 -> -1.0, .~1.5e2 ->
      -150.0, while .~0.5 and .~1.0e-10 parse right and the Urbit dojo parses all of
