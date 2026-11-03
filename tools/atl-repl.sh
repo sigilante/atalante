@@ -24,8 +24,10 @@ case "$1" in
   start)
     [[ -r "$JAM" ]] || { echo "atl-repl: no $JAM --- run tools/atlc.sh kernel" >&2; exit 2; }
     #  RUST_LOG=warn:  the runtime's INFO lines (jet registration for the
-    #  vendored numerics, which carry ~/ hints no NockVM jet matches) would
-    #  otherwise interleave with the kernel's answers
+    #  vendored numerics' ~/ hints) would otherwise interleave with the
+    #  kernel's answers.  jojo's hot table jets the float doors and the
+    #  Lagoon %i754 arms (P11); HOON_FLOAT_JET_DISABLE=1 in the environment
+    #  leaves the float doors to the Nock, for a comparison run
     tmux new-session -d -s "$SESSION" -x 120 -y 40 "cd $JOJO && RUST_LOG=warn ./target/release/jojo --prompt '🍎> ' $JAM"
     tmux bind-key -n F5 send-keys -t "$SESSION" ')TOGGLE' Enter
     tmux bind-key -n F6 send-keys -t "$SESSION" ')GREEN' Enter
