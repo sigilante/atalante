@@ -20,9 +20,9 @@ Two facts fix most of the order. Nested arrays change the array model every stru
 *Waits on:* `⌹` waits on P11's float path; P9 has landed, so `⍷ ⍪` take nested arguments from the start.
 **LANDED 2026-11-03** as D-82..D-91 ([plan §3](plan.md)), with the rest of nesting (D-78..D-81). `⌹` runs on Jock's float scalar path without waiting for P11; a fractional axis (laminate) stays out.
 
-**P12 — The deferred rulings.** D-8, an ASCII input pre-pass with its own table and vectors (`iota` for `⍳` and the like), never a grammar change. D-15, what `⎕TYPE` names once the array model has more than bloq 6: a storage width or a default literal kind. S-24, the column a green-prompt refusal blames: the rightmost unbound name, as evaluation order would.
-*Exit:* a corpus case typed in ASCII gives the Unicode case's output; `⎕TYPE` vectors for whichever meaning is ruled; S-24's refusal blames column 25 on the README sieve with R unbound.
-*Waits on:* P11 for D-15.
+**P12 — The deferred rulings (ruled 2026-11-04).** D-8: bare ASCII words in a `)ASCII ON` session mode, one lowercase word per glyph, rewritten ahead of the lexer with columns kept. D-15: `⎕TYPE` as a per-kind storage width, `UINT8`–`UINT64`, `INT8`–`INT64` and `REAL16`–`REAL128`, which means the array model leaves bloq 6, D-11's promotion learns mixed widths, and every primitive wraps or rounds at its width. S-24, the column a green-prompt refusal blames: the rightmost unbound name, as evaluation order would.
+*Exit:* a corpus case typed in ASCII under `)ASCII ON` gives the Unicode case's output; `⎕TYPE` vectors for every name, wrapping and rounding at each width; S-24's refusal blames column 25 on the README sieve with R unbound.
+*Waits on:* nothing: both rulings are in. D-15 is the larger half.
 
 ## Performance
 
