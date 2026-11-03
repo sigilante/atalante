@@ -1,0 +1,15 @@
+⍝ D-93: ⍺← gives ⍺ a default for a monadic call; a dyadic call skips it
+🍎> F←{⍺←10 ⋄ ⍺+⍵}
+🍎> F 1
+⍝ expect: 11
+🍎> 2 F 1
+⍝ expect: 3
+🍎> {⍺←'x' ⋄ ⍺,⍵}'y'
+⍝ expect: xy
+🍎> 'a'{⍺←'x' ⋄ ⍺,⍵}'y'
+⍝ expect: ay
+🍎> P←{⍺←⍵ ⋄ ⍺×⍵}
+🍎> P 4
+⍝ expect: 16
+🍎> 3 P 4
+⍝ expect: 12

@@ -29,7 +29,7 @@ struct Fndef { h: parse.Header, body: List<String>, cached: Bool, ckey: List<(St
 struct Dfndef { d: parse.Dfn, cached: Bool, ckey: List<(String, @)>, cast: List<parse.Ast>, cfor: List<List<(*, *)>> };
 // a dfn call's scope (D-65): its locals, its local dfns, the dfn itself
 // (what ∇ names) and its global name when it has one (for the cache)
-struct Frame { vars: List<(String, array.Arr)>, fns: List<(String, parse.Dfn)>, own: parse.Dfn, name: String };
+struct Frame { vars: List<(String, array.Arr)>, fns: List<(String, parse.Dfn)>, own: parse.Dfn, name: String, ops: List<(String, parse.Fn)> };   // ops: ⍺⍺ ⍵⍵ (D-95)
 struct Env {
   store: List<(String, array.Arr)>,    // arrays by name (the globals)
   io: @, pp: @,                        // ⎕IO, ⎕PP
@@ -53,7 +53,10 @@ enum Sema { leaf(String), pair((Sema, Sema)) };
 enum Evs { err(EErr), ok((List<array.Arr>, Env)) };
 enum Parts { err(EErr), ok((List<List<@>>, List<@>, Env)) };
 enum DfnR { err(EErr), ok((List<parse.Ast>, List<List<(*, *)>>, Bool, array.Arr, Env)) };
-enum StepR { err(EErr), next(Env), done((array.Arr, Env)) };
+// an error guard in force (D-94): the codes it catches, its expression and formula, and the
+// environment it was set in, where the expression runs when it catches
+struct Trap { set: Bool, codes: List<@>, e: parse.Ast, f: *, env: Env };
+enum StepR { err(EErr), next(Env), done((array.Arr, Env)), armed((Env, Trap)) };
 enum ScanR { err(EErr), ok(((List<array.Arr>, List<List<@>>), Env)) };
 enum EncR { err(EErr), ok((List<List<array.Arr>>, Env)) };
 
@@ -84,6 +87,8 @@ func put(st: List<(String, array.Arr)>, nm: String, v: array.Arr) -> List<(Strin
 // binds in the innermost frame; at the prompt it binds in the store, and
 // a dfn of that name is gone (D-64).
 func isArg(nm: String) -> Bool { nm == "⍺" or nm == "⍵" };
+// ⍺ is bound in the innermost frame: the dfn was called with a left argument (or ⍺← has run)
+func alphaBound(env: Env) -> Bool { match env.frames { (f, rest) => match lookup(f.vars, "⍺") { (found, v) => found, }, _ => false, } };
 func lookupVar(env: Env, nm: String) -> (Bool, array.Arr) {
   match env.frames {
     (f, rest) => match lookup(f.vars, nm) {
@@ -100,7 +105,7 @@ func lookupFrames(frames: List<Frame>, st: List<(String, array.Arr)>, nm: String
 };
 func putVar(env: Env, nm: String, v: array.Arr) -> Env {
   match env.frames {
-    (f, rest) => setFrames(env, (Frame( vars: put(f.vars, nm, v), fns: f.fns, own: f.own, name: f.name ), rest)),
+    (f, rest) => setFrames(env, (Frame( vars: put(f.vars, nm, v), fns: f.fns, own: f.own, name: f.name, ops: f.ops ), rest)),
     _ => setDfns(setStore(env, put(env.store, nm, v)), delDfn(env.dfns, nm)),
   }
 };
@@ -130,7 +135,7 @@ func putPD(fs: List<(String, parse.Dfn)>, nm: String, d: parse.Dfn) -> List<(Str
 // replaces a tradfn of the name (D-64)
 func putFnDef(env: Env, nm: String, d: parse.Dfn) -> Env {
   match env.frames {
-    (f, rest) => setFrames(env, (Frame( vars: delStore(f.vars, nm), fns: putPD(f.fns, nm, d), own: f.own, name: f.name ), rest)),
+    (f, rest) => setFrames(env, (Frame( vars: delStore(f.vars, nm), fns: putPD(f.fns, nm, d), own: f.own, name: f.name, ops: f.ops ), rest)),
     _ => setFns(setStore(setDfns(env, putDfn(env.dfns, nm, Dfndef( d: d, cached: false, ckey: ~, cast: ~, cfor: ~ ))), delStore(env.store, nm)), delFn(env.fns, nm)),
   }
 };
@@ -295,9 +300,14 @@ func dyadPrim(cp: @, a0: array.Arr, b0: array.Arr, env: Env) -> Ev {
       else {
         let k = array.maxk(a.kind, b.kind);
         match cp {
-          43   => okv(lagAdd(array.promote(a, k), array.promote(b, k), k), env),                      // +
-          8722 => { let j = array.maxk(k, 2); okv(array.Arr( kind: j, ray: lagoon.sub(array.promote(a, j).ray, array.promote(b, j).ray), items: ~ ), env) },   // −
-          215  => okv(array.Arr( kind: k, ray: lagoon.mul(array.promote(a, k).ray, array.promote(b, k).ray), items: ~ ), env),   // ×
+          // reals through Lagoon's jetted %i754 arms; naturals and integers by the linear zip g-arith uses,
+          // since Lagoon's +bin-op walk is a non-tail recursion, quadratic under NockVM for a kind it does not jet (P11b)
+          43   => if k == 3 { okv(lagAdd(array.promote(a, k), array.promote(b, k), k), env) }
+            else { okv(mk(k, array.shape(a), zipK(addK, k, array.vals(array.promote(a, k)), array.vals(array.promote(b, k)))), env) },   // +
+          8722 => { let j = array.maxk(k, 2); if j == 3 { okv(array.Arr( kind: j, ray: lagoon.sub(array.promote(a, j).ray, array.promote(b, j).ray), items: ~ ), env) }
+            else { okv(mk(j, array.shape(a), zipK(subK, j, array.vals(array.promote(a, j)), array.vals(array.promote(b, j)))), env) } },   // −
+          215  => if k == 3 { okv(array.Arr( kind: k, ray: lagoon.mul(array.promote(a, k).ray, array.promote(b, k).ray), items: ~ ), env) }
+            else { okv(mk(k, array.shape(a), zipK(mulK, k, array.vals(array.promote(a, k)), array.vals(array.promote(b, k)))), env) },   // ×
           247  => divide(array.toReal(a), array.toReal(b), env),                                       // ÷
           8968 => okv(array.zipArr(array.promote(a, k), array.promote(b, k), k, lambda (x: @, y: @) -> @ { if gtK(k, x, y) { x } else { y } }), env),  // ⌈
           8970 => okv(array.zipArr(array.promote(a, k), array.promote(b, k), k, lambda (x: @, y: @) -> @ { if gtK(k, x, y) { y } else { x } }), env),  // ⌊
@@ -408,18 +418,26 @@ func applyMonad(f: parse.Fn, a: array.Arr, env: Env) -> Ev {
     .user(nm) => callNamed(nm, false, array.scalar(1, 0), a, env),
     .dfn(d) => callDfn("", d, false, array.scalar(1, 0), a, env),
     .own => callOwn(false, array.scalar(1, 0), a, env),
-    .axis(x) => axisMonad(x.f, x.k, a, env),
+    .dop(x) => callOp(x, false, array.scalar(1, 0), a, env),
+    .axis(x) => if x.half { laminateMonad(x.f, x.k, a, env) } else { axisMonad(x.f, x.k, a, env) },
   }
 };
 // a name of function class: a local dfn, a global dfn, or a tradfn (D-64, D-65)
 func callNamed(nm: String, dyadic: Bool, a: array.Arr, b: array.Arr, env: Env) -> Ev {
+  if nm == "⍺⍺" or nm == "⍵⍵" { match lookupOp(env.frames, nm) {
+    (found, g) => if not found { fail("%value-error", nm + " names an operand only inside an operator (D-95)") }
+      else { backIn(if dyadic { applyDyad(g, a, b, setFrames(env, outerFrames(env.frames))) } else { applyMonad(g, b, setFrames(env, outerFrames(env.frames))) }, env.frames) },
+  } } else {
   match lookupLocalFn(env.frames, nm) {
     (local, ld) => if local { callDfn("", ld, dyadic, a, b, env) }
       else { match lookupDfn(env.dfns, nm) {
         (global, gd) => if global { callDfn(nm, gd.d, dyadic, a, b, env) } else { callUser(nm, dyadic, true, a, b, env) },
       } },
-  }
+  } }
 };
+func backIn(r: Ev, frames: List<Frame>) -> Ev { match r { .ok(x) => match x { (v, env2) => okv(v, setFrames(env2, frames)), }, .err(e) => Ev.err(e), } };
+// an operand runs where the operator was applied:  the frames outside the operator's own
+func outerFrames(fs: List<Frame>) -> List<Frame> { match fs { (f, rest) => rest, _ => ~, } };
 // ∇ inside a body: the dfn the innermost frame runs (D-63)
 func callOwn(dyadic: Bool, a: array.Arr, b: array.Arr, env: Env) -> Ev {
   match env.frames { (f, rest) => callDfn(f.name, f.own, dyadic, a, b, env), _ => fail("%syntax-error", "∇ names a dfn only inside one"), }
@@ -437,7 +455,8 @@ func applyDyad(f: parse.Fn, a: array.Arr, b: array.Arr, env: Env) -> Ev {
     .user(nm) => callNamed(nm, true, a, b, env),
     .dfn(d) => callDfn("", d, true, a, b, env),
     .own => callOwn(true, a, b, env),
-    .axis(x) => axisDyad(x.f, x.k, a, b, env),
+    .dop(x) => callOp(x, true, a, b, env),
+    .axis(x) => if x.half { laminateDyad(x.f, x.k, a, b, env) } else { axisDyad(x.f, x.k, a, b, env) },
   }
 };
 // --- pervasion and each (D-72, D-74): f on every element, the results in normal form ----
@@ -674,6 +693,42 @@ func catenateItems(a: array.Arr, b: array.Arr, k: @, env: Env) -> Ev {
     .ok(r) => match r { (v, env2) => okv(array.regather(array.boxOf([na + nb], array.catA(ia, ib)), v), env2), },
   }
 };
+// --- a fractional axis (D-92) ---------------------------------------------------------------------
+// `k` is ⌊axis⌋+1 as parsed, so the new axis goes before position k-⎕IO (0-origin) of the shape
+func halfPos(k: @, r: @, env: Env) -> (Bool, @) { if k >= env.io and (k - env.io) <= r { (true, k - env.io) } else { (false, 0) } };
+// a with the same elements under a new shape of the same count (a box keeps its items)
+func reshapeKeep(a: array.Arr, shp: List<@>) -> array.Arr {
+  if array.isBox(a) { array.regather(a, mk(1, shp, array.vals(array.ixArr(a)))) } else { mk(a.kind, shp, array.vals(a)) }
+};
+func isComma(f: parse.Fn) -> Bool { match f { .prim(cp) => cp == 44, _ => false, } };
+// ,[k]B: B with a new axis of length 1
+func laminateMonad(f: parse.Fn, k: @, a: array.Arr, env: Env) -> Ev {
+  if not isComma(f) { fail("%axis-error", "a fractional axis takes , alone (D-92)") }
+  else { match halfPos(k, array.rank(a), env) {
+    (ok, pos) => if not ok { fail("%axis-error", "the fractional axis is outside the rank") }
+      else { okv(reshapeKeep(a, insertAt(array.shape(a), pos, 1)), env) },
+  } }
+};
+// A,[k]B: A and B of one shape (a scalar extends) joined along a new axis of length 2
+func laminateDyad(f: parse.Fn, k: @, a0: array.Arr, b0: array.Arr, env: Env) -> Ev {
+  if not isComma(f) { fail("%axis-error", "a fractional axis takes , alone (D-92)") }
+  else { match extendTo(a0, b0, env) { .err(e) => Ev.err(e), .ok(ra) => match ra { (a, e1) => laminateB(k, a, b0, env), }, } }
+};
+func laminateB(k: @, a: array.Arr, b0: array.Arr, env: Env) -> Ev {
+  match extendTo(b0, a, env) { .err(e) => Ev.err(e), .ok(rb) => match rb { (b, e2) => laminateAB(k, a, b, env), }, }
+};
+func laminateAB(k: @, a: array.Arr, b: array.Arr, env: Env) -> Ev {
+  if array.rank(a) != array.rank(b) { fail("%rank-error", "laminate takes arrays of one rank") }
+  else if array.shape(a) != array.shape(b) { fail("%length-error", "laminate takes arrays of one shape") }
+  else { match halfPos(k, array.rank(a), env) {
+    (ok, pos) => if not ok { fail("%axis-error", "the fractional axis is outside the rank") }
+      else { let shp = insertAt(array.shape(a), pos, 1); catenateAxis(reshapeKeep(a, shp), reshapeKeep(b, shp), pos, env) },
+  } }
+};
+// a scalar a takes other's shape; anything else stays
+func extendTo(a: array.Arr, other: array.Arr, env: Env) -> Ev {
+  if array.rank(a) == 0 and array.rank(other) > 0 { dyadStruct(9076, vec(1, array.shape(other)), a, env) } else { okv(a, env) }
+};
 func axisMonad(f: parse.Fn, k0: @, a: array.Arr, env: Env) -> Ev {
   match axisOf(k0, array.rank(a), env) {
     (ok, k) => if not ok { fail("%axis-error", "axis {k0} is outside the rank") }
@@ -696,6 +751,7 @@ func axisDyad(f: parse.Fn, k0: @, a: array.Arr, b: array.Arr, env: Env) -> Ev {
         else if cp == 44 { catenateAxis(a, b, k, env) }
         else if cp == 47 or cp == 9023 { repAxis(a, b, k, false, env) }
         else if cp == 92 or cp == 9024 { repAxis(a, b, k, true, env) }
+        else if cp == 8834 { if array.rank(b) > 1 { partitionAxis(a, b, k, env) } else { partitionVec(a, b, env) } }
         else { nyi("axis specification on dyadic " + lexerText(cp)) },
       _ => nyi("axis specification on that function"),
     } },
@@ -1303,9 +1359,39 @@ func rowsOfCols(cols: List<List<array.Arr>>, i: @, na: @) -> List<array.Arr> {
 func tally(a: array.Arr) -> @ { if array.rank(a) == 0 { 1 } else { array.firstDim(array.shape(a)) } };
 // A⊂B: a new element where the count rises, a 0 drops the element
 func partition(a: array.Arr, b: array.Arr, env: Env) -> Ev {
+  if array.rank(b) > 1 { partitionAxis(a, b, array.rank(b) - 1, env) } else { partitionVec(a, b, env) }
+};
+// A⊂[k]B past rank 1 (D-78): every line along axis k partitioned by the same counts, so the
+// result has B's shape with axis k replaced by the number of groups, each element a vector
+func partitionAxis(a: array.Arr, b: array.Arr, k: @, env: Env) -> Ev {
   match natVec(a) {
     (ok, cs0) => if not ok { dom("the left argument of ⊂ is a vector of non-negative integers") }
-    else if array.rank(b) > 1 { fail("%rank-error", "⊂ partitions a vector") }
+    else {
+      let shp = array.shape(b);
+      let n = array.nth(shp, k);
+      let cs = if array.rank(a) == 0 { array.repL(array.first(a), n) } else { cs0 };
+      if array.count(cs) != n { fail("%length-error", "one count per element along the axis") }
+      else {
+        let g = countStarts(cs, 0);
+        let lines = axisLines(shp, k);
+        let groups = partLines(cs, b, lines);
+        let shp2 = setNth(shp, k, g);
+        let numbered = numberLines(array.countLL(lines), g, 1);
+        okv(array.regather(array.boxOf([array.countA(groups)], groups), mk(1, shp2, fromLines(shp2, k, numbered))), env)
+      }
+    },
+  }
+};
+// the groups the counts open: a count above the one before it, after a 0 or at the start
+func countStarts(cs: List<@>, prev: @) -> @ { match cs { (c, t) => (if c != 0 and c > prev { 1 } else { 0 }) + countStarts(t, c), _ => 0, } };
+func partLines(cs: List<@>, b: array.Arr, lines: List<List<@>>) -> List<array.Arr> {
+  match lines { (l, rest) => array.catA(partGroups(cs, lineItems(b, l), 0, ~, ~), partLines(cs, b, rest)), _ => ~, }
+};
+// line i's groups are numbered from i*g+1
+func numberLines(nl: @, g: @, from: @) -> List<List<@>> { if nl == 0 { ~ } else { (array.iotaL(g, from), numberLines(nl - 1, g, from + g)) } };
+func partitionVec(a: array.Arr, b: array.Arr, env: Env) -> Ev {
+  match natVec(a) {
+    (ok, cs0) => if not ok { dom("the left argument of ⊂ is a vector of non-negative integers") }
     else {
       let xs = array.itemsOf(b);
       let n = array.countA(xs);
@@ -1383,13 +1469,33 @@ func transposeCells(axes: List<@>, shp: List<@>, shp2: List<@>, vs: List<@>, p: 
 // A⍷B (D-87): 1 where a copy of A begins, both as matrices
 func pickAxes(axes: List<@>, ix2: List<@>) -> List<@> { match axes { (x, t) => (array.nth(ix2, x), pickAxes(t, ix2)), _ => ~, } };
 func find(a: array.Arr, b: array.Arr, env: Env) -> Ev {
-  if array.rank(a) > 2 or array.rank(b) > 2 { nyi("⍷ on rank 3 and above") }
-  else if array.rank(a) > array.rank(b) { fail("%rank-error", "the pattern outranks the array") }
+  if array.rank(a) > array.rank(b) { fail("%rank-error", "the pattern outranks the array") }
+  else if array.rank(b) > 2 {
+    let sb = array.shape(b);
+    let sa = array.catL(array.repL(1, array.rank(b) - array.rank(a)), array.shape(a));
+    okv(mk(1, sb, findN(array.itemsOf(a), sa, array.size(sa), array.itemsOf(b), sb, 0, array.size(sb))), env)
+  }
   else {
     let ia = array.itemsOf(a);
     let ib = array.itemsOf(b);
     match matDims(a) { (pr, pc) => match matDims(b) { (br, bc) =>
       okv(mk(1, array.shape(b), findCells(ia, pr, pc, ib, br, bc, 0, br * bc)), env), }, }
+  }
+};
+// ⍷ at any rank (D-87): position p of B begins a copy of A when A fits there and every cell matches
+func findN(ia: List<array.Arr>, sa: List<@>, na: @, ib: List<array.Arr>, sb: List<@>, p: @, n: @) -> List<@> {
+  if p == n { ~ } else {
+    let ix = array.unflatIx(sb, p);
+    (b2n(fitsAt(ix, sa, sb) and findAtN(ia, sa, ib, sb, ix, 0, na)), findN(ia, sa, na, ib, sb, p + 1, n))
+  }
+};
+func fitsAt(ix: List<@>, sa: List<@>, sb: List<@>) -> Bool {
+  match ix { (i, it) => match sa { (d, st) => match sb { (e, et) => i + d <= e and fitsAt(it, st, et), _ => false, }, _ => false, }, _ => true, }
+};
+func addIx(xs: List<@>, ys: List<@>) -> List<@> { match xs { (x, xt) => match ys { (y, yt) => (x + y, addIx(xt, yt)), _ => ~, }, _ => ~, } };
+func findAtN(ia: List<array.Arr>, sa: List<@>, ib: List<array.Arr>, sb: List<@>, ix: List<@>, q: @, m: @) -> Bool {
+  if q == m { true } else {
+    if matchArr(array.nthA(ia, q), array.nthA(ib, array.flatIx(sb, addIx(ix, array.unflatIx(sa, q))))) { findAtN(ia, sa, ib, sb, ix, q + 1, m) } else { false }
   }
 };
 func matDims(a: array.Arr) -> (@, @) {
@@ -1427,8 +1533,21 @@ func charsOf(text: String) -> array.Arr {
 };
 func formatArr(a: array.Arr, env: Env) -> Ev {
   if a.kind == 4 { okv(a, env) }
-  else if array.rank(a) > 2 { nyi("⍕ on rank 3 and above") }
+  else if array.rank(a) > 2 {
+    let rows = dropBlank(splitNl(cps(array.format(a, env.pp)), ~, ~));
+    let lead = array.takeL(array.shape(a), array.rank(a) - 1);
+    if array.countLL(rows) != array.size(lead) { nyi("⍕ of this array past rank 2") }
+    else { let w = maxLenL(rows, 0); okv(mk(4, array.catL(lead, [w]), array.flatten(padRows(rows, w))), env) }
+  }
   else { okv(charsOf(array.format(a, env.pp)), env) }
+};
+func rankUp(m: array.Arr, b: array.Arr) -> array.Arr { if array.rank(b) > 2 { charsRank(m, array.shape(b)) } else { m } };
+// the rows of a display without the blank lines that part its planes
+func dropBlank(rows: List<List<@>>) -> List<List<@>> { match rows { (r, t) => match r { (c, ct) => (r, dropBlank(t)), _ => dropBlank(t), }, _ => ~, } };
+// a character matrix of rows, as an array of B's leading axes by the text width (⍕ past rank 2)
+func charsRank(m: array.Arr, shp: List<@>) -> array.Arr {
+  let w = if array.rank(m) == 2 { array.lastDim(array.shape(m)) } else { array.size(array.shape(m)) };
+  mk(4, array.catL(array.takeL(shp, array.count(shp) - 1), [w]), array.vals(m))
 };
 func roundNat(f: Float64) -> @ { lagoon.tabs(array.sToInt(lagoon.rflo(hoon.radd(f, 0.5)) ?? 0)) };
 func fracText(frac: @, d: @) -> String { if d == 0 { "" } else { "." + array.zeros(d - array.ndigits(frac)) + array.fmtNat(frac) } };
@@ -1457,18 +1576,17 @@ func formatBy(a: array.Arr, b: array.Arr, env: Env) -> Ev {
   match natVec(a) {
     (ok, spec) => if not ok or array.count(spec) > 2 or array.count(spec) == 0 { dom("the left argument of ⍕ is D or W D") }
     else if b.kind == 4 or array.isBox(b) { dom("⍕ with a left argument formats numbers") }
-    else if array.rank(b) > 2 { nyi("⍕ on rank 3 and above") }
     else {
       let d = array.lastL(spec);
       let cells = fmtFixedAll(b.kind, array.vals(b), d);
-      let cols = if array.rank(b) == 2 { array.lastDim(array.shape(b)) } else { countS(cells) };
+      let cols = if array.rank(b) >= 2 { array.lastDim(array.shape(b)) } else { countS(cells) };
       let rows = array.chunk(cells, cols);
       if array.count(spec) == 2 {
         match fitWidth(cells, array.firstDim(spec)) {
           (fits, padded) => if not fits { dom("a number does not fit the width") }
-            else { okv(charsOf(array.joinS(array.fmtRows(array.chunk(padded, cols), ~, ""), "\n")), env) },
+            else { okv(rankUp(charsOf(array.joinS(array.fmtRows(array.chunk(padded, cols), ~, ""), "\n")), b), env) },
         }
-      } else { okv(charsOf(array.joinS(array.fmtRows(rows, array.widths(rows, ~), " "), "\n")), env) }
+      } else { okv(rankUp(charsOf(array.joinS(array.fmtRows(rows, array.widths(rows, ~), " "), "\n")), b), env) }
     },
   }
 };
@@ -1492,6 +1610,7 @@ func execAst(t: parse.Ast, env: Env) -> Ev {
     .header(h) => dom("the executed line has no value"),
     .fassign(s) => dom("the executed line has no value"),
     .guard(g) => dom("the executed line has no value"),
+    .eguard(g) => dom("the executed line has no value"),
     _ => evalAst(t, env),
   }
 };
@@ -1945,6 +2064,7 @@ func runStmt(a: parse.Ast, env: Env) -> (String, Env) {
     .cmd(c) => command(c, env),
     .fassign(s) => ("", putFnDef(env, s.nm, dfnOf(s.f))),
     .guard(g) => ("%syntax-error a guard belongs in a dfn body (D-66)", env),
+    .eguard(g) => ("%syntax-error an error guard belongs in a dfn body (D-94)", env),
     _ => finish(a, evalAst(a, env), env),
   }
 };
@@ -2014,15 +2134,16 @@ func sigOf(env: Env) -> List<(String, @)> {
   match env.frames { (f, rest) => (("∇", 4), sigFrames(env.frames, globals)), _ => globals, }
 };
 func sigDfns(ds: List<(String, Dfndef)>, acc: List<(String, @)>) -> List<(String, @)> {
-  match ds { ((n, d), t) => sigDfns(t, ((n, 4), acc)), _ => acc, }
+  match ds { ((n, d), t) => sigDfns(t, ((n, parse.dfnClass(d.d)), acc)), _ => acc, }
 };
 // innermost first in the list means the innermost frame's entries go in front last
 func sigFrames(frames: List<Frame>, acc: List<(String, @)>) -> List<(String, @)> {
   match frames { (f, rest) => sigFrame(f, sigFrames(rest, acc)), _ => acc, }
 };
-func sigFrame(f: Frame, acc: List<(String, @)>) -> List<(String, @)> { sigPDs(f.fns, sigStore(f.vars, acc)) };
+func sigFrame(f: Frame, acc: List<(String, @)>) -> List<(String, @)> { sigOps(f.ops, sigPDs(f.fns, sigStore(f.vars, acc))) };
+func sigOps(os: List<(String, parse.Fn)>, acc: List<(String, @)>) -> List<(String, @)> { match os { ((n, g), t) => sigOps(t, ((n, 4), acc)), _ => acc, } };
 func sigPDs(fs: List<(String, parse.Dfn)>, acc: List<(String, @)>) -> List<(String, @)> {
-  match fs { ((n, d), t) => sigPDs(t, ((n, 4), acc)), _ => acc, }
+  match fs { ((n, d), t) => sigPDs(t, ((n, parse.dfnClass(d)), acc)), _ => acc, }
 };
 func sigStore(st: List<(String, array.Arr)>, acc: List<(String, @)>) -> List<(String, @)> {
   match st { ((n, v), t) => sigStore(t, ((n, 1), acc)), _ => acc, }
@@ -2140,6 +2261,7 @@ func runBodyStmt(a: parse.Ast, f: *, env: Env) -> EnvR {
     .header(h) => EnvR.err(EErr( tag: "%syntax-error", hint: "∇ inside a function body" )),
     .fassign(s) => EnvR.ok(putFnDef(env, s.nm, dfnOf(s.f))),
     .guard(g) => EnvR.err(EErr( tag: "%syntax-error", hint: "a guard belongs in a dfn body (D-66)" )),
+    .eguard(g) => EnvR.err(EErr( tag: "%syntax-error", hint: "an error guard belongs in a dfn body (D-94)" )),
     _ => match bodyEv(a, f, env) {
       .err(e) => EnvR.err(e),
       .ok(r) => match r { (v, env2) => EnvR.ok(if isAssign(a) { env2 } else { pushOut(env2, array.format(v, env2.pp)) }), },
@@ -2158,16 +2280,36 @@ func runBodyStmt(a: parse.Ast, f: *, env: Env) -> EnvR {
 // the trees and formulas of the lines a call reached, keyed by the entry
 // signature (which carries ⍺ only when bound, D-67); a later call that
 // reaches further parses on from there and extends the cache.
-func callDfn(nm: String, d: parse.Dfn, dyadic: Bool, a: array.Arr, b: array.Arr, env: Env) -> Ev {
+func callDfn(nm: String, d: parse.Dfn, dyadic: Bool, a: array.Arr, b: array.Arr, env: Env) -> Ev { callDfnOps(nm, d, dyadic, a, b, ~, env) };
+// a dfn operator applied (D-95): its body runs as a dfn's, with the operands as ⍺⍺ and ⍵⍵
+func callOp(x: parse.Dop, dyadic: Bool, a: array.Arr, b: array.Arr, env: Env) -> Ev {
+  let ops = if x.two { [("⍺⍺", x.l), ("⍵⍵", x.r)] } else { [("⍺⍺", x.l)] };
+  match x.op {
+    .dfn(d) => callDfnOps("", d, dyadic, a, b, ops, env),
+    .user(nm) => match lookupLocalFn(env.frames, nm) {
+      (local, ld) => if local { callDfnOps("", ld, dyadic, a, b, ops, env) }
+        else { match lookupDfn(env.dfns, nm) { (global, gd) => if global { callDfnOps(nm, gd.d, dyadic, a, b, ops, env) } else { fail("%value-error", nm + " is not defined") }, } },
+    },
+    _ => fail("%syntax-error", "an operator is a dfn naming ⍺⍺ (D-95)"),
+  }
+};
+func lookupOp(frames: List<Frame>, nm: String) -> (Bool, parse.Fn) {
+  match frames { (f, rest) => lookupOpIn(f.ops, nm), _ => (false, parse.Fn.prim(0)), }
+};
+func lookupOpIn(os: List<(String, parse.Fn)>, nm: String) -> (Bool, parse.Fn) {
+  match os { ((n, g), t) => if n == nm { (true, g) } else { lookupOpIn(t, nm) }, _ => (false, parse.Fn.prim(0)), }
+};
+func callDfnOps(nm: String, d: parse.Dfn, dyadic: Bool, a: array.Arr, b: array.Arr, ops: List<(String, parse.Fn)>, env: Env) -> Ev {
   let global = nm != "";
   let args = if dyadic { [("⍺", a), ("⍵", b)] } else { [("⍵", b)] };
-  let frame = Frame( vars: args, fns: ~, own: d, name: nm );
+  let frame = Frame( vars: args, fns: ~, own: d, name: nm, ops: ops );
   let entry = setFrames(env, if global { [frame] } else { (frame, env.frames) });
   let key = sigOf(entry);
   match lookupDfn(env.dfns, nm) {
     (found, cd) => {
       let hit = global and found and cd.cached and cd.ckey == key;
-      let ran = if hit { dfnCached(cd.cast, cd.cfor, d.body, entry, ~, ~) } else { dfnLines(d.body, 1, entry, ~, ~) };
+      let tr0 = noTrap(entry);
+      let ran = if hit { dfnCached(cd.cast, cd.cfor, d.body, entry, ~, ~, tr0) } else { dfnLines(d.body, 1, entry, ~, ~, tr0) };
       match ran {
         .err(e) => Ev.err(e),
         .ok(r) => match r { (asts, fors, has, v, env2) => {
@@ -2179,16 +2321,17 @@ func callDfn(nm: String, d: parse.Dfn, dyadic: Bool, a: array.Arr, b: array.Arr,
     },
   }
 };
-func dfnLines(lines: List<String>, n: @, env: Env, acc: List<parse.Ast>, facc: List<List<(*, *)>>) -> DfnR {
+func dfnLines(lines: List<String>, n: @, env: Env, acc: List<parse.Ast>, facc: List<List<(*, *)>>, tr: Trap) -> DfnR {
   match lines {
     (line, rest) => match parse.parseLine(line, sigOf(env)) {
-      .err(e) => DfnR.err(EErr( tag: e.tag, hint: "dfn line {n}: " + e.hint )),
+      .err(e) => caught(tr, EErr( tag: e.tag, hint: "dfn line {n}: " + e.hint ), acc, facc),
       .ok(a) => {
         let ss = flatStmts(a);
         let fs = dfnFormulas(ss, env);
-        match dfnStmts(ss, fs, env) {
+        match dfnStmts(ss, fs, env, tr) {
           .err(e) => DfnR.err(e),
-          .next(env2) => dfnLines(rest, n + 1, env2, (a, acc), (fs, facc)),
+          .next(env2) => dfnLines(rest, n + 1, env2, (a, acc), (fs, facc), tr),
+          .armed(r) => match r { (env2, tr2) => dfnLines(rest, n + 1, env2, (a, acc), (fs, facc), tr2), },
           .done(r) => match r { (v, env2) => DfnR.ok((revAsts((a, acc), ~), revDFors((fs, facc), ~), true, v, env2)), },
         }
       },
@@ -2197,17 +2340,18 @@ func dfnLines(lines: List<String>, n: @, env: Env, acc: List<parse.Ast>, facc: L
   }
 };
 // the cached prefix replayed, then the lines past it parsed on
-func dfnCached(asts: List<parse.Ast>, fors: List<List<(*, *)>>, lines: List<String>, env: Env, acc: List<parse.Ast>, facc: List<List<(*, *)>>) -> DfnR {
+func dfnCached(asts: List<parse.Ast>, fors: List<List<(*, *)>>, lines: List<String>, env: Env, acc: List<parse.Ast>, facc: List<List<(*, *)>>, tr: Trap) -> DfnR {
   match asts {
     (a, arest) => match fors {
-      (fs, frest) => match dfnStmts(flatStmts(a), fs, env) {
+      (fs, frest) => match dfnStmts(flatStmts(a), fs, env, tr) {
         .err(e) => DfnR.err(e),
-        .next(env2) => dfnCached(arest, frest, tailS(lines), env2, (a, acc), (fs, facc)),
+        .next(env2) => dfnCached(arest, frest, tailS(lines), env2, (a, acc), (fs, facc), tr),
+        .armed(r) => match r { (env2, tr2) => dfnCached(arest, frest, tailS(lines), env2, (a, acc), (fs, facc), tr2), },
         .done(r) => match r { (v, env2) => DfnR.ok((revAsts((a, acc), ~), revDFors((fs, facc), ~), true, v, env2)), },
       },
       _ => DfnR.err(EErr( tag: "%emit-mismatch", hint: "cache shape" )),
     },
-    _ => dfnLines(lines, countAsts(acc) + 1, env, acc, facc),
+    _ => dfnLines(lines, countAsts(acc) + 1, env, acc, facc, tr),
   }
 };
 func tailS(xs: List<String>) -> List<String> { match xs { (h, t) => t, _ => ~, } };
@@ -2218,28 +2362,62 @@ func dfnFormulas(ss: List<parse.Ast>, env: Env) -> List<(*, *)> {
   match ss { (st, rest) => (dfnFormula(st, env), dfnFormulas(rest, env)), _ => ~, }
 };
 func dfnFormula(st: parse.Ast, env: Env) -> (*, *) {
-  match st { .guard(g) => (lowerOr(g.c, env), lowerOr(g.e, env)), _ => (lowerOr(st, env), noFormula()), }
+  match st { .guard(g) => (lowerOr(g.c, env), lowerOr(g.e, env)), .eguard(g) => (lowerOr(g.c, env), lowerOr(g.e, env)), _ => (lowerOr(st, env), noFormula()), }
 };
 func lowerOr(a: parse.Ast, env: Env) -> * { if emittable(a) { lower(a, env) } else { noFormula() } };
 func noFormula() -> * { 0 };
-func dfnStmts(ss: List<parse.Ast>, fs: List<(*, *)>, env: Env) -> StepR {
+func dfnStmts(ss: List<parse.Ast>, fs: List<(*, *)>, env: Env, tr: Trap) -> StepR {
   match ss {
     (st, rest) => match fs {
       ((f1, f2), frest) => match dfnStmt(st, f1, f2, env) {
-        .err(e) => StepR.err(e),
-        .next(env2) => dfnStmts(rest, frest, env2),
+        .err(e) => if catches(tr, e) { runTrap(tr) } else { StepR.err(e) },
+        .next(env2) => dfnStmts(rest, frest, env2, tr),
+        .armed(r) => match r { (env2, tr2) => dfnStmts(rest, frest, env2, tr2), },
         .done(r) => StepR.done(r),
       },
       _ => StepR.err(EErr( tag: "%emit-mismatch", hint: "formula count" )),
     },
-    _ => StepR.next(env),
+    _ => if tr.set { StepR.armed((env, tr)) } else { StepR.next(env) },
   }
+};
+// --- error guards (D-94) ------------------------------------------------------------------------
+func noTrap(env: Env) -> Trap { Trap( set: false, codes: ~, e: parse.Ast.empty, f: noFormula(), env: env ) };
+// the error number of a tag:  Dyalog's where the class is shared (valence errors are its syntax errors)
+func errCode(tag: String) -> @ {
+  if tag == "%syntax-error" or tag == "%valence-error" { 2 } else if tag == "%index-error" { 3 } else if tag == "%rank-error" { 4 }
+  else if tag == "%length-error" { 5 } else if tag == "%value-error" { 6 } else if tag == "%axis-error" { 9 } else if tag == "%domain-error" { 11 }
+  else if tag == "%unimplemented" { 16 } else { 999 }
+};
+func catches(tr: Trap, e: EErr) -> Bool {
+  let c = errCode(e.tag);
+  tr.set and c != 999 and (memberN(0, tr.codes) or memberN(c, tr.codes))
+};
+func memberN(x: @, xs: List<@>) -> Bool { match xs { (h, rest) => if h == x { true } else { memberN(x, rest) }, _ => false, } };
+func runTrap(tr: Trap) -> StepR {
+  match bodyEv(tr.e, tr.f, tr.env) { .err(e) => StepR.err(e), .ok(r) => StepR.done(r), }
+};
+// a parse error on a later line, caught by the guard in force
+func caught(tr: Trap, e: EErr, acc: List<parse.Ast>, facc: List<List<(*, *)>>) -> DfnR {
+  if catches(tr, e) { match runTrap(tr) {
+    .done(r) => match r { (v, env2) => DfnR.ok((revAsts(acc, ~), revDFors(facc, ~), true, v, env2)), },
+    .err(e2) => DfnR.err(e2),
+    _ => DfnR.err(e),
+  } } else { DfnR.err(e) }
 };
 func boolScalar(v: array.Arr) -> Bool { v.kind == 1 and array.size(array.shape(v)) == 1 and isBool(array.first(v)) };
 func dfnStmt(a: parse.Ast, f1: *, f2: *, env: Env) -> StepR {
   match a {
     .empty => StepR.next(env),
     .fassign(s) => StepR.next(putFnDef(env, s.nm, dfnOf(s.f))),
+    .assign(s) => if s.nm == "⍺" and alphaBound(env) { StepR.next(env) }     // ⍺←X: a default, ignored when called dyadically (D-93)
+      else { match bodyEv(a, f1, env) { .err(e) => StepR.err(e), .ok(r) => match r { (v, env2) => StepR.next(env2), }, } },
+    .eguard(g) => match bodyEv(g.c, f1, env) {
+      .err(e) => StepR.err(e),
+      .ok(r) => match r { (cv, env2) => match natVec(cv) {
+        (ok, codes) => if not ok { StepR.err(EErr( tag: "%domain-error", hint: "an error guard takes error numbers (D-94)" )) }
+          else { StepR.armed((env2, Trap( set: true, codes: codes, e: g.e, f: f2, env: env2 ))) },
+      }, },
+    },
     .guard(g) => match bodyEv(g.c, f1, env) {
       .err(e) => StepR.err(e),
       .ok(r) => match r { (cv, env2) => if not boolScalar(cv) { StepR.err(EErr( tag: "%domain-error", hint: "a guard takes a scalar 0 or 1 (D-66)" )) }
@@ -2393,8 +2571,9 @@ func foldK(f: (@, @, @) -> @, k: @, vs: List<@>) -> @ {
 func foldFrom(f: (@, @, @) -> @, k: @, restRev: List<@>, acc: @) -> @ {
   match restRev { (x, more) => foldFrom(f, k, more, f(k, x, acc)), _ => acc, }
 };
-func zipK(f: (@, @, @) -> @, k: @, xs: List<@>, ys: List<@>) -> List<@> {
-  match xs { (x, xt) => match ys { (y, yt) => (f(k, x, y), zipK(f, k, xt, yt)), _ => ~, }, _ => ~, }
+func zipK(f: (@, @, @) -> @, k: @, xs: List<@>, ys: List<@>) -> List<@> { array.revL(zipKAcc(f, k, xs, ys, ~), ~) };
+func zipKAcc(f: (@, @, @) -> @, k: @, xs: List<@>, ys: List<@>, acc: List<@>) -> List<@> {
+  match xs { (x, xt) => match ys { (y, yt) => zipKAcc(f, k, xt, yt, (f(k, x, y), acc)), _ => acc, }, _ => acc, }
 };
 // f/ on a non-empty rank-1 numeric array for + × ⌈ ⌊
 func gReduce(cp: @, x: Ev) -> Ev {
@@ -2454,13 +2633,11 @@ func gReshape(l: Ev, r: Ev) -> Ev {
         else { dyadStruct(9076, lv, rv, env2) },
     }, }, }, }, }
 };
-// ⍳n through Lagoon's iota, shifted by ⎕IO
+// ⍳n from ⎕IO, by the interpreter's own tail-recursive builder
 func gIota(x: Ev) -> Ev {
   match x { .err(e) => x, .ok(p) => match p { (xv, env) => match natArg(xv, "⍳") {
     (ok, n) => if ok and n > 0 {
-      let m = array.metaOf(1, [n]);
-      let base = lagoon.iota(m);
-      okv(array.Arr( kind: 1, ray: if env.io == 0 { base } else { lagoon.add(base, lagoon.fill(m, env.io)) }, items: ~ ), env)
+      okv(vec(1, array.iotaL(n, env.io)), env)   // Lagoon's +iota builds through +gulf, a non-tail recursion that NockVM copies per frame (P11b)
     } else { monadStruct(9075, xv, env) }, }, }, }
 };
 func gAbs(x: Ev) -> Ev {

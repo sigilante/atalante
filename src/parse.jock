@@ -31,15 +31,16 @@ import lexer;
 
 struct Lit { kind: @, vals: List<String> };               // 1 nat, 2 int, 3 real, 4 chr (D-10)
 struct Inner { f: Fn, g: Fn };
-struct Axis { f: Fn, k: @ };                             // f[k], the axis as typed (D-82)
+struct Axis { f: Fn, k: @, half: Bool };                 // f[k] (D-82); half: a fractional k, kept as ⌊k⌋+1 (laminate, D-92)
 struct Dfn { body: List<String> };                        // source lines (D-63)
-enum Fn { prim(@), user(String), reduce(Fn), reduce1(Fn), scan(Fn), scan1(Fn), each(Fn), inner(Inner), outer(Fn), dfn(Dfn), own, axis(Axis) };
+struct Dop { op: Fn, l: Fn, r: Fn, two: Bool };           // a dfn operator applied: op is the dfn or its name, l (and r) the operands (D-95)
+enum Fn { prim(@), user(String), reduce(Fn), reduce1(Fn), scan(Fn), scan1(Fn), each(Fn), inner(Inner), outer(Fn), dfn(Dfn), own, axis(Axis), dop(Dop) };
 enum Ast {
   empty, elide, fnend,
   lit(Lit), name(String), nilad(String), sysvar(String), strand(List<Ast>),
   monad(Monad), dyad(Dyad), index(Index),
   assign(Assign), iassign(IAssign), sysassign(Assign), fassign(FAssign),
-  guard(Guard),
+  guard(Guard), eguard(Guard),
   cmd(Cmd), header(Header), stmts(List<Ast>),
 };
 struct Monad { f: Fn, r: Ast };
@@ -67,6 +68,48 @@ func cls(sig: List<(String, @)>, nm: String) -> @ {
   match sig { ((n, c), t) => if n == nm { c } else { cls(t, nm) }, _ => 0, }
 };
 func isFnClass(c: @) -> Bool { c == 2 or c == 3 or c == 4 };
+// --- dfn operators (D-95) -------------------------------------------------------------------
+// a dfn whose body names ⍺⍺ is a monadic operator (class 6), one naming ⍵⍵ a dyadic one (class 7);
+// a nested dfn's ⍺⍺ is its own
+func opClassToks(ts: List<lexer.Token>, depth: @, c: @) -> @ {
+  match ts {
+    (t, rest) => {
+      let k = kindOf(t);
+      if k == 17 { opClassToks(rest, depth + 1, c) }
+      else if k == 18 { opClassToks(rest, if depth > 0 { depth - 1 } else { 0 }, c) }
+      else if k == 5 and depth == 0 and t.text == "⍵⍵" { 7 }
+      else if k == 5 and depth == 0 and t.text == "⍺⍺" { opClassToks(rest, depth, 6) }
+      else { opClassToks(rest, depth, c) }
+    },
+    _ => c,
+  }
+};
+func opClassLines(ls: List<String>, c: @) -> @ {
+  match ls {
+    (l, rest) => match lexer.tokens(l) {
+      .ok(ts) => { let c2 = opClassToks(ts, 0, c); if c2 == 7 { 7 } else { opClassLines(rest, c2) } },
+      _ => opClassLines(rest, c),
+    },
+    _ => c,
+  }
+};
+// the class a dfn binds a name to: an operator's, or ambivalent (D-64)
+func dfnClass(d: Dfn) -> @ { let c = opClassLines(d.body, 0); if c == 0 { 4 } else { c } };
+func isOpClass(c: @) -> Bool { c == 6 or c == 7 };
+// an operator `op` meets the item to its left as its left operand, and for a dyadic one the operand to its right
+func pushOperator(op: Fn, two: Bool, col: @, rest: List<lexer.Token>, sig: List<(String, @)>, acc: List<Item>) -> Items {
+  match acc {
+    (h, more) => match h {
+      .fun(x) => if two { match operandOf(rest, sig) {
+          (isf, gf, rest2) => if isf { items(rest2, sig, (funItem(Fn.dop(Dop( op: op, l: x.f, r: gf, two: true )), x.col), more)) }
+            else { sei(col, "a dyadic operator needs a function to its right (D-95)") },
+        } }
+        else { items(rest, sig, (funItem(Fn.dop(Dop( op: op, l: x.f, r: Fn.prim(0), two: false )), x.col), more)) },
+      _ => sei(col, "an operator needs a function to its left (D-95)"),
+    },
+    _ => sei(col, "an operator needs a function to its left (D-95)"),
+  }
+};
 // token kind as a number, so a match can dispatch on it
 func kindOf(t: lexer.Token) -> @ {
   match t.kind {
@@ -79,6 +122,21 @@ func inBody(sig: List<(String, @)>) -> Bool { cls(sig, "∇") == 4 };   // parsi
 func isOp(cp: @) -> Bool { cp == 47 or cp == 92 or cp == 9023 or cp == 9024 or cp == 168 or cp == 46 or cp == 8728 };  // / \ ⌿ ⍀ ¨ . ∘
 func maxk(a: @, b: @) -> @ { if a > b { a } else { b } };
 func natText(s: String) -> @ { natDigits(lexer.toCps(s.chars()), 0) };
+// a fractional axis numeral (D-92):  `1.5` -> ⌊k⌋+1 = 2, `0.5` -> 1, `¯0.5` -> 0;  an integer, a
+// negative below ¯1 or an exponent is refused
+func halfAxis(cs: List<@>) -> (Bool, @) {
+  match cs {
+    (c, t) => if c == 175 { match splitDot(t, ~) { (ip, fp, dot) => if dot and natDigits(ip, 0) == 0 and anyNonZero(fp) and allDigits(ip) and allDigits(fp) { (true, 0) } else { (false, 0) }, } }
+      else { match splitDot(cs, ~) { (ip, fp, dot) => if dot and anyNonZero(fp) and allDigits(ip) and allDigits(fp) { (true, natDigits(ip, 0) + 1) } else { (false, 0) }, } },
+    _ => (false, 0),
+  }
+};
+func splitDot(cs: List<@>, acc: List<@>) -> (List<@>, List<@>, Bool) {
+  match cs { (c, t) => if c == 46 { (revN(acc, ~), t, true) } else { splitDot(t, (c, acc)) }, _ => (revN(acc, ~), ~, false), }
+};
+func revN(xs: List<@>, acc: List<@>) -> List<@> { match xs { (h, t) => revN(t, (h, acc)), _ => acc, } };
+func allDigits(cs: List<@>) -> Bool { match cs { (c, t) => if c >= 48 and c <= 57 { allDigits(t) } else { false }, _ => true, } };
+func anyNonZero(cs: List<@>) -> Bool { match cs { (c, t) => if c != 48 { true } else { anyNonZero(t) }, _ => false, } };
 func natDigits(cs: List<@>, acc: @) -> @ { match cs { (c, t) => natDigits(t, acc * 10 + (c - 48)), _ => acc, } };
 func revT(xs: List<lexer.Token>, acc: List<lexer.Token>) -> List<lexer.Token> {
   match xs { (h, t) => revT(t, (h, acc)), _ => acc, }
@@ -304,9 +362,12 @@ func pushGlyph(t: lexer.Token, rest: List<lexer.Token>, sig: List<(String, @)>, 
     _    => items(rest, sig, (funItem(Fn.prim(t.cp), t.col), acc)),
   }
 };
+// the items so far end in ← (an operator literal being named, D-95)
+func startsAssign(acc: List<Item>) -> Bool { match acc { (h, more) => match h { .asg(c) => true, _ => false, }, _ => false, } };
 func pushName(t: lexer.Token, rest: List<lexer.Token>, sig: List<(String, @)>, acc: List<Item>) -> Items {
   let c = cls(sig, t.text);
-  if isFnClass(c) { items(rest, sig, (funItem(Fn.user(t.text), t.col), acc)) }
+  if isOpClass(c) { pushOperator(Fn.user(t.text), c == 7, t.col, rest, sig, acc) }
+  else if isFnClass(c) { items(rest, sig, (funItem(Fn.user(t.text), t.col), acc)) }
   else if c == 5 { pushArr(Ast.nilad(t.text), t.col, false, false, rest, sig, acc) }
   else { pushArr(Ast.name(t.text), t.col, false, c == 0, rest, sig, acc) }
 };
@@ -341,7 +402,12 @@ func indexParts(parts: List<List<lexer.Token>>, sig: List<(String, @)>, acc: Lis
 func pushBrace(t: lexer.Token, rest: List<lexer.Token>, sig: List<(String, @)>, acc: List<Item>) -> Items {
   match matchTo(rest, 17, 18, 0, ~) {
     (inner, rest2, closed) => if not closed { sei(t.col, "unbalanced {{") }
-      else { items(rest2, sig, (funItem(Fn.dfn(Dfn( body: bodyLines(inner, 0, ~, ~) )), t.col), acc)) },
+      else {
+        let d = Dfn( body: bodyLines(inner, 0, ~, ~) );
+        let oc = opClassToks(inner, 0, 0);
+        if oc == 0 or startsAssign(acc) { items(rest2, sig, (funItem(Fn.dfn(d), t.col), acc)) }
+        else { pushOperator(Fn.dfn(d), oc == 7, t.col, rest2, sig, acc) }
+      },
   }
 };
 func pushBrack(t: lexer.Token, rest: List<lexer.Token>, sig: List<(String, @)>, acc: List<Item>) -> Items {
@@ -365,7 +431,11 @@ func pushBrack(t: lexer.Token, rest: List<lexer.Token>, sig: List<(String, @)>, 
           else { match inner {
             (k, krest) => match krest {
               (k2, krest2) => sei(t.col, "an axis is one numeral (D-82)"),
-              _ => if kindOf(k) == 1 { items(rest2, sig, (funItem(Fn.axis(Axis( f: x.f, k: natText(k.text) )), x.col), more)) }
+              _ => if kindOf(k) == 1 { items(rest2, sig, (funItem(Fn.axis(Axis( f: x.f, k: natText(k.text), half: false )), x.col), more)) }
+                else if kindOf(k) == 3 or kindOf(k) == 2 { match halfAxis(lexer.toCps(k.text.chars())) {
+                  (ok, kk) => if ok { items(rest2, sig, (funItem(Fn.axis(Axis( f: x.f, k: kk, half: true )), x.col), more)) }
+                    else { sei(t.col, "an axis is a natural or a fraction between two axes (D-82, D-92)") },
+                } }
                 else { sei(t.col, "an axis is one numeral (D-82)") },
             },
             _ => sei(t.col, "an axis is one numeral (D-82)"),
@@ -581,10 +651,17 @@ func parseGuarded(ts: List<lexer.Token>, sig: List<(String, @)>) -> Parsed {
         else {
           match lft {
             (l0, lr) => match rgt {
-              (r0, rr) => match parseExpr(lft, sig) {
+              (r0, rr) => if kindOf(r0) == 19 { match rr {
+                  (r1, rr2) => match parseExpr(lft, sig) {
+                    .err(e) => Parsed.err(e),
+                    .ok(c) => match parseExpr(rr, sig) { .err(e) => Parsed.err(e), .ok(x) => Parsed.ok(Ast.eguard(Guard( c: c, e: x ))), },
+                  },
+                  _ => se(1, "an error guard needs an expression after :: (D-94)"),
+                } }
+                else { match parseExpr(lft, sig) {
                 .err(e) => Parsed.err(e),
                 .ok(c) => match parseExpr(rgt, sig) { .err(e) => Parsed.err(e), .ok(x) => Parsed.ok(Ast.guard(Guard( c: c, e: x ))), },
-              },
+              } },
               _ => se(1, "a guard needs an expression after : (D-66)"),
             },
             _ => se(1, "a guard needs a condition before : (D-66)"),
@@ -608,10 +685,11 @@ func bindsAll(xs: List<Ast>, sig: List<(String, @)>) -> List<(String, @)> {
 func binds(a: Ast, sig: List<(String, @)>) -> List<(String, @)> {
   match a {
     .assign(s) => binds(s.v, bind(sig, s.nm, 1)),
-    .fassign(s) => bind(sig, s.nm, 4),
+    .fassign(s) => bind(sig, s.nm, match s.f { .dfn(d) => dfnClass(d), _ => 4, }),
     .iassign(s) => binds(s.v, bindsAll(s.ix, sig)),
     .sysassign(s) => binds(s.v, sig),
     .guard(g) => binds(g.e, binds(g.c, sig)),
+    .eguard(g) => binds(g.e, binds(g.c, sig)),
     .monad(m) => binds(m.r, sig),
     .dyad(d) => binds(d.l, binds(d.r, sig)),
     .index(ix) => bindsAll(ix.ix, binds(ix.a, sig)),
@@ -667,7 +745,8 @@ func showFn(f: Fn) -> String {
     .outer(g) => "∘." + showFn(g),
     .dfn(d) => "{{" + joinS(d.body, " ⋄ ") + "}}",
     .own => "∇",
-    .axis(x) => showFn(x.f) + "[{x.k}]",
+    .dop(x) => "(" + showFn(x.l) + " " + showFn(x.op) + (if x.two { " " + showFn(x.r) } else { "" }) + ")",
+    .axis(x) => if not x.half { showFn(x.f) + "[{x.k}]" } else if x.k == 0 { showFn(x.f) + "[¯0.5]" } else { showFn(x.f) + "[{x.k - 1}.5]" },
   }
 };
 func showAsts(xs: List<Ast>, sep: String) -> String {
@@ -700,6 +779,7 @@ func showAst(a: Ast) -> String {
     .sysassign(s) => "←(⎕" + s.nm + ", " + showAst(s.v) + ")",
     .fassign(s) => "←(" + s.nm + ", " + showFn(s.f) + ")",
     .guard(g) => ":(" + showAst(g.c) + ", " + showAst(g.e) + ")",
+    .eguard(g) => "::(" + showAst(g.c) + ", " + showAst(g.e) + ")",
     .cmd(c) => match c.args { (h, t) => ")" + c.nm + " " + joinS(c.args, " "), _ => ")" + c.nm, },
     .header(h) => showHeader(h),
     .stmts(ss) => showAsts(ss, " ⋄ "),

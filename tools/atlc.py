@@ -9,7 +9,8 @@
   atlc.py parse [CASE.atl ...]      run the PARSE corpus (default: tests/parse/*.atl)
 
 A parse case may open with `⍝ sig: n:a DIV:d` naming each name's class
-for the parser (a array, m monadic, d dyadic, b ambivalent, n niladic);
+for the parser (a array, m monadic, d dyadic, b ambivalent, n niladic,
+o monadic dfn operator, p dyadic dfn operator);
 every other name is unbound.
 
 The runner turns the cases into ONE Jock program (tests/gen/corpus.jock)
@@ -33,7 +34,7 @@ GS, RS, US = "\x1d", "\x1e", "\x1f"
 BATCH = int(os.environ.get("ATL_BATCH", "1000"))   # cases per generated program; one program by default (S-13 closed)
 
 
-CLASSES = {"a": 1, "m": 2, "d": 3, "b": 4, "n": 5}
+CLASSES = {"a": 1, "m": 2, "d": 3, "b": 4, "n": 5, "o": 6, "p": 7}
 
 
 def parse_case(path):

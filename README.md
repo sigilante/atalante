@@ -1,6 +1,6 @@
 # ATaLante:  Golden APL
 
-**STATUS ~2026.11.03:  The project is at v0.2 in progress, implementing dialect v1 plus P8 (dfns with guards), P9 (nested arrays) and P10 (the held-back primitives and axis specification).**
+**STATUS ~2026.11.04:  The project is at v0.2 in progress, implementing dialect v1 plus P8 (dfns with guards), P9 (nested arrays), P10 (the held-back primitives and axis specification), P11 (float jets under jojo) and the rest of the spec's §9 (laminate, dfn operators, `⍺←`, error guards).**
 
 ![](./logo.jpg)
 
@@ -122,6 +122,30 @@ Axis specification and the primitives v1 held back (D-82 to D-91):
 2 3 ¯1
 ```
 
+Laminate, partition past rank 1, and dfn operators, defaults and error guards (D-92 to D-95):
+
+```apl
+🍎> 1 2 3,[0.5]4 5 6
+1 2 3
+4 5 6
+
+🍎> 1 1 2⊂2 3⍴⍳6
+(1 2) (,3)
+(4 5) (,6)
+
+🍎> R←{⍺⍺/⍵}
+🍎> ×R 1 2 3 4
+24
+
+🍎> F←{⍺←10 ⋄ ⍺+⍵}
+🍎> F 1
+11
+
+🍎> H←{5::'len' ⋄ 1 2+⍵}
+🍎> H 1 2 3
+len
+```
+
 `[k]` names an axis after `⌽ ⊖ , / \` and after a reduction or scan; reductions, scans, replicate, expand, reverse, rotate, take and drop work on any rank; `⍪` tables and catenates on the first axis; `⊥ ⊤` take integers and reals; `⍕` formats to fixed point; `⍎` executes a line in the current environment; `⌹` inverts, solves and fits by least squares.
 
 From an input file (the Caesar cipher):
@@ -187,15 +211,17 @@ tools/atlc.sh repl-test     # the README typed at the live prompt, 28 lines
 | build the kernel jam | about 3.5 min |
 | first boot under jojo (later boots are checkpointed) | 75 s |
 | a README line at the prompt | 0.3 s |
-| `+/` over 100,000 elements, generic path | 13 s |
-| `+/` over 100,000 elements, specialised gate | about 1 s |
+| `+/` over 100,000 naturals, both paths (the default) | 4 s |
+| `+/` over 100,000 naturals, `)PATH EMIT` | 0.3 s |
+| `+/1.5×v` over 100,000 elements, both paths | 31 s |
+| `⍳100000` | 0.3 s |
 
-NockVM jets integer arithmetic and nothing on floats, so real-valued work costs about 0.3 ms an operation.
+Measured under jojo with `tools/bench-repl.py` on 2026-11-04. Jojo jets the float doors and Lagoon's `%i754` arms (P11). By default the red prompt runs every statement twice, through the interpreter and the emitted formula, and compares them. `)PATH EMIT` runs the emitted formula alone. Printing a large array is the slow step: 100,000 reals take about two minutes on either path (roadmap P11b).
 
 ## What is held back
 
-- A nested array is a list of arrays on the Jock side, outside the Lagoon layout and the specialised gates (P11).  Partition takes a vector; `⍕` and `⍷` take rank at most 2; a fractional axis (laminate by `[k]`) is held back.
-- Dfns have guards and nothing else for control flow (D-32, D-63); `→` and labels are omitted for good.  Dfn operators (`⍺⍺ ⍵⍵`), a default left argument (`⍺←`) and error guards (`::`) are on the roadmap.
+- A nested array is a list of arrays on the Jock side, outside the specialised gates. Its structural work runs on a `%uint` index ray, so it needs no Lagoon layout of its own (P11).
+- Dfns have guards and nothing else for control flow (D-32, D-63); `→` and labels are omitted for good.  A dfn operator takes function operands only; array operands and `∇∇` are held back (D-95).
 - Input is Unicode; the ASCII spellings `- * | ~` are canonical (D-9) and nothing else is transliterated (D-8).
 - `⎕TYPE` is a reserved name (D-15): it parses, and reading or assigning it refuses with `%unimplemented`.
 

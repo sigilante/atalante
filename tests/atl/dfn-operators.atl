@@ -1,0 +1,21 @@
+⍝ D-95: a dfn naming ⍺⍺ is a monadic operator, one naming ⍵⍵ a dyadic one
+🍎> +{⍺⍺/⍵}1 2 3
+⍝ expect: 6
+🍎> ×{⍵⍵ ⍺⍺ ⍵}- 3
+⍝ expect: ¯1
+🍎> 2 +{⍺ ⍺⍺ ⍵} 3
+⍝ expect: 5
+🍎> R←{⍺⍺/⍵}
+🍎> +R 1 2 3
+⍝ expect: 6
+🍎> ×R 1 2 3 4
+⍝ expect: 24
+🍎> TW←{⍺⍺ ⍺⍺ ⍵}
+🍎> {⍵+1}TW 5
+⍝ expect: 7
+🍎> D←{⍺⍺ ⍵⍵ ⍵}
+🍎> ⌽D⍳ 3
+⍝ expect: 3 2 1
+🍎> DIV←{⍺÷⍵}
+🍎> 1 DIV{⍺ ⍺⍺ ⍵}4
+⍝ expect: 0.25

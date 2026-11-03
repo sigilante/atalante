@@ -21,3 +21,16 @@
 ⍝ expect: 9
 🍎> 2⍕'ab'
 ⍝ refuse: %domain-error
+⍝ D-88 past rank 2: B's leading axes by the text width, columns aligned across planes
+🍎> ⍴⍕2 2 3⍴⍳12
+⍝ expect: 2 2 8
+🍎> ⍕2 2 3⍴⍳12
+⍝ expect:  1  2  3
+⍝ expect:  4  5  6
+⍝ expect:
+⍝ expect:  7  8  9
+⍝ expect: 10 11 12
+🍎> ⍴2⍕2 2 3⍴⍳12
+⍝ expect: 2 2 17
+🍎> ⍴6 1⍕2 2 2⍴⍳8
+⍝ expect: 2 2 12
