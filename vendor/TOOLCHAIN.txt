@@ -26,9 +26,9 @@ nockvm      two NockVMs.  honk-kick's, in-tree at the honk pin above, has
             nockchain/nockchain @ b9dd5af (2026-08-30), runs with numerics' hoon-float-jets and lagoon-jets in
             its hot table (P11), so the REPL's reals run jetted.
 
-jojo        github.com/sigilante/jojo @ 3beadb8 (2026-11-04, PR #15 merged to main:
-            atalante.jam at c84de98, P11; runtime at nockchain b9dd5af with the
-            float and Lagoon jets), release build (cargo build --release);
+jojo        github.com/sigilante/jojo @ 98bbb22 (2026-11-04, PR #16 merged to main:
+            atalante.jam at 6af8efe, P12; runtime at nockchain b9dd5af with the
+            float and Lagoon jets since PR #15), release build (cargo build --release);
             tools/atl-repl.sh takes the checkout as $JOJO.  It carries its
             own nockapp and nockvm crates in-tree, so it pins its runtime
             by itself.  This commit adds --prompt and the [%prompt cord]
