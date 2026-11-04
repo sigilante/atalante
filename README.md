@@ -1,6 +1,6 @@
 # ATaLante:  Golden APL
 
-**STATUS ~2026.11.04:  The project is at v0.2 in progress, implementing dialect v1 plus P8 (dfns with guards), P9 (nested arrays), P10 (the held-back primitives and axis specification), P11 (float jets under jojo) and the rest of the spec's §9 (laminate, dfn operators, `⍺←`, error guards).**
+**STATUS ~2026.11.04:  The project is at v0.2 in progress, implementing dialect v1 plus P8 (dfns with guards), P9 (nested arrays), P10 (the held-back primitives and axis specification), P11 (float jets under jojo), the rest of the spec's §9 (laminate, dfn operators, `⍺←`, error guards) and P12 (ASCII input and `⎕TYPE` widths).**
 
 ![](./logo.jpg)
 
@@ -146,6 +146,24 @@ Laminate, partition past rank 1, and dfn operators, defaults and error guards (D
 len
 ```
 
+ASCII words under `)ASCII ON`, and storage widths per kind under `⎕TYPE` (D-8, D-15):
+
+```apl
+🍎> )ASCII ON
+ascii ON
+🍎> 2 3 rho iota 6
+1 2 3
+4 5 6
+🍎> )ASCII OFF
+ascii OFF
+
+🍎> ⎕TYPE←'UINT8 REAL32'
+🍎> 200+100
+44
+🍎> 1÷3
+0.33333334
+```
+
 `[k]` names an axis after `⌽ ⊖ , / \` and after a reduction or scan; reductions, scans, replicate, expand, reverse, rotate, take and drop work on any rank; `⍪` tables and catenates on the first axis; `⊥ ⊤` take integers and reals; `⍕` formats to fixed point; `⍎` executes a line in the current environment; `⌹` inverts, solves and fits by least squares.
 
 From an input file (the Caesar cipher):
@@ -222,8 +240,7 @@ Measured under jojo with `tools/bench-repl.py` on 2026-11-04. Jojo jets the floa
 
 - A nested array is a list of arrays on the Jock side, outside the specialised gates. Its structural work runs on a `%uint` index ray, so it needs no Lagoon layout of its own (P11).
 - Dfns have guards and nothing else for control flow (D-32, D-63); `→` and labels are omitted for good.  A dfn operator takes function operands only; array operands and `∇∇` are held back (D-95).
-- Input is Unicode; the ASCII spellings `- * | ~` are canonical (D-9) and nothing else is transliterated (D-8).
-- `⎕TYPE` is a reserved name (D-15): it parses, and reading or assigning it refuses with `%unimplemented`.
+- `⎕PP` stops at 17 digits, so a `REAL128` value prints fewer digits than it carries (D-15).
 
 ## Layout
 

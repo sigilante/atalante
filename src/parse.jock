@@ -369,8 +369,50 @@ func pushName(t: lexer.Token, rest: List<lexer.Token>, sig: List<(String, @)>, a
   if isOpClass(c) { pushOperator(Fn.user(t.text), c == 7, t.col, rest, sig, acc) }
   else if isFnClass(c) { items(rest, sig, (funItem(Fn.user(t.text), t.col), acc)) }
   else if c == 5 { pushArr(Ast.nilad(t.text), t.col, false, false, rest, sig, acc) }
-  else { pushArr(Ast.name(t.text), t.col, false, c == 0, rest, sig, acc) }
+  else { pushArr(Ast.name(t.text), t.col, false, c == 0 and not assignedIn(rest, t.text, 0), rest, sig, acc) }
 };
+// --- S-24: unbound reads in evaluation order --------------------------------------------
+// the tokens to the right assign nm outside any dfn: evaluation runs right to left, so a
+// read of nm to the left of `nm ←` finds it bound
+func assignedIn(ts: List<lexer.Token>, nm: String, depth: @) -> Bool {
+  match ts {
+    (t, rest) => {
+      let k = kindOf(t);
+      if k == 17 { assignedIn(rest, nm, depth + 1) }
+      else if k == 18 { assignedIn(rest, nm, if depth > 0 { depth - 1 } else { 0 }) }
+      else if k == 5 and depth == 0 and t.text == nm and nextIsAssign(rest) { true }
+      else { assignedIn(rest, nm, depth) }
+    },
+    _ => false,
+  }
+};
+func nextIsAssign(ts: List<lexer.Token>) -> Bool { match ts { (t, rest) => kindOf(t) == 14, _ => false, } };
+// the rightmost unbound read of a statement, the first one evaluation reaches: (found, column, name)
+func lastUnbound(ts: List<lexer.Token>, sig: List<(String, @)>, depth: @, found: Bool, col: @, nm: String) -> (Bool, @, String) {
+  match ts {
+    (t, rest) => {
+      let k = kindOf(t);
+      if k == 17 { lastUnbound(rest, sig, depth + 1, found, col, nm) }
+      else if k == 18 { lastUnbound(rest, sig, if depth > 0 { depth - 1 } else { 0 }, found, col, nm) }
+      else if k == 5 and depth == 0 and cls(sig, t.text) == 0 and not nextIsAssign(rest) and not assignedIn(rest, t.text, 0) { lastUnbound(rest, sig, depth, true, t.col, t.text) }
+      else { lastUnbound(rest, sig, depth, found, col, nm) }
+    },
+    _ => (found, col, nm),
+  }
+};
+// a VALUE ERROR for an unbound name blames the rightmost unbound read (S-24)
+func blameLast(r: Parsed, ts: List<lexer.Token>, sig: List<(String, @)>) -> Parsed {
+  match r {
+    .err(e) => if e.tag == "%value-error" and endsDefined(e.hint) {
+        match lastUnbound(ts, sig, 0, false, 0, "") { (found, col, nm) => if found { Parsed.err(pe("%value-error", col, nm + " is not defined")) } else { r }, }
+      } else { r },
+    _ => r,
+  }
+};
+func endsDefined(h: String) -> Bool { endsWithCps(lexer.toCps(h.chars()), lexer.toCps(" is not defined".chars())) };
+func endsWithCps(xs: List<@>, suf: List<@>) -> Bool { let n = countCps(xs); let m = countCps(suf); if m > n { false } else { dropCps(xs, n - m) == suf } };
+func countCps(xs: List<@>) -> @ { match xs { (h, t) => 1 + countCps(t), _ => 0, } };
+func dropCps(xs: List<@>, n: @) -> List<@> { if n == 0 { xs } else { match xs { (h, t) => dropCps(t, n - 1), _ => ~, } } };
 func pushParen(t: lexer.Token, rest: List<lexer.Token>, sig: List<(String, @)>, acc: List<Item>) -> Items {
   match matchTo(rest, 9, 10, 0, ~) {
     (inner, rest2, closed) => if not closed { sei(t.col, "unbalanced (") }
@@ -638,7 +680,7 @@ func parseStmt(ts: List<lexer.Token>, sig: List<(String, @)>) -> Parsed {
     (t, rest) => match kindOf(t) {
       7  => Parsed.ok(Ast.cmd(Cmd( nm: t.text, args: texts(rest) ))),
       15 => if inBody(sig) { parseGuarded(ts, sig) } else { match rest { (t2, r2) => parseHeader(rest, t.col), _ => Parsed.ok(Ast.fnend), } },
-      _  => parseGuarded(ts, sig),
+      _  => blameLast(parseGuarded(ts, sig), ts, sig),
     },
     _ => Parsed.ok(Ast.empty),
   }

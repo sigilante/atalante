@@ -41,8 +41,17 @@ def wait_prompt(timeout):
     return False
 
 
+def trimmed():
+    """the pane without its empty tail:  blank lines INSIDE an answer are kept (a rank-3
+    display parts its planes with them), only the screen's unused rows are dropped"""
+    lines = pane()
+    while lines and lines[-1] == "":
+        lines.pop()
+    return lines
+
+
 def send(line, timeout=120, open_brace=False, continued=False):
-    before = len([l for l in pane() if l != ""])
+    before = len(trimmed())
     subprocess.run(["tmux", "send-keys", "-t", SESSION, line, "Enter"])
     time.sleep(0.3)
     if open_brace:                  # jojo reads on to the closing brace: no prompt yet (D-69)
@@ -50,13 +59,17 @@ def send(line, timeout=120, open_brace=False, continued=False):
         return ""
     if not wait_prompt(timeout):
         return None
-    lines = [l for l in pane() if l != ""]
+    lines = trimmed()
     out = lines[before:]            # the echoed command, the output, the fresh prompt
+    while out and out[0] == "":
+        out = out[1:]
     if out and any(out[0].startswith(p + " ") for p in PROMPTS):
         out = out[1:]
     elif continued and out and out[0] == line:   # a continuation line echoes with no prompt
         out = out[1:]
     if out and out[-1] in PROMPTS:
+        out = out[:-1]
+    while out and out[-1] == "":
         out = out[:-1]
     return "\n".join(out)
 

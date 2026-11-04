@@ -1,6 +1,6 @@
 # Atalante — Roadmap
 
-**Status: P8, P9 and P10 landed 2026-11-03; P11 landed 2026-11-04 on the float half of its exit; P11b is profiled with its first fixes in; the rest of §9 landed the same day; P12 and the hosts remain.** v0.1.1 implements dialect v1 in full ([release notes](release-v0.1.md)). This file carries what comes after, in the plan's shape: numbered phases from P8, each with its scope, the rules it closes, a mechanical exit test, and what it waits on. The order below is a dependency order and a recommendation; the maintainer rules it. A phase lands as the P0–P7 phases did ([plan.md §3](plan.md)): with its vectors, recorded in the plan with numbers, and the spec's rules pinned.
+**Status: P8, P9 and P10 landed 2026-11-03; P11 landed 2026-11-04 on the float half of its exit; P11b is profiled with its first fixes in; the rest of §9 and P12 landed the same day; the rest of P11b and the hosts remain.** v0.1.1 implements dialect v1 in full ([release notes](release-v0.1.md)). This file carries what comes after, in the plan's shape: numbered phases from P8, each with its scope, the rules it closes, a mechanical exit test, and what it waits on. The order below is a dependency order and a recommendation; the maintainer rules it. A phase lands as the P0–P7 phases did ([plan.md §3](plan.md)): with its vectors, recorded in the plan with numbers, and the spec's rules pinned.
 
 Two facts fix most of the order. Nested arrays change the array model every structural function sits on, so they precede the primitives that need them (`⍷ ⍪ ≡`, dyadic `⍕`). Dfns need `⍺ ⍵` and guards in the parser before the emitter can see them, so they are a phase of their own and come first, since nothing else depends on them and they are what the v1 tradfn programmer reaches for next.
 
@@ -23,6 +23,7 @@ Two facts fix most of the order. Nested arrays change the array model every stru
 **P12 — The deferred rulings (ruled 2026-11-04).** D-8: bare ASCII words in a `)ASCII ON` session mode, one lowercase word per glyph, rewritten ahead of the lexer with columns kept. D-15: `⎕TYPE` as a per-kind storage width, `UINT8`–`UINT64`, `INT8`–`INT64` and `REAL16`–`REAL128`, which means the array model leaves bloq 6, D-11's promotion learns mixed widths, and every primitive wraps or rounds at its width. S-24, the column a green-prompt refusal blames: the rightmost unbound name, as evaluation order would.
 *Exit:* a corpus case typed in ASCII under `)ASCII ON` gives the Unicode case's output; `⎕TYPE` vectors for every name, wrapping and rounding at each width; S-24's refusal blames column 25 on the README sieve with R unbound.
 *Waits on:* nothing: both rulings are in. D-15 is the larger half.
+**LANDED 2026-11-04** ([plan §3](plan.md)): `)ASCII ON` with a 51-word table, `⎕TYPE` as per-kind widths through width-dispatching float arms, and S-24's column. The README typed in ASCII gives the Unicode output, 30/30; `⎕TYPE` wraps and rounds at every width in `atl/types`; the sieve refuses at column 25.
 
 ## Performance
 

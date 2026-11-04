@@ -19,15 +19,103 @@ struct Arr { kind: @, ray: lagoon.Ray, items: List<Arr> };
 
 // --- construction and reading --------------------------------------------------
 func lagKind(k: @) -> Term { match k { 2 => %int2, 3 => %i754, _ => %uint, } };
-func metaOf(k: @, shp: List<@>) -> lagoon.Meta { lagoon.Meta( shape: shp, bloq: 6, kind: lagKind(k), tail: 0 ) };
-func make(k: @, shp: List<@>, vs: List<@>) -> Arr { Arr( kind: k, ray: lagoon.from(metaOf(k, shp), vs), items: ~ ) };
+func metaOf(k: @, shp: List<@>) -> lagoon.Meta { metaB(k, 6, shp) };
+func metaB(k: @, b: @, shp: List<@>) -> lagoon.Meta { lagoon.Meta( shape: shp, bloq: b, kind: lagKind(k), tail: 0 ) };
+// Naturals and integers are built at 64 bits, the computing width; reals at the width their
+// values carry (D-15: a real of another width than 64 travels tagged, see `tagged` below)
+func make(k: @, shp: List<@>, vs: List<@>) -> Arr {
+  if k == 3 and not allRaw(vs) { makeReal(maxTagW(vs, 0), shp, vs) } else { Arr( kind: k, ray: lagoon.from(metaOf(k, shp), vs), items: ~ ) }
+};
+func allRaw(vs: List<@>) -> Bool { match vs { (v, t) => if v < two128() { allRaw(t) } else { false }, _ => true, } };
+// at bloq b: naturals and integers wrap to it (Lagoon's +rep keeps each element's low bits)
+func makeB(k: @, b: @, shp: List<@>, vs: List<@>) -> Arr {
+  if k == 3 { makeReal(b, shp, vs) } else { Arr( kind: k, ray: lagoon.from(metaB(k, b, shp), vs), items: ~ ) }
+};
+// a real array at width w:  every value converted to w and stored untagged
+func makeReal(w: @, shp: List<@>, vs: List<@>) -> Arr { Arr( kind: 3, ray: lagoon.from(metaB(3, w, shp), rawsAt(vs, w, ~)), items: ~ ) };
+func rawsAt(vs: List<@>, w: @, acc: List<@>) -> List<@> { match vs { (v, t) => rawsAt(t, w, (rawAt(v, w), acc)), _ => revL(acc, ~), } };
 func scalar(k: @, v: @) -> Arr { make(k, ~, [v]) };
 func shape(a: Arr) -> List<@> { a.ray.meta.shape };
-func vals(a: Arr) -> List<@> { lagoon.ravel(a.ray) };
+func vals(a: Arr) -> List<@> {
+  let b = a.ray.meta.bloq;
+  if b == 6 or a.kind == 1 or a.kind == 4 or a.kind == 5 { lagoon.ravel(a.ray) }
+  else if a.kind == 2 { sextAll(lagoon.ravel(a.ray), b, ~) }
+  else { tagAll(lagoon.ravel(a.ray), b, ~) }
+};
+func bloqOf(a: Arr) -> @ { a.ray.meta.bloq };
+// an integer stored in 2^b bits, read as 64-bit two's complement (the computing width)
+func sextAll(xs: List<@>, b: @, acc: List<@>) -> List<@> { match xs { (x, t) => sextAll(t, b, (sext(x, b), acc)), _ => revL(acc, ~), } };
+func sext(x: @, b: @) -> @ { let bits = pow2(pow2(b)); if x >= bits / 2 { x + (two64() - bits) } else { x } };
+func pow2(n: @) -> @ { if n == 0 { 1 } else { 2 * pow2(n - 1) } };
+func two64() -> @ { 18446744073709551616 };
+func tagAll(xs: List<@>, w: @, acc: List<@>) -> List<@> { match xs { (x, t) => tagAll(t, w, (tagged(w, x), acc)), _ => revL(acc, ~), } };
 func count(xs: List<@>) -> @ { match xs { (h, t) => 1 + count(t), _ => 0, } };
 func size(shp: List<@>) -> @ { match shp { (h, t) => h * size(t), _ => 1, } };
 func rank(a: Arr) -> @ { count(shape(a)) };
 func first(a: Arr) -> @ { match vals(a) { (h, t) => h, _ => 0, } };
+
+// --- real widths (D-15) ---------------------------------------------------------
+// A real value in the interpreter is the bits of its width, and a width other than 64
+// travels with it: bits + c·2^128, c = 1 half, 2 single, 3 quad. A 64-bit real is its bare
+// bits, so every path at the default width reads exactly what it read before.
+func two128() -> @ { 340282366920938463463374607431768211456 };
+func tagCode(w: @) -> @ { if w == 4 { 1 } else if w == 5 { 2 } else if w == 7 { 3 } else { 0 } };
+func widthOf(x: @) -> @ { let c = x / two128(); if c == 1 { 4 } else if c == 2 { 5 } else if c == 3 { 7 } else { 6 } };
+func rawOf(x: @) -> @ { x % two128() };
+func tagged(w: @, raw: @) -> @ { raw + tagCode(w) * two128() };
+// x's bits at width w (rounded to nearest-even when narrowing, exact when widening)
+func rawAt(x: @, w: @) -> @ { let v = widthOf(x); if v == w { rawOf(x) } else { lagoon.fconv(v, w, rawOf(x)) } };
+func toWidth(x: @, w: @) -> @ { tagged(w, rawAt(x, w)) };
+// not ±infinity or NaN:  the exponent field is not all ones (half 5 bits over 10, single 8 over
+// 23, double 11 over 52, quad 15 over 112)
+func finite(x: @) -> Bool {
+  let w = widthOf(x);
+  let mb = if w == 4 { 10 } else if w == 5 { 23 } else if w == 7 { 112 } else { 52 };
+  let eb = if w == 4 { 5 } else if w == 5 { 8 } else if w == 7 { 15 } else { 11 };
+  let top = pow2(eb) - 1;
+  ((rawOf(x) / pow2(mb)) % pow2(eb)) != top
+};
+// +0 is all-zero bits at every width, so a bare 0 (a fill, a computed zero) sets no width
+func maxTagW(vs: List<@>, m: @) -> @ { match vs { (v, t) => maxTagW(t, if v == 0 { m } else { maxW(m, widthOf(v)) }), _ => if m == 0 { 6 } else { m }, } };
+func maxW(a: @, b: @) -> @ { if a > b { a } else { b } };
+// two reals at one width:  the wider of theirs (each primitive first brings its operands to
+// the session's width, so this is a fallback for values of an older width)
+func pairW(x: @, y: @) -> @ { if x == 0 { widthOf(y) } else if y == 0 { widthOf(x) } else { maxW(widthOf(x), widthOf(y)) } };
+func both64(x: @, y: @) -> Bool { x < two128() and y < two128() };
+// o: 1 add 2 sub 3 mul 4 div
+func rop(o: @, x: @, y: @) -> @ {
+  if both64(x, y) { fbits(if o == 1 { hoon.radd(freal(x), freal(y)) } else if o == 2 { hoon.rsub(freal(x), freal(y)) } else if o == 3 { hoon.rmul(freal(x), freal(y)) } else { hoon.rdiv(freal(x), freal(y)) }) }
+  else { let w = pairW(x, y); tagged(w, lagoon.fop(w, o, rawAt(x, w), rawAt(y, w))) }
+};
+// o: 1 lth 2 lte 3 gth 4 gte
+func rcmp(o: @, x: @, y: @) -> Bool {
+  if both64(x, y) { if o == 1 { hoon.rlth(freal(x), freal(y)) } else if o == 2 { hoon.rlte(freal(x), freal(y)) } else if o == 3 { hoon.rgth(freal(x), freal(y)) } else { hoon.rgte(freal(x), freal(y)) } }
+  else { let w = pairW(x, y); lagoon.fcmp(w, o, rawAt(x, w), rawAt(y, w)) }
+};
+// o: 1 sqt 2 exp 3 log 4 sin 5 cos 6 tan 7 asin 8 acos 9 atan 10 factorial
+func rfun(o: @, x: @) -> @ {
+  if x < two128() {
+    let f = freal(x);
+    fbits(if o == 1 { lagoon.rsqt(f) } else if o == 2 { lagoon.rexp(f) } else if o == 3 { lagoon.rlog(f) } else if o == 4 { lagoon.rsin(f) } else if o == 5 { lagoon.rcos(f) }
+      else if o == 6 { lagoon.rtan(f) } else if o == 7 { lagoon.rasin(f) } else if o == 8 { lagoon.racos(f) } else if o == 9 { lagoon.ratan(f) } else { lagoon.rfact(f) })
+  } else { let w = widthOf(x); tagged(w, lagoon.fun(w, o, rawOf(x))) }
+};
+func rpow(x: @, y: @) -> @ { if both64(x, y) { fbits(lagoon.rpow(freal(x), freal(y))) } else { let w = pairW(x, y); tagged(w, lagoon.fpow(w, rawAt(x, w), rawAt(y, w))) } };
+func rpiAt(w: @) -> @ { if w == 6 { fbits(lagoon.rpi(0)) } else { tagged(w, lagoon.fpi(w)) } };
+func rsunAt(w: @, n: @) -> @ { if w == 6 { fbits(lagoon.rsun(n)) } else { tagged(w, lagoon.fsun(w, n)) } };
+// m: the rounding mode as its letter's code, 100 (%d) floor, 117 (%u) ceiling, 110 (%n) nearest;
+// the answer is a ZigZag @s as bare bits
+func rtoi(m: @, x: @) -> @ {
+  if x < two128() { if m == 100 { lagoon.rflo(freal(x)) ?? 0 } else if m == 117 { lagoon.rcei(freal(x)) ?? 0 } else { lagoon.rtoi(freal(x)) ?? 0 } }
+  else { lagoon.ftoi(widthOf(x), m, rawOf(x)) ?? 0 }
+};
+func rsanLike(x: @, z: @) -> @ { if x < two128() { fbits(lagoon.rsan(z)) } else { let w = widthOf(x); tagged(w, lagoon.fsan(w, z)) } };
+func rdrg(x: @) -> (Bool, @, @) { if x < two128() { lagoon.rdrg(freal(x)) } else { lagoon.fdrg(widthOf(x), rawOf(x)) } };
+// the constants of x's width
+func zeroLike(x: @) -> @ { tagged(widthOf(x), 0) };
+func oneLike(x: @) -> @ { rsunAt(widthOf(x), 1) };
+// a decimal (sign, exponent as ZigZag bits, mantissa) at width w, correctly rounded
+func rgrd(w: @, pos: Bool, e: @, m: @) -> @ { tagged(w, lagoon.fgrd(w, pos, e, m)) };
 func relabel(r: lagoon.Ray, k: Term) -> lagoon.Ray {
   lagoon.Ray( meta: lagoon.Meta( shape: r.meta.shape, bloq: r.meta.bloq, kind: k, tail: r.meta.tail ), data: r.data )
 };
@@ -108,28 +196,45 @@ func firstDim(shp: List<@>) -> @ { match shp { (d, ds) => d, _ => 1, } };
 func isNeg(x: @) -> Bool { lagoon.tmsb(x) == 1 };                       // int2 sign
 func fbits(f: Float64) -> @ { f as! @ };
 func freal(x: @) -> Float64 { x as! Float64 };
-func natToReal(x: @) -> @ { fbits(lagoon.rsun(x)) };
-func intToReal(x: @) -> @ { if isNeg(x) { fbits(hoon.rsub(0.0, lagoon.rsun(lagoon.tabs(x)))) } else { natToReal(x) } };
+func natToReal(x: @) -> @ { natToRealAt(6, x) };
+func intToReal(x: @) -> @ { intToRealAt(6, x) };
+func natToRealAt(w: @, x: @) -> @ { rsunAt(w, x) };
+func intToRealAt(w: @, x: @) -> @ { if isNeg(x) { rop(2, tagged(w, 0), rsunAt(w, lagoon.tabs(x))) } else { rsunAt(w, x) } };
 // a ZigZag @s (crossing as bare bits) -> int2 bits
 func sToInt(z: @) -> @ { lagoon.ts2t(z) };
-func realIsNeg(x: @) -> Bool { hoon.rlth(freal(x), 0.0) };
+func realIsNeg(x: @) -> Bool { rcmp(1, x, zeroLike(x)) };
 func pow10(n: @) -> @ { if n == 0 { 1 } else { 10 * pow10(n - 1) } };
 
 // --- promotion (D-11) ------------------------------------------------------------
-func toReal(a: Arr) -> Arr {
+func toReal(a: Arr) -> Arr { toRealAt(a, 6) };
+// a numeric array as reals of width w (D-11, D-15)
+func toRealAt(a: Arr, w: @) -> Arr {
   match a.kind {
-    1 => Arr( kind: 3, ray: lagoon.change(a.ray, %i754, 6), items: ~ ),   // +change: linear, +sun:rd's rounding, any rank since numerics #94 (S-23, S-25 closed at P11)
-    2 => mapArr(a, 3, intToReal),
+    1 => if bloqOf(a) == 6 { Arr( kind: 3, ray: lagoon.change(a.ray, %i754, w), items: ~ ) } else { makeReal(w, shape(a), natsAt(w, vals(a), ~)) },   // +change: linear, +sun's rounding, any rank since numerics #94
+    2 => makeReal(w, shape(a), intsAt(w, vals(a), ~)),
+    3 => if bloqOf(a) == w { a } else { makeReal(w, shape(a), vals(a)) },
     _ => a,
   }
 };
-func toInt(a: Arr) -> Arr { match a.kind { 1 => Arr( kind: 2, ray: relabel(a.ray, %int2), items: ~ ), _ => a, } };
+func natsAt(w: @, xs: List<@>, acc: List<@>) -> List<@> { match xs { (x, t) => natsAt(w, t, (natToRealAt(w, x), acc)), _ => revL(acc, ~), } };
+func intsAt(w: @, xs: List<@>, acc: List<@>) -> List<@> { match xs { (x, t) => intsAt(w, t, (intToRealAt(w, x), acc)), _ => revL(acc, ~), } };
+func toInt(a: Arr) -> Arr { match a.kind { 1 => if bloqOf(a) == 6 { Arr( kind: 2, ray: relabel(a.ray, %int2), items: ~ ) } else { make(2, shape(a), vals(a)) }, _ => a, } };
 func promote(a: Arr, k: @) -> Arr { match k { 3 => toReal(a), 2 => toInt(a), _ => a, } };
+func promoteAt(a: Arr, k: @, w: @) -> Arr { match k { 3 => toRealAt(a, w), 2 => toInt(a), _ => a, } };
+// an array as the session would make it (D-15):  naturals at nb, integers at ib, reals at rb
+func narrow(a: Arr, nb: @, ib: @, rb: @) -> Arr {
+  let b = bloqOf(a);
+  if a.kind == 1 { if b == nb { a } else { makeB(1, nb, shape(a), vals(a)) } }
+  else if a.kind == 2 { if b == ib { a } else { makeB(2, ib, shape(a), vals(a)) } }
+  else if a.kind == 3 { if b == rb { a } else { makeReal(rb, shape(a), vals(a)) } }
+  else { a }
+};
 func maxk(a: @, b: @) -> @ { if a > b { a } else { b } };
 
 // --- scalar extension (D-25):  (a', b', tag);  tag "" when the shapes agree
 // a scalar repeated to a shape: Lagoon's +fill builds through +reap, unjetted under jojo and quadratic as a non-tail recursion (P11b)
-func spread(a: Arr, shp: List<@>) -> Arr { Arr( kind: a.kind, ray: lagoon.from(metaOf(a.kind, shp), repL(first(a), size(shp))), items: a.items ) };
+func spread(a: Arr, shp: List<@>) -> Arr { if a.kind == 3 { makeReal(bloqOf(a), shp, repL(first(a), size(shp))) } else { Arr( kind: a.kind, ray: lagoon.from(metaB(a.kind, bloqOf(a), shp), repL(rawFirst(a), size(shp))), items: a.items ) } };
+func rawFirst(a: Arr) -> @ { match lagoon.ravel(a.ray) { (h, t) => h, _ => 0, } };
 func extend(a: Arr, b: Arr) -> (Arr, Arr, String) {
   if shape(a) == shape(b) { (a, b, "") }
   else if size(shape(a)) == 1 { (spread(a, shape(b)), b, "") }
@@ -151,7 +256,10 @@ func revA(xs: List<Arr>, acc: List<Arr>) -> List<Arr> { match xs { (h, t) => rev
 func allSimpleScalars(xs: List<Arr>) -> Bool { match xs { (h, t) => if isSimpleScalar(h) { allSimpleScalars(t) } else { false }, _ => true, } };
 func oneClass(xs: List<Arr>, c: @) -> Bool { match xs { (h, t) => if classOf(h) == c { oneClass(t, c) } else { false }, _ => true, } };
 func maxKindA(xs: List<Arr>, k: @) -> @ { match xs { (h, t) => maxKindA(t, maxk(k, h.kind)), _ => k, } };
-func firstValsA(xs: List<Arr>, k: @) -> List<@> { match xs { (h, t) => (first(promote(h, k)), firstValsA(t, k)), _ => ~, } };
+func firstValsA(xs: List<Arr>, k: @) -> List<@> { let w = realWA(xs, 0); firstValsAt(xs, k, w) };
+func firstValsAt(xs: List<Arr>, k: @, w: @) -> List<@> { match xs { (h, t) => (first(promoteAt(h, k, w)), firstValsAt(t, k, w)), _ => ~, } };
+// the widest real width among the arrays, 6 when none is real (a join's width, D-15)
+func realWA(xs: List<Arr>, m: @) -> @ { match xs { (h, t) => realWA(t, if h.kind == 3 { maxW(m, bloqOf(h)) } else { m }), _ => if m == 0 { 6 } else { m }, } };
 // a box of the given shape over elements in ravel order
 func boxOf(shp: List<@>, xs: List<Arr>) -> Arr { Arr( kind: 5, ray: lagoon.from(metaOf(1, shp), iotaL(countA(xs), 1)), items: xs ) };
 // D-70's normal form: all simple scalars of one class make a simple array
@@ -217,7 +325,7 @@ func placeDigits(a: @, pneg: Bool, pmag: @, pp: @) -> String {
   }
 };
 func fmtReal(x: @, pp: @) -> String {
-  match lagoon.rdrg(freal(x)) {
+  match rdrg(x) {
     (s, e, a) => if a == 0 { "0" } else {
       // e is a ZigZag @s as bare bits;  p = e + L signed, as (pneg, pmag)
       let l = ndigits(a);

@@ -1,0 +1,9 @@
+⍝ S-24: a VALUE ERROR blames the rightmost unbound read, the first evaluation reaches
+🍏> (~R ∊ R ∘.× R) / R ← 1↓⍳R
+⍝ refuse: %value-error col:25
+🍎> (~R ∊ R ∘.× R) / R ← 1↓⍳R
+⍝ refuse: %value-error col:25
+🍎> A+(A←3)
+⍝ expect: 6
+🍎> XX + YY
+⍝ refuse: %value-error col:6

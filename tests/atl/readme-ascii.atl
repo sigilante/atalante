@@ -1,0 +1,46 @@
+⍝ D-8: the README transcript (readme-red) typed in ASCII words under )ASCII ON gives the Unicode case's output
+🍎> )ASCII ON
+⍝ expect: ascii ON
+🍎> n leftarrow 4 5 6 7
+🍎> n
+⍝ expect: 4 5 6 7
+🍎> n+4
+⍝ expect: 8 9 10 11
+🍎> +/3+ iota 4
+⍝ expect: 22
+🍎> 2 * 10 * circlestar 10
+⍝ expect: 2.642213044E60
+🍎> X leftarrow 3 1 4 1 5 9 2 6
+🍎> gradeup X
+⍝ expect: 2 4 7 1 3 5 8 6
+🍎> X[ gradeup X]
+⍝ expect: 1 1 2 3 4 5 6 9
+🍎> R leftarrow 21
+🍎> (~R epsilon R jot . times R) / R leftarrow 1 downarrow iota R
+⍝ expect: 2 3 5 7 11 13 17 19
+🍎> matrix leftarrow 3 3 rho 1 2 3 4 5 6 7 8 9
+🍎> matrix
+⍝ expect: 1 2 3
+⍝ expect: 4 5 6
+⍝ expect: 7 8 9
+🍎> del R leftarrow A DIV B
+R leftarrow A divide B
+del
+🍎> 5 DIV 6
+⍝ expect: 0.8333333333
+🍎> quadio leftarrow 1 lamp index origin at one
+🍎> lamp
+🍎> del EncryptedText leftarrow key CaesarCipher PlainText;Alphabet;ShiftedAlphabet
+	Alphabet leftarrow 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+	ShiftedAlphabet leftarrow (key circlestile Alphabet), Alphabet
+	EncryptedText leftarrow ShiftedAlphabet[Alphabet iota PlainText]
+	del
+🍎> 3 CaesarCipher 'HELLO'
+⍝ expect: KHOOR
+🍎> Alphabet
+⍝ refuse: %value-error
+🍎> X leftarrow 'sing' 'goddess' 'sing' 'of' 'the' 'rage'
+🍎> gradeup X
+⍝ expect: 2 4 6 1 3 5
+🍎> X[ gradeup X]
+⍝ expect: 'goddess' 'of' 'rage' 'sing' 'sing' 'the'

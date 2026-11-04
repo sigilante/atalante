@@ -1,0 +1,36 @@
+⍝ D-8: bare ASCII words under )ASCII ON
+🍎> )ASCII
+⍝ expect: ascii OFF
+🍎> )ASCII ON
+⍝ expect: ascii ON
+🍎> 2 3 rho iota 6
+⍝ expect: 1 2 3
+⍝ expect: 4 5 6
+🍎> +slashbar 2 3 rho iota 6
+⍝ expect: 5 7 9
+🍎> x leftarrow _3 4 5
+🍎> circlestile x
+⍝ expect: 5 4 ¯3
+🍎> upstile/ x
+⍝ expect: 5
+🍎> 'iota' , 'rho'
+⍝ expect: iotarho
+🍎> x times 2 lamp a comment
+⍝ expect: ¯6 8 10
+🍎> F leftarrow {alpha times omega}
+🍎> 3 F 4
+⍝ expect: 12
+🍎> OP leftarrow {alphaalpha/omega}
+🍎> +OP iota 4
+⍝ expect: 10
+🍎> quadio
+⍝ expect: 1
+🍎> iotas leftarrow 7
+🍎> iotas
+⍝ expect: 7
+🍎> iota iota
+⍝ refuse: %syntax-error col:6
+🍎> )ASCII OFF
+⍝ expect: ascii OFF
+🍎> iota 5
+⍝ refuse: %value-error col:1

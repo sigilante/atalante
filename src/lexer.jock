@@ -261,6 +261,107 @@ func lexFrom(cs: List<@>, col: @, bol: Bool, acc: List<Token>) -> Lexed {
 func toLineEnd(cs: List<@>) -> List<@> { match cs { (c, rest) => if c == 10 { cs } else { toLineEnd(rest) }, _ => ~, } };
 func tokens(line: String) -> Lexed { lexFrom(toCps(line.chars()), 1, true, ~) };
 
+// --- ASCII input (D-8) -----------------------------------------------------------
+// Under `)ASCII ON` a line is rewritten before it is lexed: a word of the table becomes its
+// glyph, and `_` opening a token before a digit becomes `¯`. Quoted text and what follows ⍝
+// are copied as typed. The rewrite answers the glyph text and, for each of its codepoints, the
+// column it was typed at, so every token and refusal blames the column of the typed line.
+func asciiGlyph(w: String) -> String {
+  if w == "upstile" { "⌈" }
+  else if w == "downstile" { "⌊" }
+  else if w == "rho" { "⍴" }
+  else if w == "iota" { "⍳" }
+  else if w == "times" { "×" }
+  else if w == "divide" { "÷" }
+  else if w == "domino" { "⌹" }
+  else if w == "circle" { "○" }
+  else if w == "circlestar" { "⍟" }
+  else if w == "circlestile" { "⌽" }
+  else if w == "circlebar" { "⊖" }
+  else if w == "gradeup" { "⍋" }
+  else if w == "gradedown" { "⍒" }
+  else if w == "hydrant" { "⍎" }
+  else if w == "thorn" { "⍕" }
+  else if w == "transpose" { "⍉" }
+  else if w == "equalunderbar" { "≡" }
+  else if w == "equalunderbarslash" { "≢" }
+  else if w == "commabar" { "⍪" }
+  else if w == "epsilon" { "∊" }
+  else if w == "epsilonunderbar" { "⍷" }
+  else if w == "uparrow" { "↑" }
+  else if w == "downarrow" { "↓" }
+  else if w == "uptack" { "⊥" }
+  else if w == "downtack" { "⊤" }
+  else if w == "diaeresis" { "¨" }
+  else if w == "lessorequal" { "≤" }
+  else if w == "greaterorequal" { "≥" }
+  else if w == "notequal" { "≠" }
+  else if w == "logicalor" { "∨" }
+  else if w == "logicaland" { "∧" }
+  else if w == "logicalnor" { "⍱" }
+  else if w == "logicalnand" { "⍲" }
+  else if w == "lefttack" { "⊣" }
+  else if w == "righttack" { "⊢" }
+  else if w == "leftshoe" { "⊂" }
+  else if w == "rightshoe" { "⊃" }
+  else if w == "slashbar" { "⌿" }
+  else if w == "backslashbar" { "⍀" }
+  else if w == "jot" { "∘" }
+  else if w == "diamond" { "⋄" }
+  else if w == "leftarrow" { "←" }
+  else if w == "del" { "∇" }
+  else if w == "lamp" { "⍝" }
+  else if w == "alpha" { "⍺" }
+  else if w == "omega" { "⍵" }
+  else if w == "alphaalpha" { "⍺⍺" }
+  else if w == "omegaomega" { "⍵⍵" }
+  else if w == "quadio" { "⎕IO" }
+  else if w == "quadpp" { "⎕PP" }
+  else if w == "quadtype" { "⎕TYPE" }
+  else { "" }
+};
+func asciiLine(line: String) -> (String, List<@>) {
+  match asciiFrom(toCps(line.chars()), 1, false, ~, ~) { (out, cols) => (text(revCps(out, ~)), revCps(cols, ~)), }
+};
+// out and cols are built reversed; quoted: inside '…'
+func asciiFrom(cs: List<@>, col: @, quoted: Bool, out: List<@>, cols: List<@>) -> (List<@>, List<@>) {
+  match cs {
+    (c, rest) => if quoted { asciiFrom(rest, col + 1, c != 39, (c, out), (col, cols)) }
+      else if c == 39 { asciiFrom(rest, col + 1, true, (c, out), (col, cols)) }
+      else if c == 9053 { copyRest(cs, col, out, cols) }
+      else if c == 95 and headIs(rest, isDigit) { asciiFrom(rest, col + 1, false, (175, out), (col, cols)) }
+      else if isLetter(c) { match scanName(cs) { (nm, r, n) => {
+          let g = asciiGlyph(text(nm));
+          if g == "" { asciiFrom(r, col + n, false, pushAll(nm, out), pushCols(col, n, cols)) }
+          else { let gs = toCps(g.chars()); let o2 = pushAll(gs, out); let c2 = pushSame(col, count(gs), cols);
+            if g == "⍝" { copyRest(r, col + n, o2, c2) } else { asciiFrom(r, col + n, false, o2, c2) } }
+        }, } }
+      else { asciiFrom(rest, col + 1, false, (c, out), (col, cols)) },
+    _ => (out, cols),
+  }
+};
+func copyRest(cs: List<@>, col: @, out: List<@>, cols: List<@>) -> (List<@>, List<@>) {
+  match cs { (c, rest) => copyRest(rest, col + 1, (c, out), (col, cols)), _ => (out, cols), }
+};
+func pushAll(xs: List<@>, acc: List<@>) -> List<@> { match xs { (h, t) => pushAll(t, (h, acc)), _ => acc, } };
+func pushCols(col: @, n: @, acc: List<@>) -> List<@> { if n == 0 { acc } else { pushCols(col + 1, n - 1, (col, acc)) } };
+func pushSame(col: @, n: @, acc: List<@>) -> List<@> { if n == 0 { acc } else { pushSame(col, n - 1, (col, acc)) } };
+func count(xs: List<@>) -> @ { match xs { (h, t) => 1 + count(t), _ => 0, } };
+// the typed column of a glyph-text column (1-based; 0, a line end's, stays 0)
+func typedCol(cols: List<@>, c: @) -> @ { if c == 0 { 0 } else { colAt(cols, c - 1, c) } };
+func colAt(cols: List<@>, i: @, dflt: @) -> @ { match cols { (h, t) => if i == 0 { h } else { colAt(t, i - 1, dflt) }, _ => dflt, } };
+func remapToks(ts: List<Token>, cols: List<@>) -> List<Token> {
+  match ts { (t, rest) => (Token( kind: t.kind, text: t.text, cp: t.cp, col: typedCol(cols, t.col) ), remapToks(rest, cols)), _ => ~, }
+};
+// a line's tokens in ASCII mode, every column the typed one
+func asciiTokens(line: String) -> Lexed {
+  match asciiLine(line) { (g, cols) => match tokens(g) {
+    .ok(ts) => Lexed.ok(remapToks(ts, cols)),
+    .err(e) => Lexed.err(LexErr( tag: e.tag, col: typedCol(cols, e.col), hint: e.hint )),
+  }, }
+};
+
+
 // --- rendering (the lex corpus) -------------------------------------------
 func kindName(k: Kind) -> String {
   match k {
