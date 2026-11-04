@@ -11,6 +11,6 @@ foo
 1 2 3 ÷
 ⍝ refuse: %syntax-error
 ⎕TYPE
-⍝ refuse: %unimplemented
+⍝ expect: UINT64 INT64 REAL64
 ⎕TYPE ← 1
-⍝ refuse: %unimplemented
+⍝ refuse: %domain-error

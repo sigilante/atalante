@@ -1,0 +1,89 @@
+⍝ D-15: ⎕TYPE sets the width each kind is made at, per session
+🍎> ⎕TYPE
+⍝ expect: UINT64 INT64 REAL64
+🍎> ⎕TYPE←'UINT8'
+🍎> ⎕TYPE
+⍝ expect: UINT8 INT64 REAL64
+⍝ naturals wrap at 8 bits
+🍎> 200+100
+⍝ expect: 44
+🍎> 255+1
+⍝ expect: 0
+🍎> x←2 3⍴250+⍳6
+🍎> x
+⍝ expect: 251 252 253
+⍝ expect: 254 255   0
+🍎> +/x
+⍝ expect: 244 253
+🍎> ⌽x
+⍝ expect: 253 252 251
+⍝ expect:   0 255 254
+🍎> x,7
+⍝ expect: 251 252 253 7
+⍝ expect: 254 255   0 7
+⍝ shapes and indices stay 64-bit; a numeral must fit
+🍎> ⍴⍳200
+⍝ expect: 200
+🍎> ⍴⍳300
+⍝ refuse: %domain-error
+🍎> ⎕TYPE←'UINT64 INT8'
+🍎> ¯100-100
+⍝ expect: 56
+🍎> ¯128
+⍝ expect: ¯128
+🍎> ¯129
+⍝ refuse: %domain-error
+🍎> 127+1
+⍝ expect: 128
+⍝ reals at 32 bits:  each operation rounds once to single precision
+🍎> ⎕TYPE←'INT64 REAL32'
+🍎> 1÷3
+⍝ expect: 0.33333334
+🍎> 0.1+0.2
+⍝ expect: 0.3
+🍎> 2*0.5
+⍝ expect: 1.4142135
+🍎> v←0.1×⍳3
+🍎> v÷3
+⍝ expect: 0.033333335 0.06666667 0.1
+🍎> 3|5.5
+⍝ expect: 2.5
+🍎> 2⍕v
+⍝ expect: 0.10 0.20 0.30
+🍎> (1.5 2.5)≡1.5 2.5
+⍝ expect: 1
+🍎> 1E39
+⍝ refuse: %domain-error
+⍝ ⎕TYPE is local to a dfn
+🍎> F←{⎕TYPE←'REAL16' ⋄ ÷⍵}
+🍎> F 3
+⍝ expect: 0.33325195
+🍎> ⎕TYPE
+⍝ expect: UINT64 INT64 REAL32
+🍎> ⎕TYPE←'REAL16'
+🍎> 1÷3
+⍝ expect: 0.3333
+🍎> 6E4
+⍝ expect: 60000
+🍎> 7E4
+⍝ refuse: %domain-error
+⍝ an older array keeps its width until a function makes a new one
+🍎> ⎕TYPE←'REAL64'
+🍎> v
+⍝ expect: 0.1 0.2 0.3
+🍎> v+0.1
+⍝ expect: 0.2000000015 0.300000003 0.4000000119
+🍎> ⎕TYPE←'REAL128'
+🍎> ⎕PP←17
+🍎> 1÷3
+⍝ expect: 0.33333333333333333
+🍎> ⎕PP←10
+🍎> 1E300×1E300
+⍝ expect: 1E600
+🍎> ⎕TYPE←'BAD'
+⍝ refuse: %domain-error
+🍎> ⎕TYPE←1
+⍝ refuse: %domain-error
+🍎> ⎕TYPE←'UINT64 INT64 REAL64'
+🍎> 1÷3
+⍝ expect: 0.3333333333

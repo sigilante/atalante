@@ -37,3 +37,12 @@ foo[1] ← 2
 ⍝ expect: %value-error col:1 foo is not defined
 .5
 ⍝ expect: %syntax-error col:1 a numeral needs a digit before the point (D-3)
+⍝ S-24: an unbound read blames the rightmost, the first evaluation reaches
+(~R ∊ R ∘.× R) / R ← 1↓⍳R
+⍝ expect: %value-error col:25 R is not defined
+XX + YY
+⍝ expect: %value-error col:6 YY is not defined
+XX YY ZZ
+⍝ expect: %value-error col:7 ZZ is not defined
+(B←3)+B
+⍝ expect: %value-error col:7 B is not defined
