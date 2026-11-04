@@ -36,8 +36,9 @@ jojo        github.com/sigilante/jojo @ 98bbb22 (2026-11-04, PR #16 merged to ma
             atalante.jam beside the Jock REPL jams with a manifest of the
             module sources it embeds.
 
-numerics    the numerics monorepo (lagoon, libmath) @ 9eb9500 (2026-10-28,
-            past PR #94), vendored into vendor/numerics by
+numerics    the numerics monorepo (lagoon, libmath) @ 0611fac (2026-11-04,
+            urbit/numerics#97's branch: main 9eb9500 past PR #94, plus
+            +argmax/+argmin indexing at any rank), vendored into vendor/numerics by
             tools/vendor-numerics.py with three patches; the jet parent is
             spelled ..ut, as numerics' NockApp jet harness expects.  vendor/NUMERICS.txt records the files and the rules.
 
