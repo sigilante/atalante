@@ -178,6 +178,8 @@ S-24. A name assigned further right in a statement is bound where it is read, an
 
 Vectors: `atl/types` (52), `atl/ascii` (20), `atl/readme-ascii` (30), `atl/unbound-column` (5), `atl/errors` (the two `⎕TYPE` lines now read and refuse), and four S-24 refusals in `parse/refusals`. Corpus 702/702, 51/51 cases; lexcheck 702/702; lex 41/41; parse 133/133; oracle 14/14. The REAL64 values of the whole corpus are unchanged, including every real numeral now converted by `+grd`.
 
+At the live jojo prompt, on the jam staged in jojo#16 and each case on a fresh session, all 21 cases tried reproduce in full: `readme-red` 28/28, `readme-ascii` 30/30, `types` 52/52, `ascii` 20/20, `errors` 8/8, `unbound-column` 5/5, `dfn-lines` 25/25, `dfns` 33/33, `nested` 75/75, `axis` 14/14, `execute` 11/11, `solve` 6/6, `format` 16/16, `laminate` 17/17, `partition` 13/13, `find` 11/11, `rank3` 18/18, `dfn-defaults` 9/9, `error-guards` 18/18, `dfn-operators` 13/13, `path` 8/8. The blank-line limit of P10 was the harness's: `tools/repl-test.py` dropped every empty pane row, a rank-3 display's plane separators with the screen's empty tail. It now drops only the tail, and the multi-plane displays reproduce.
+
 **Deferred:** the Gall host, SoftBLAS jets (vere fork only), array operands of a dfn operator and `∇∇` (D-95), the rest of the P11b sweep.
 
 ## 4. The shakedown ledger
