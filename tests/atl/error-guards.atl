@@ -1,0 +1,26 @@
+⍝ D-94: codes::expr in a dfn body catches an error of a listed number in what follows
+🍎> G←{0::'oops' ⋄ 1 2+1 2 3}
+🍎> G 0
+⍝ expect: oops
+🍎> H←{5::'len' ⋄ 1 2+⍵}
+🍎> H 1 2 3
+⍝ expect: len
+🍎> H 1
+⍝ expect: 2 3
+🍎> K←{11::'dom' ⋄ 1 2+⍵}
+🍎> K 1 2 3
+⍝ refuse: %length-error
+⍝ a guard covers the lines after it, parse-time errors included
+V←{
+6::'unbound'
+⍵+Q
+}
+🍎> V 1
+⍝ expect: unbound
+🍎> I←{3 5::¯1 ⋄ ⍵[9]}
+🍎> I 1 2 3
+⍝ expect: ¯1
+🍎> {11::⍵ ⋄ ⍵÷'a'}7
+⍝ expect: 7
+🍎> {1+⍵ ⋄ 0::'late'}0
+⍝ expect: 1

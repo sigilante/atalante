@@ -221,8 +221,12 @@ func lexFrom(cs: List<@>, col: @, bol: Bool, acc: List<Token>) -> Lexed {
       123  => lexFrom(rest, col + 1, false, (tok(Kind.lbrace, "{{", 0, col), acc)),           // { (D-63)
       125  => lexFrom(rest, col + 1, false, (tok(Kind.rbrace, "}}", 0, col), acc)),           // }
       58   => lexFrom(rest, col + 1, false, (tok(Kind.colon, ":", 0, col), acc)),            // : (D-66)
-      9082 => lexFrom(rest, col + 1, false, (tok(Kind.name, "⍺", 0, col), acc)),             // ⍺ (D-63)
-      9077 => lexFrom(rest, col + 1, false, (tok(Kind.name, "⍵", 0, col), acc)),             // ⍵
+      9082 => match rest { (c2, r2) => if c2 == 9082 { lexFrom(r2, col + 2, false, (tok(Kind.name, "⍺⍺", 0, col), acc)) }       // ⍺⍺ (D-95)
+          else { lexFrom(rest, col + 1, false, (tok(Kind.name, "⍺", 0, col), acc)) },                                            // ⍺ (D-63)
+        _ => lexFrom(rest, col + 1, false, (tok(Kind.name, "⍺", 0, col), acc)), },
+      9077 => match rest { (c2, r2) => if c2 == 9077 { lexFrom(r2, col + 2, false, (tok(Kind.name, "⍵⍵", 0, col), acc)) }       // ⍵⍵
+          else { lexFrom(rest, col + 1, false, (tok(Kind.name, "⍵", 0, col), acc)) },                                            // ⍵
+        _ => lexFrom(rest, col + 1, false, (tok(Kind.name, "⍵", 0, col), acc)), },
       40   => lexFrom(rest, col + 1, false, (tok(Kind.lparen, "(", 0, col), acc)),
       41   => if bol and headIs(rest, isLetter) {                                            // )CMD (D-61)
                 match scanName(rest) { (nm, r, n) => lexFrom(r, col + 1 + n, false, (tok(Kind.cmd, text(nm), 0, col), acc)), }

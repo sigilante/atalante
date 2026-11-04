@@ -1,6 +1,6 @@
 # Atalante — Roadmap
 
-**Status: P8, P9 and P10 landed 2026-11-03; P11 landed 2026-11-04 on the float half of its exit; P11b, P12 and the hosts remain.** v0.1.1 implements dialect v1 in full ([release notes](release-v0.1.md)). This file carries what comes after, in the plan's shape: numbered phases from P8, each with its scope, the rules it closes, a mechanical exit test, and what it waits on. The order below is a dependency order and a recommendation; the maintainer rules it. A phase lands as the P0–P7 phases did ([plan.md §3](plan.md)): with its vectors, recorded in the plan with numbers, and the spec's rules pinned.
+**Status: P8, P9 and P10 landed 2026-11-03; P11 landed 2026-11-04 on the float half of its exit; P11b is profiled with its first fixes in; the rest of §9 landed the same day; P12 and the hosts remain.** v0.1.1 implements dialect v1 in full ([release notes](release-v0.1.md)). This file carries what comes after, in the plan's shape: numbered phases from P8, each with its scope, the rules it closes, a mechanical exit test, and what it waits on. The order below is a dependency order and a recommendation; the maintainer rules it. A phase lands as the P0–P7 phases did ([plan.md §3](plan.md)): with its vectors, recorded in the plan with numbers, and the spec's rules pinned.
 
 Two facts fix most of the order. Nested arrays change the array model every structural function sits on, so they precede the primitives that need them (`⍷ ⍪ ≡`, dyadic `⍕`). Dfns need `⍺ ⍵` and guards in the parser before the emitter can see them, so they are a phase of their own and come first, since nothing else depends on them and they are what the v1 tradfn programmer reaches for next.
 
@@ -20,9 +20,9 @@ Two facts fix most of the order. Nested arrays change the array model every stru
 *Waits on:* `⌹` waits on P11's float path; P9 has landed, so `⍷ ⍪` take nested arguments from the start.
 **LANDED 2026-11-03** as D-82..D-91 ([plan §3](plan.md)), with the rest of nesting (D-78..D-81). `⌹` runs on Jock's float scalar path without waiting for P11; a fractional axis (laminate) stays out.
 
-**P12 — The deferred rulings.** D-8, an ASCII input pre-pass with its own table and vectors (`iota` for `⍳` and the like), never a grammar change. D-15, what `⎕TYPE` names once the array model has more than bloq 6: a storage width or a default literal kind. S-24, the column a green-prompt refusal blames: the rightmost unbound name, as evaluation order would.
-*Exit:* a corpus case typed in ASCII gives the Unicode case's output; `⎕TYPE` vectors for whichever meaning is ruled; S-24's refusal blames column 25 on the README sieve with R unbound.
-*Waits on:* P11 for D-15.
+**P12 — The deferred rulings (ruled 2026-11-04).** D-8: bare ASCII words in a `)ASCII ON` session mode, one lowercase word per glyph, rewritten ahead of the lexer with columns kept. D-15: `⎕TYPE` as a per-kind storage width, `UINT8`–`UINT64`, `INT8`–`INT64` and `REAL16`–`REAL128`, which means the array model leaves bloq 6, D-11's promotion learns mixed widths, and every primitive wraps or rounds at its width. S-24, the column a green-prompt refusal blames: the rightmost unbound name, as evaluation order would.
+*Exit:* a corpus case typed in ASCII under `)ASCII ON` gives the Unicode case's output; `⎕TYPE` vectors for every name, wrapping and rounding at each width; S-24's refusal blames column 25 on the README sieve with R unbound.
+*Waits on:* nothing: both rulings are in. D-15 is the larger half.
 
 ## Performance
 
@@ -34,6 +34,7 @@ Two facts fix most of the order. Nested arrays change the array model every stru
 **P11b — The natural fold and the Jock-side costs.** P11 left the generic `+/` over 1e5 naturals at 3.7 s under jojo, against P11's 1 s target. The float jets cannot reach it, and at that size two Jock-side costs dominate everything else: printing 1e5 reals takes ~230 s and `v ← ⍳100000` takes ~173 s. Three candidates, to measure before choosing. The first is integer paths in lagoon-jets (`add-rays`, `sub-rays`, `mul-rays`, `cumsum`, `max`, `min` on `%uint` and `%int2`), checked bit for bit under `NOCK_TEST_JETS` and reached by re-exporting the folds from the package for `g-reduce`. The second is the session's double run, since every red statement evaluates through both the interpreter and the emitter. The third is the display and `⍳` paths in `src/array.jock` and `src/interp.jock`.
 *Exit:* `tools/bench-repl.py 100000` under jojo shows the generic `+/v` under 1 s, `1.5×v` printed in under 10 s, and `v ← ⍳100000` in under 10 s; the corpus unchanged.
 *Waits on:* a profile of the 3.7 s; Rust in jojo's lagoon-jets only if the profile points at the fold.
+**PROFILED 2026-11-04** ([plan §3](plan.md)). The cost is NockVM copying a non-tail call's cells out of its frame, which makes every consing recursion quadratic. The 3.7 s was the interpreter half of the session's double run: the emitted `+/` alone takes 0.33 s. The hot builders are fixed, taking `⍳100000` from 179 s to 0.64 s and `1+v` from 115 s to 1.3 s. The sweep through display, `⍕` and the remaining builders is the open work, and no Rust is needed for it.
 
 ## Hosts and tooling
 

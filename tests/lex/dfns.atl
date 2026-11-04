@@ -10,3 +10,5 @@ F←{⍺÷⍵}
 ⍝ expect: lbrace lbrace name:⍵ glyph:+ nat:1 rbrace name:⍵ rbrace nat:2
 {'it''s'⍳⍵} 's'
 ⍝ expect: lbrace chr:it's glyph:⍳ name:⍵ rbrace chr:s
+⍺⍺ ⍵⍵ ⍺⍵⍺
+⍝ expect: name:⍺⍺ name:⍵⍵ name:⍺ name:⍵ name:⍺

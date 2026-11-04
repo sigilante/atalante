@@ -1,0 +1,16 @@
+⍝ D-61: )PATH chooses the red prompt's evaluation path
+🍎> )PATH
+⍝ expect: path BOTH
+🍎> )PATH EMIT
+⍝ expect: path EMIT
+🍎> +/⍳4
+⍝ expect: 10
+🍎> )PATH INTERP
+⍝ expect: path INTERP
+🍎> 2 3⍴⍳6
+⍝ expect: 1 2 3
+⍝ expect: 4 5 6
+🍎> )PATH BOTH
+⍝ expect: path BOTH
+🍎> )PATH FAST
+⍝ refuse: %syntax-error

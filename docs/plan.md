@@ -143,7 +143,32 @@ The maintainer asked for the rest of §9 and P10 together on 2026-11-03: D-78..D
 
 The float half of the exit test holds: a float `+/` costs 7.6× the natural one, inside the 10× bound. The natural half misses: `+/v` costs 3.7 s against 1 s, and the float jets cannot move it; the maintainer ruled to close P11 on the float half and carry that number to P11b with the Jock-side costs. Display and `⍳` dominate the remaining cost and are Jock-side work. Corpus 511/511 on the re-vendored package; lex 40/40; parse 116/116; oracle 14/14; kernel-test 5/5; at the jetted prompt the README 28/28, `nested` 75/75, `axis` 14/14, `execute` 11/11, `solve` 6/6, `format` 11/11 and `rank3` 12/15 (the blank-line harness limit of P10).
 
-**Deferred past P10:** the Gall host, ASCII input (D-8), `⎕TYPE` (D-15), SoftBLAS jets (vere fork only), dfn operators and `⍺←` and `::` (D-63), a fractional axis, partition of rank 2, `⍕` and `⍷` past rank 2 (spec §9).
+**P11b — Profiling the Jock-side costs (2026-11-04).** The cause is one fact about the runtime. NockVM copies the cells a non-tail call allocated out of its frame when the call returns, so a list built by a consing recursion, `(h, f(t))` in Jock or `[i $(...)]` in Hoon, is copied once per level: O(n²) in its length. Atalante's list builders were written that way, and so are Hoon's `+gulf` and `+reap` and Lagoon's `+bin-op` walk. Jojo jets none of those for `%uint`. The method was `)PATH`, a new session command (D-61) that runs one evaluation path, and `tools/bench-repl.py --path`, which times statements at the live prompt.
+
+| at 1e5 elements, under jojo | interpreter | emitter | both (the default) |
+|---|---|---|---|
+| `v ← ⍳100000`, before | 58 s | 118 s | 179 s |
+| `+/v` | 3.8 s | 0.33 s | 4.0 s |
+| `x←1.5×v` | 14 s | 14.6 s | 28 s |
+| `1.5×v` (printing) | 140 s | 137 s | 258 s |
+
+Three findings follow. The BOTH path costs the sum of the other two: comparing the two results and environments is nearly free, and the double run is the whole overhead. The natural `+/` on the emitted path is 0.33 s, under P11's 1 s target. P11's 3.7 s was the interpreter half of the double run. The scaling runs at 1e4 and 3e4 showed `⍳`, `⍴` and `⍕` quadratic and elementwise real arithmetic linear, at about 140 µs an element.
+
+The fix, applied to the hot builders as proof. `iotaL`, `repL`, `cycleL`, `turnL`, `zipL`, `takeL`, `catL` and `flatten` in `src/array.jock`, and `zipK` in `src/interp.jock`, now build by tail calls over an accumulator and reverse once. `cycleL` also walks its source instead of indexing it with `nth` for every element. The `⍳` gate builds through `iotaL` rather than Lagoon's `+iota`, and natural and integer `+ − ×` zip in Jock rather than calling Lagoon's `+bin-op`. Scalar extension builds through `repL` rather than Lagoon's `+fill`. Reals stay on Lagoon's jetted `%i754` arms. Every value is unchanged, and the corpus, the interpreter-emitter differential, holds.
+
+| at 1e5, both paths | before | after |
+|---|---|---|
+| `v ← ⍳100000` | 179 s | 0.64 s |
+| `x←100000⍴7` | 56 s | 0.64 s |
+| `x←1+v` | 115 s | 1.3 s |
+| `x←v+v`, `x←2×v`, `x←v-1` | — | 1.0–1.6 s |
+| `x←1.5×v` | 28 s | 26 s |
+
+What remains for P11b is the same sweep through the rest of the consing recursions, display and `⍕` first. Printing 1e5 values is still quadratic: `⍴⍕v` at 1e5 runs past ten minutes. Real elementwise arithmetic costs about 130 µs an element, and its profile is the next measurement. A choice of default path also remains, the red prompt's BOTH against EMIT, which is the maintainer's ruling.
+
+**The rest of §9 (2026-11-04).** Laminate (D-92), partition past rank 1 (D-78), `⍷` and `⍕` past rank 2 (D-87, D-88), a default left argument `⍺←` (D-93), error guards `::` (D-94) and dfn operators `⍺⍺ ⍵⍵` (D-95). The parser carries a fractional axis as `⌊k⌋+1` with a flag, an error guard as `Ast.eguard`, and an applied operator as `Fn.dop`, and it classes a named operator 6 or 7 in the signature. The interpreter arms a guard as a `Trap` threaded through the dfn's statements and lines, and binds operands in a new `ops` field of the frame. Display past rank 2 now aligns columns across every plane, and rank 4 parts its groups of planes with two blank lines (D-45). Vectors: `atl/laminate` (17), `atl/dfn-defaults` (9), `atl/error-guards` (18), `atl/dfn-operators` (13), `atl/path` (8), `parse/dfn-extras` (12), and additions to `atl/partition`, `atl/find`, `atl/format`, `atl/rank3` and `lex/dfns`. Corpus 595/595, 47/47 cases; lex 41/41; lexcheck 595/595; parse 128/128; oracle 14/14; kernel-test 5/5. At the live prompt `readme-red` 28/28, `nested` 75/75, `axis` 14/14, `execute` 11/11, `solve` 6/6, `laminate` 17/17, `partition` 13/13, `dfn-defaults` 9/9, `error-guards` 18/18, `dfn-operators` 13/13, `path` 8/8, `dfn-lines` 25/25 and `dfns` 33/33 on a fresh session. The multi-plane displays in `rank3`, `find` and `format` hit the known blank-line harness limit.
+
+**Deferred:** the Gall host, ASCII input (D-8), `⎕TYPE` (D-15), SoftBLAS jets (vere fork only), array operands of a dfn operator and `∇∇` (D-95), the rest of the P11b sweep.
 
 ## 4. The shakedown ledger
 

@@ -28,7 +28,7 @@ ATL/APL is the APL that Atalante compiles. It is Budd's compiler subset (Budd 19
 
 **D-7 · Comments and separators.** `⍝` comments to end of line. `⋄` separates statements on one line. A newline ends a statement except inside a `∇` definition. ⟨`lex/names-glyphs`, `lex/strings-system`⟩
 
-**D-8 · DEFERRED 2026-10-28 · ASCII transliteration.** v1 reads Unicode only, with D-9's four ASCII spellings. An ASCII input layer is a possible continuation on the §9 roadmap: a lexer pre-pass with its own table and vectors, never a grammar change. The 2024 tree's `ascii-map` (`desk/sur/atalante.hoon`, history b721975) is the half-finished and ambiguous start (`|` is both residue and part of `|^`) that any such pass replaces.
+**D-8 · RULED 2026-11-04 · ASCII input is bare words, in a session mode.** `)ASCII ON` turns the mode on and `)ASCII OFF` turns it off; it starts off. In the mode, a word from the ASCII table stands for its glyph: `iota 5` is `⍳5`. The table gives one lowercase word for each glyph of the inventory. A table word is then reserved and names nothing, while every other word remains a name. Outside the mode the table is inert, so a Unicode session keeps every name, `key` and `rank` included. The pass rewrites words to glyphs ahead of the lexer, never touching the grammar, and an error blames the column of the text the user typed. Output stays Unicode. D-9's four ASCII spellings hold in both modes. The words and their vectors are P12's to write. Dyalog has no ASCII spelling of its glyphs, offering keyboard and prefix-key input instead, and the 2024 tree's `ascii-map` (history b721975) is the ambiguous digraph scheme this replaces.
 
 **D-9 · Four ASCII glyphs are canonical spellings, not transliterations.** `-` is `−`, `*` is `⋆`, `|` is `∣`, `~` is `∼`. ISO 13751 spells them in ASCII and every APL keyboard produces them; the lexer maps each to the inventory glyph and nothing else about D-8 changes. ⟨`lex/names-glyphs`⟩
 
@@ -44,7 +44,7 @@ ATL/APL is the APL that Atalante compiles. It is Budd's compiler subset (Budd 19
 
 **D-14 · `⎕IO` is 1 by default and may be set to 0 or 1.** It affects `⍳`, indexing, `⍋`, `⍒`, `⍳` (index-of), `∊`'s companion `⍸` (absent in v1), and `?`. ⟨`atl/index-origin` (assignment and the domain refusal)⟩
 
-**D-15 · RULED 2026-10-28 · `⎕TYPE` is a reserved name.** The 2024 README set `⎕TYPE ← 'UINT8'`. Whether the name declares a storage width (Lagoon `bloq`) or a default literal kind is a v2 decision, taken when the array model gains more than bloq 6. In v1 the name is reserved: it lexes and parses as a system name (D-60), and reading or assigning it refuses with `%unimplemented`. ⟨`atl/errors`⟩
+**D-15 · RULED 2026-11-04 · `⎕TYPE` sets a storage width per kind.** The names are a kind word and a width in bits. Naturals take `UINT8` `UINT16` `UINT32` `UINT64` (Lagoon `%uint`, bloq 3 to 6), integers `INT8` `INT16` `INT32` `INT64` (`%int2`, bloq 3 to 6), and reals `REAL16` `REAL32` `REAL64` `REAL128` (`%i754`, bloq 4 to 7, the four float doors jojo jets). The setting is per kind and per session: `⎕TYPE←'REAL32'` sets the width of reals and leaves the other kinds alone, and reading `⎕TYPE` gives all three, `UINT64 INT64 REAL64` by default, which is the v1 model. Arrays made after a change take the new width. Arithmetic wraps a natural or an integer at its width and rounds a real to its width. Characters stay codepoints and have no `⎕TYPE` name. This replaces the 2026-10-28 ruling that reserved the name; until P12 implements the setting, reading or assigning `⎕TYPE` still refuses with `%unimplemented`. Its interaction with D-11 promotion across widths is P12's to settle. ⟨`atl/errors`⟩
 
 ### Nested arrays (P9, 2026-11-03)
 
@@ -66,7 +66,7 @@ ATL/APL is the APL that Atalante compiles. It is Budd's compiler subset (Budd 19
 
 ### Nesting, the rest (P9 closed, 2026-11-03)
 
-**D-78 · Partition.** `A⊂B`: `A` a vector of non-negative integers as long as `B` (a scalar extends), `B` a vector. An element of the result starts where `A` exceeds the count before it; a 0 drops `B`'s element. `1 1 2 2⊂'abcd'` is `'ab' 'cd'`; `1 0 1⊂'abc'` is `'a' 'c'`. Rank 2 is a RANK ERROR. ⟨`atl/partition`⟩
+**D-78 · Partition.** `A⊂B`: `A` a vector of non-negative integers as long as `B` (a scalar extends), `B` a vector. An element of the result starts where `A` exceeds the count before it; a 0 drops `B`'s element. `1 1 2 2⊂'abcd'` is `'ab' 'cd'`; `1 0 1⊂'abc'` is `'a' 'c'`. AMENDED 2026-11-04: past rank 1 the counts partition every line along the last axis, or along axis `k` in `A⊂[k]B`. The result has `B`'s shape with that axis replaced by the number of groups, and each element is a vector: `1 1 2⊂2 3⍴⍳6` is `(1 2) (,3)` over `(4 5) (,6)`. ⟨`atl/partition`⟩
 
 **D-79 · Tally and not-match.** `≢B` is the length of `B`'s first axis, 1 for a scalar. `A≢B` is `∼A≡B`. ⟨`atl/tally`⟩
 
@@ -76,7 +76,7 @@ ATL/APL is the APL that Atalante compiles. It is Budd's compiler subset (Budd 19
 
 ### Axis specification and the held-back primitives (P10, 2026-11-03)
 
-**D-82 · Axis specification `[k]`.** A numeral in `⎕IO`, in brackets after `⌽ ⊖ , / \ ⌿ ⍀` and after a derived `f/ f\ f⌿ f⍀`: `⌽[k]B` reverses along axis `k`, `A⌽[k]B` rotates, `A,[k]B` catenates, `f/[k]B` reduces, `f\[k]B` scans, `A/[k]B` replicates, `A\[k]B` expands. `k` is integral and within the rank, else an AXIS ERROR; a fractional axis (laminate) is held back, `⍪` covers the common case. ⟨`atl/axis`⟩
+**D-82 · Axis specification `[k]`.** A numeral in `⎕IO`, in brackets after `⌽ ⊖ , / \ ⌿ ⍀` and after a derived `f/ f\ f⌿ f⍀`: `⌽[k]B` reverses along axis `k`, `A⌽[k]B` rotates, `A,[k]B` catenates, `f/[k]B` reduces, `f\[k]B` scans, `A/[k]B` replicates, `A\[k]B` expands. `k` is integral and within the rank, else an AXIS ERROR; a fractional `k` after `,` laminates (D-92, AMENDED 2026-11-04). ⟨`atl/axis`⟩
 
 **D-83 · Past rank 2 (amends D-42, D-43).** Reduction, scan, replicate, expand, reverse and rotate work along the last axis, the first with `⌿ ⍀ ⊖`, or the named one, of an array of any rank. `A⌽B` takes a scalar or one count per line, an array of the shape of `B` without that axis. `A↑B` and `A↓B` take one count per leading axis of `B`; fewer counts than axes leave the trailing axes whole; a scalar `B` is treated as having that many axes of length 1. ⟨`atl/rank3`, `atl/take-drop-rotate`⟩
 
@@ -86,15 +86,25 @@ ATL/APL is the APL that Atalante compiles. It is Budd's compiler subset (Budd 19
 
 **D-86 · Decode and encode on integers and reals (amends D-42).** `A⊥B` evaluates the polynomial in the join kind of `A` and `B`, a scalar radix extending, `B` a scalar or vector. `A⊤B` encodes with floor and residue (APL2's rule), so negative and real values encode as they do there: `2 2 2⊤¯1` is `1 1 1`, `10 10⊤1.5` is `0 1.5`; `B` a scalar gives a vector, a vector gives a `(⍴A),(⍴B)` matrix; a 0 radix takes what remains. ⟨`atl/encode-decode`⟩
 
-**D-87 · Find.** `A⍷B` is a Boolean of `B`'s shape, 1 where a copy of `A` begins, elements compared by match (D-73); `A` of rank at most that of `B`, both at most rank 2; a scalar `A` is `A=B` by match. ⟨`atl/find`⟩
+**D-87 · Find.** `A⍷B` is a Boolean of `B`'s shape, 1 where a copy of `A` begins, elements compared by match (D-73); `A` of rank at most that of `B`, any rank (AMENDED 2026-11-04, from rank 2), with `A`'s shape padded by leading 1s; a scalar `A` is `A=B` by match. ⟨`atl/find`⟩
 
-**D-88 · Format.** `⍕B` is `B`'s display (D-45, D-76) as a character array: a vector for rank at most 1 and for a box of rank at most 1, a matrix for rank 2, one row per line of the display; a character array is itself. `D⍕B` prints each number with `D` decimals in fixed point, columns right-aligned to the widest; `W D⍕B` gives each column width `W`, and a number that does not fit is a DOMAIN ERROR. Negatives carry `¯`. ⟨`atl/format`⟩
+**D-88 · Format.** `⍕B` is `B`'s display (D-45, D-76) as a character array: a vector for rank at most 1 and for a box of rank at most 1, a matrix for rank 2, one row per line of the display; past rank 2 (AMENDED 2026-11-04) an array of `B`'s leading axes by the text width, its rows the display's rows without the blank lines; a character array is itself. `D⍕B` prints each number with `D` decimals in fixed point, columns right-aligned to the widest; `W D⍕B` gives each column width `W`, and a number that does not fit is a DOMAIN ERROR. Negatives carry `¯`. ⟨`atl/format`⟩
 
 **D-89 · Execute.** `⍎B` runs the character vector `B` as a line in the current environment, through the compiler, and is the line's value; its assignments persist. A line without a value (a system command, a `∇` header, nothing) is a DOMAIN ERROR; a refusal in the line is the refusal. ⟨`atl/execute`⟩
 
 **D-90 · Matrix divide.** `⌹B` inverts a square matrix. `A⌹B` solves `B X = A` for square `B` and gives the least-squares solution when `B` has more rows than columns (through the normal equations); `A` a vector is one column, a matrix several. Gaussian elimination with partial pivoting over reals; the result is `%real`; a singular `B` is a DOMAIN ERROR. ⟨`atl/solve`⟩
 
 **D-91 · Dfn operands (amends D-63).** The operand of `.` and `∘.` may be a dfn: `∘.{⍺×⍵}`, `+.{⍺×⍵}`. ⟨`atl/dfn-operands`, `parse/operators`⟩
+
+### The rest of §9 (2026-11-04)
+
+**D-92 · Laminate: a fractional axis after `,`.** `A,[k]B` with `k` a numeral that is not an integer joins `A` and `B` along a new axis of length 2, placed between axes `⌊k` and `⌈k` (in `⎕IO`). `A` and `B` have one shape, and a scalar extends to the other's. `1 2 3,[0.5]4 5 6` is a 2×3 matrix and `1 2 3,[1.5]4 5 6` a 3×2 one. With `⎕IO←0` the first position is `[¯0.5]`. Monadic `,[k]B` gives `B` a new axis of length 1 there. Shapes that differ are a LENGTH ERROR and ranks that differ a RANK ERROR. A fractional axis outside the rank, or after any function but `,`, is an AXIS ERROR. ⟨`atl/laminate`, `parse/dfn-extras`⟩
+
+**D-93 · A default left argument, `⍺←`.** In a dfn body, `⍺←X` binds `⍺` to `X` when the dfn was called monadically and does nothing when it was called with a left argument, so `{⍺←10 ⋄ ⍺+⍵}` adds 10 to a lone argument. Any other assignment to `⍺` or `⍵` is an ordinary local assignment (D-65). ⟨`atl/dfn-defaults`⟩
+
+**D-94 · Error guards, `codes::expr`.** A dfn statement `codes::expr` arms a guard. If a later statement of the same call fails with an error whose number is in `codes`, or 0 is in `codes`, the call's result is `expr`. The expression runs in the environment the guard was armed in. A later guard replaces an earlier one. The numbers follow Dyalog where the error class is shared: SYNTAX 2, INDEX 3, RANK 4, LENGTH 5, VALUE 6, DOMAIN 11, and NONCE 16 for an unimplemented case. VALENCE folds into 2, since Dyalog reports valence as syntax, and AXIS takes 9, which Dyalog leaves unused. An emitter mismatch is never caught. A parse-time error on a later body line is caught. One on the guard's own line is not, because a body line parses whole before it runs. ⟨`atl/error-guards`, `parse/dfn-extras`⟩
+
+**D-95 · Dfn operators.** A dfn whose body names `⍺⍺`, outside any nested dfn, is a monadic operator; one naming `⍵⍵` is a dyadic operator. `⍺⍺` and `⍵⍵` lex as single names. The operator takes the function to its left as `⍺⍺` and, when dyadic, the function to its right as `⍵⍵`, and the derived function is called as any dfn is. `+{⍺⍺/⍵}1 2 3` is 6. `OP←{⍺⍺/⍵}` names a monadic operator, which the signature classes as 6 (7 for a dyadic one), so `+OP 1 2 3` parses as `(+ OP)(1 2 3)`. Operands are functions: a glyph, a function name, or a dfn literal. An operand runs in the frames around the operator, not inside it. An array operand, and `∇∇` for the operator itself, are held back. ⟨`atl/dfn-operators`, `parse/dfn-extras`, `lex/dfns`⟩
 
 ## 4. Syntax and evaluation
 
@@ -124,7 +134,7 @@ ATL/APL is the APL that Atalante compiles. It is Budd's compiler subset (Budd 19
 
 ### Dfns (P8, 2026-11-03)
 
-**D-63 · Dfns.** `{…}` is a function value: the body between the braces is statements separated by `⋄` or by line ends (D-69). `⍵` names the right argument and `⍺` the left; `∇` inside the body names the dfn itself. A dfn stands wherever a function stands: applied to the array on its right, with an array on its left, and as the operand of `/ \ ⌿ ⍀ ¨` (`{⍺+⍵}/1 2 3`). Dfns nest. Out of v2, on the roadmap: dfn operators (`⍺⍺ ⍵⍵`), a default left argument (`⍺←`), error guards (`::`), and a dfn as the operand of `.` or `∘.`. ⟨`lex/dfns`, `parse/dfns`, `atl/dfns`⟩
+**D-63 · Dfns.** `{…}` is a function value: the body between the braces is statements separated by `⋄` or by line ends (D-69). `⍵` names the right argument and `⍺` the left; `∇` inside the body names the dfn itself. A dfn stands wherever a function stands: applied to the array on its right, with an array on its left, and as the operand of `/ \ ⌿ ⍀ ¨` (`{⍺+⍵}/1 2 3`). Dfns nest. AMENDED 2026-11-04: dfn operators (D-95), a default left argument (D-93) and error guards (D-94) have landed, as has a dfn as the operand of `.` or `∘.` (D-91). ⟨`lex/dfns`, `parse/dfns`, `atl/dfns`⟩
 
 **D-64 · A name takes a dfn by assignment and is then an ambivalent function.** `F←{⍺÷⍵}` binds `F` with class ambivalent (D-22, D-52): `F 6` is monadic, `5 F 6` dyadic. Only a brace literal is assigned as a function; `F←+` is a SYNTAX ERROR. The name is one name: an array assigned to it later makes it an array (`DIV←3`), a `∇` definition replaces the dfn, and a dfn assignment replaces a tradfn. `)FNS` lists it and `)ERASE` erases it. ⟨`parse/dfns`, `atl/dfns`⟩
 
@@ -153,7 +163,7 @@ Dyadic: `+ − × ÷ ⌈ ⌊ ∣ ⋆ ⍟ ○ !` and `< ≤ = ≥ > ≠ ∨ ∧ �
 
 **D-44 · Held back from v1, with the reason.** `⌹` matrix divide (needs Lagoon or a float linear solver); `⍎` execute (needs the compiler in the runtime, plan P6 makes it cheap); `⍕` format (monadic only, for display, D-45); `⍷` find; `⍪` table/laminate; `≡` match and depth (ENTERED 2026-11-03 as D-73); `⍉` dyadic; `⌽` with axis `[k]`. Each enters with its three vectors or stays out. ENTERED 2026-11-03 as P10: all of them, D-82..D-90, each with its vectors.
 
-**D-45 · Display.** Vectors print space-separated on one line; a matrix prints one row per line, columns right-aligned; higher ranks print planes separated by a blank line. Numbers print with `⎕PP` 10 significant digits, exponent form past `1E10` (`2.642213044E60` as in the README). `%real` whose value is integral prints without a point. Negative numbers print with `¯`, never `-`. Character arrays print raw, without quotes. AMENDED 2026-11-03: a box prints as its strand (D-76). ⟨`atl/power-log`, `atl/display`, `atl/residue-sign`⟩
+**D-45 · Display.** Vectors print space-separated on one line; a matrix prints one row per line, columns right-aligned; higher ranks print planes separated by a blank line. AMENDED 2026-11-04: past rank 2 the columns align across every plane, and each axis further out adds one more blank line between its cells. Numbers print with `⎕PP` 10 significant digits, exponent form past `1E10` (`2.642213044E60` as in the README). `%real` whose value is integral prints without a point. Negative numbers print with `¯`, never `-`. Character arrays print raw, without quotes. AMENDED 2026-11-03: a box prints as its strand (D-76). ⟨`atl/power-log`, `atl/display`, `atl/residue-sign`⟩
 
 ## 7. Compilation model
 
@@ -171,7 +181,7 @@ Dyadic: `+ − × ÷ ⌈ ⌊ ∣ ⋆ ⍟ ○ !` and `< ≤ = ≥ > ≠ ∨ ∧ �
 
 **D-60 · System variables.** `⎕IO` (D-14), `⎕PP` (D-45), `⎕TYPE` (D-15, reserved). Reading one is an expression; assigning one is validated (`⎕IO ← 2` is a DOMAIN ERROR). ⟨`lex/strings-system` (lexing only), `atl/index-origin`⟩
 
-**D-61 · System commands.** `)GREEN`, `)RED` and `)TOGGLE` choose the prompt mode (D-54) for the lines that follow (added 2026-10-27 for the REPL). A `)` that opens a line and is followed by a name is a command token; elsewhere `)` closes a parenthesis. `)VARS` lists variables, `)FNS` lists functions, `)ERASE name`, `)OFF` ends the session. `)SAVE` is the kernel's checkpoint and needs no command; it is parsed and answers that. ⟨`lex/strings-system`, `atl/commands`, `kernel/sieve` (`)VARS` through the kernel)⟩
+**D-61 · System commands.** `)GREEN`, `)RED` and `)TOGGLE` choose the prompt mode (D-54) for the lines that follow (added 2026-10-27 for the REPL). A `)` that opens a line and is followed by a name is a command token; elsewhere `)` closes a parenthesis. `)VARS` lists variables, `)FNS` lists functions, `)ERASE name`, `)OFF` ends the session. `)PATH BOTH`, `)PATH INTERP` and `)PATH EMIT` (added 2026-11-04, P11b) choose how the red prompt evaluates. BOTH, the default, runs the interpreter and the emitted formula and compares them (D-53). INTERP runs the interpreter alone, and EMIT the emitted formula alone, which is the fast path. A bare `)PATH` prints the current choice. ⟨`atl/path`⟩ `)SAVE` is the kernel's checkpoint and needs no command; it is parsed and answers that. ⟨`lex/strings-system`, `atl/commands`, `kernel/sieve` (`)VARS` through the kernel)⟩
 
 **D-62 · A `∇` line puts the session in definition mode** until a line that is exactly `∇`. Definition-mode lines are stored, not evaluated; a syntax error in a body is reported at the closing `∇` with the body line number. ⟨`atl/readme-green`⟩
 
@@ -181,7 +191,7 @@ Dyadic: `+ − × ÷ ⌈ ⌊ ∣ ⋆ ⍟ ○ !` and `< ≤ = ≥ > ≠ ∨ ∧ �
 
 Ordered as phases P8 onward in [`docs/roadmap.md`](../roadmap.md).
 
-A fractional axis (laminate by `[k]`, D-82); partition of rank 2 (D-78); `⍕` of rank 3 and above (D-88); dfn operators, `⍺←` and `::` (D-63); an ASCII input pre-pass (D-8, deferred); `⎕TYPE`'s meaning (D-15, the name is reserved); packed Lagoon erasure and SoftBLAS jets (plan P7).
+Landed 2026-11-04: laminate (D-92), partition past rank 1 (D-78), `⍕` and `⍷` past rank 2 (D-88, D-87), `⍺←` (D-93), error guards (D-94) and dfn operators (D-95). Still owed: array operands of a dfn operator and `∇∇` (D-95); an ASCII input pre-pass (D-8, deferred); `⎕TYPE`'s meaning (D-15, the name is reserved); packed Lagoon erasure and SoftBLAS jets (plan P7).
 
 ## References
 

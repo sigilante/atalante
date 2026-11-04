@@ -35,9 +35,14 @@ func relabel(r: lagoon.Ray, k: Term) -> lagoon.Ray {
 func toCps(cs: List<UniChar>) -> List<@> { match cs { (h, t) => (h as! @, toCps(t)), _ => ~, } };
 
 // --- list helpers --------------------------------------------------------------
-func turnL(xs: List<@>, f: @ -> @) -> List<@> { match xs { (h, t) => (f(h), turnL(t, f)), _ => ~, } };
-func zipL(xs: List<@>, ys: List<@>, f: (@, @) -> @) -> List<@> {
-  match xs { (h, t) => match ys { (h2, t2) => (f(h, h2), zipL(t, t2, f)), _ => ~, }, _ => ~, }
+// The list builders run as tail calls over an accumulator and reverse once: NockVM copies a
+// non-tail call's result out of each frame it returns through, which makes a consing recursion
+// quadratic in its length (P11b)
+func turnL(xs: List<@>, f: @ -> @) -> List<@> { revL(turnAcc(xs, f, ~), ~) };
+func turnAcc(xs: List<@>, f: @ -> @, acc: List<@>) -> List<@> { match xs { (h, t) => turnAcc(t, f, (f(h), acc)), _ => acc, } };
+func zipL(xs: List<@>, ys: List<@>, f: (@, @) -> @) -> List<@> { revL(zipAcc(xs, ys, f, ~), ~) };
+func zipAcc(xs: List<@>, ys: List<@>, f: (@, @) -> @, acc: List<@>) -> List<@> {
+  match xs { (h, t) => match ys { (h2, t2) => zipAcc(t, t2, f, (f(h, h2), acc)), _ => acc, }, _ => acc, }
 };
 func anyL(xs: List<@>, p: @ -> Bool) -> Bool { match xs { (h, t) => if p(h) { true } else { anyL(t, p) }, _ => false, } };
 func allL(xs: List<@>, p: @ -> Bool) -> Bool { match xs { (h, t) => if p(h) { allL(t, p) } else { false }, _ => true, } };
@@ -50,19 +55,29 @@ func zipArr(a: Arr, b: Arr, k: @, f: (@, @) -> @) -> Arr { make(k, shape(a), zip
 
 // --- more list and index helpers (P4) -------------------------------------------------
 func nth(xs: List<@>, i: @) -> @ { match xs { (h, t) => if i == 0 { h } else { nth(t, i - 1) }, _ => 0, } };
-func takeL(xs: List<@>, n: @) -> List<@> { if n == 0 { ~ } else { match xs { (h, t) => (h, takeL(t, n - 1)), _ => ~, } } };
+func takeL(xs: List<@>, n: @) -> List<@> { revL(takeAcc(xs, n, ~), ~) };
+func takeAcc(xs: List<@>, n: @, acc: List<@>) -> List<@> { if n == 0 { acc } else { match xs { (h, t) => takeAcc(t, n - 1, (h, acc)), _ => acc, } } };
 func dropL(xs: List<@>, n: @) -> List<@> { if n == 0 { xs } else { match xs { (h, t) => dropL(t, n - 1), _ => ~, } } };
 func revL(xs: List<@>, acc: List<@>) -> List<@> { match xs { (h, t) => revL(t, (h, acc)), _ => acc, } };
-func catL(a: List<@>, b: List<@>) -> List<@> { match a { (h, t) => (h, catL(t, b)), _ => b, } };
-func repL(x: @, n: @) -> List<@> { if n == 0 { ~ } else { (x, repL(x, n - 1)) } };
+func catL(a: List<@>, b: List<@>) -> List<@> { revL(revL(a, ~), b) };
+func repL(x: @, n: @) -> List<@> { repAcc(x, n, ~) };
+func repAcc(x: @, n: @, acc: List<@>) -> List<@> { if n == 0 { acc } else { repAcc(x, n - 1, (x, acc)) } };
 // n elements drawn cyclically from xs (xs non-empty)
-func cycleL(xs: List<@>, n: @, i: @, len: @) -> List<@> { if i == n { ~ } else { (nth(xs, i % len), cycleL(xs, n, i + 1, len)) } };
+// xs repeated to n - i elements (len > 0), walked once with an accumulator (P11b)
+func cycleL(xs: List<@>, n: @, i: @, len: @) -> List<@> { match xs { (h, t) => revL(cycAcc(dropL(xs, i % len), xs, n - i, ~), ~), _ => repL(0, n - i), } };
+func cycAcc(rem: List<@>, full: List<@>, n: @, acc: List<@>) -> List<@> {
+  if n == 0 { acc } else { match rem { (h, t) => cycAcc(t, full, n - 1, (h, acc)), _ => cycAcc(full, full, n, acc), } }
+};
 func chunks(xs: List<@>, n: @) -> List<List<@>> { match xs { (h, t) => (takeL(xs, n), chunks(dropL(xs, n), n)), _ => ~, } };
-func flatten(xss: List<List<@>>) -> List<@> { match xss { (r, rest) => catL(r, flatten(rest)), _ => ~, } };
+func flatten(xss: List<List<@>>) -> List<@> { revL(flatAcc(xss, ~), ~) };
+func flatAcc(xss: List<List<@>>, acc: List<@>) -> List<@> { match xss { (r, rest) => flatAcc(rest, revL(r, acc)), _ => acc, } };
 func countLL(xss: List<List<@>>) -> @ { match xss { (r, rest) => 1 + countLL(rest), _ => 0, } };
 func colOf(rows: List<List<@>>, j: @) -> List<@> { match rows { (r, rest) => (nth(r, j), colOf(rest, j)), _ => ~, } };
 func colsOf(rows: List<List<@>>, ncols: @, j: @) -> List<List<@>> { if j == ncols { ~ } else { (colOf(rows, j), colsOf(rows, ncols, j + 1)) } };
-func iotaL(n: @, from: @) -> List<@> { if n == 0 { ~ } else { (from, iotaL(n - 1, from + 1)) } };
+// built from the end by a tail call: a non-tail recursion's list is copied out of every frame it
+// returns through, which is quadratic under NockVM (P11b)
+func iotaL(n: @, from: @) -> List<@> { if n == 0 { ~ } else { iotaDown(n, from + n - 1, ~) } };
+func iotaDown(n: @, cur: @, acc: List<@>) -> List<@> { if n == 0 { acc } else if n == 1 { (cur, acc) } else { iotaDown(n - 1, cur - 1, (cur, acc)) } };
 func lastL(xs: List<@>) -> @ { match xs { (h, t) => match t { (h2, t2) => lastL(t), _ => h, }, _ => 0, } };
 func initL(xs: List<@>) -> List<@> { match xs { (h, t) => match t { (h2, t2) => (h, initL(t)), _ => ~, }, _ => ~, } };
 func fillOf(k: @) -> @ { if k == 4 { 32 } else { 0 } };
@@ -113,7 +128,8 @@ func promote(a: Arr, k: @) -> Arr { match k { 3 => toReal(a), 2 => toInt(a), _ =
 func maxk(a: @, b: @) -> @ { if a > b { a } else { b } };
 
 // --- scalar extension (D-25):  (a', b', tag);  tag "" when the shapes agree
-func spread(a: Arr, shp: List<@>) -> Arr { Arr( kind: a.kind, ray: lagoon.fill(metaOf(a.kind, shp), first(a)), items: a.items ) };
+// a scalar repeated to a shape: Lagoon's +fill builds through +reap, unjetted under jojo and quadratic as a non-tail recursion (P11b)
+func spread(a: Arr, shp: List<@>) -> Arr { Arr( kind: a.kind, ray: lagoon.from(metaOf(a.kind, shp), repL(first(a), size(shp))), items: a.items ) };
 func extend(a: Arr, b: Arr) -> (Arr, Arr, String) {
   if shape(a) == shape(b) { (a, b, "") }
   else if size(shape(a)) == 1 { (spread(a, shape(b)), b, "") }
@@ -263,15 +279,20 @@ func fmtMatrix(k: @, cells: List<String>, cols: @) -> String {
 func last2(shp: List<@>) -> (@, @) {
   match shp { (a, t) => match t { (b, t2) => match t2 { (c, t3) => last2(t), _ => (a, b), }, _ => (a, a), }, _ => (1, 1), }
 };
-func fmtPlanes(k: @, cells: List<String>, rows: @, cols: @) -> String {
-  match cells {
-    (h, t) => {
-      let n = rows * cols;
-      let here = fmtMatrix(k, takeS(cells, n), cols);
-      match dropS(cells, n) { (h2, t2) => here + "\n\n" + fmtPlanes(k, dropS(cells, n), rows, cols), _ => here, }
-    },
-    _ => "",
-  }
+// rank 3 and above: every row of every plane, columns aligned across the whole array, a blank
+// line between planes and one more at each axis further out (D-45)
+func fmtPlanes(k: @, cells: List<String>, shp: List<@>) -> String {
+  match last2(shp) { (rows, cols) => {
+    let all = chunk(cells, cols);
+    let lines = if k == 4 { fmtRows(all, ~, "") } else { fmtRows(all, widths(all, ~), " ") };
+    joinPlanes(lines, rows, dropL(revL(takeL(shp, count(shp) - 1), ~), 1), 1)
+  }, }
+};
+func joinPlanes(lines: List<String>, rows: @, outer: List<@>, i: @) -> String {
+  match lines { (l, rest) => match rest { (l2, r2) => l + "\n" + blanks(i, rows, outer) + joinPlanes(rest, rows, outer, i + 1), _ => l, }, _ => "", }
+};
+func blanks(i: @, m: @, outer: List<@>) -> String {
+  match outer { (d, t) => if i % m == 0 { "\n" + blanks(i, m * d, t) } else { "" }, _ => "", }
 };
 // --- display of a box (D-76): the strand that builds it ------------------------------
 func quoted(cs: List<@>) -> String { "'" + joinS(quoteEach(cs), "") + "'" };
@@ -329,6 +350,6 @@ func formatSimple(a: Arr, pp: @) -> String {
   if r == 0 { joinS(cells, "") }
   else if r == 1 { if a.kind == 4 { joinS(cells, "") } else { joinS(cells, " ") } }
   else {
-    match last2(shape(a)) { (rows, cols) => if r == 2 { fmtMatrix(a.kind, cells, cols) } else { fmtPlanes(a.kind, cells, rows, cols) }, }
+    match last2(shape(a)) { (rows, cols) => if r == 2 { fmtMatrix(a.kind, cells, cols) } else { fmtPlanes(a.kind, cells, shape(a)) }, }
   }
 };
