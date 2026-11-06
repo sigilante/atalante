@@ -120,7 +120,8 @@ func relabel(r: lagoon.Ray, k: Term) -> lagoon.Ray {
   lagoon.Ray( meta: lagoon.Meta( shape: r.meta.shape, bloq: r.meta.bloq, kind: k, tail: r.meta.tail ), data: r.data )
 };
 
-func toCps(cs: List<UniChar>) -> List<@> { match cs { (h, t) => (h as! @, toCps(t)), _ => ~, } };
+func toCps(cs: List<UniChar>) -> List<@> { revL(toCpsAcc(cs, ~), ~) };
+func toCpsAcc(cs: List<UniChar>, acc: List<@>) -> List<@> { match cs { (h, t) => toCpsAcc(t, (h as! @, acc)), _ => acc, } };
 
 // --- list helpers --------------------------------------------------------------
 // The list builders run as tail calls over an accumulator and reverse once: NockVM copies a
@@ -156,18 +157,26 @@ func cycleL(xs: List<@>, n: @, i: @, len: @) -> List<@> { match xs { (h, t) => r
 func cycAcc(rem: List<@>, full: List<@>, n: @, acc: List<@>) -> List<@> {
   if n == 0 { acc } else { match rem { (h, t) => cycAcc(t, full, n - 1, (h, acc)), _ => cycAcc(full, full, n, acc), } }
 };
-func chunks(xs: List<@>, n: @) -> List<List<@>> { match xs { (h, t) => (takeL(xs, n), chunks(dropL(xs, n), n)), _ => ~, } };
+func chunks(xs: List<@>, n: @) -> List<List<@>> { revLLa(chunksAcc(xs, n, ~), ~) };
+func chunksAcc(xs: List<@>, n: @, acc: List<List<@>>) -> List<List<@>> { match xs { (h, t) => chunksAcc(dropL(xs, n), n, (takeL(xs, n), acc)), _ => acc, } };
+func revLLa(xs: List<List<@>>, acc: List<List<@>>) -> List<List<@>> { match xs { (h, t) => revLLa(t, (h, acc)), _ => acc, } };
 func flatten(xss: List<List<@>>) -> List<@> { revL(flatAcc(xss, ~), ~) };
 func flatAcc(xss: List<List<@>>, acc: List<@>) -> List<@> { match xss { (r, rest) => flatAcc(rest, revL(r, acc)), _ => acc, } };
 func countLL(xss: List<List<@>>) -> @ { match xss { (r, rest) => 1 + countLL(rest), _ => 0, } };
-func colOf(rows: List<List<@>>, j: @) -> List<@> { match rows { (r, rest) => (nth(r, j), colOf(rest, j)), _ => ~, } };
-func colsOf(rows: List<List<@>>, ncols: @, j: @) -> List<List<@>> { if j == ncols { ~ } else { (colOf(rows, j), colsOf(rows, ncols, j + 1)) } };
+func colOf(rows: List<List<@>>, j: @) -> List<@> { revL(colAcc(rows, j, ~), ~) };
+func colAcc(rows: List<List<@>>, j: @, acc: List<@>) -> List<@> { match rows { (r, rest) => colAcc(rest, j, (nth(r, j), acc)), _ => acc, } };
+// the columns j.. of the rows, each step peeling one head off every row (linear in the cells)
+func colsOf(rows: List<List<@>>, ncols: @, j: @) -> List<List<@>> { revLLa(colsAcc(dropEach(rows, j, ~), ncols - j, ~), ~) };
+func colsAcc(rows: List<List<@>>, n: @, acc: List<List<@>>) -> List<List<@>> { if n == 0 { acc } else { colsAcc(tailsOf(rows, ~), n - 1, (headsOf(rows, ~), acc)) } };
+func headsOf(rows: List<List<@>>, acc: List<@>) -> List<@> { match rows { (r, rest) => headsOf(rest, (match r { (h, t) => h, _ => 0, }, acc)), _ => revL(acc, ~), } };
+func tailsOf(rows: List<List<@>>, acc: List<List<@>>) -> List<List<@>> { match rows { (r, rest) => tailsOf(rest, (match r { (h, t) => t, _ => ~, }, acc)), _ => revLLa(acc, ~), } };
+func dropEach(rows: List<List<@>>, j: @, acc: List<List<@>>) -> List<List<@>> { if j == 0 { rows } else { match rows { (r, rest) => dropEach(rest, j, (dropL(r, j), acc)), _ => revLLa(acc, ~), } } };
 // built from the end by a tail call: a non-tail recursion's list is copied out of every frame it
 // returns through, which is quadratic under NockVM (P11b)
 func iotaL(n: @, from: @) -> List<@> { if n == 0 { ~ } else { iotaDown(n, from + n - 1, ~) } };
 func iotaDown(n: @, cur: @, acc: List<@>) -> List<@> { if n == 0 { acc } else if n == 1 { (cur, acc) } else { iotaDown(n - 1, cur - 1, (cur, acc)) } };
 func lastL(xs: List<@>) -> @ { match xs { (h, t) => match t { (h2, t2) => lastL(t), _ => h, }, _ => 0, } };
-func initL(xs: List<@>) -> List<@> { match xs { (h, t) => match t { (h2, t2) => (h, initL(t)), _ => ~, }, _ => ~, } };
+func initL(xs: List<@>) -> List<@> { match revL(xs, ~) { (h, t) => revL(t, ~), _ => ~, } };
 func fillOf(k: @) -> @ { if k == 4 { 32 } else { 0 } };
 // row-major index arithmetic
 func flatIx(shp: List<@>, ix: List<@>) -> @ {
@@ -177,18 +186,15 @@ func unflatIx(shp: List<@>, k: @) -> List<@> {
   match shp { (d, ds) => { let s = size(ds); ((k / s) % d, unflatIx(ds, k % s)) }, _ => ~, }
 };
 // every combination of one element from each part, first part slowest
-func cartesian(parts: List<List<@>>) -> List<List<@>> {
-  match parts {
-    (p, rest) => match rest { (p2, r2) => prefixAll(p, cartesian(rest)), _ => singles(p), },
-    _ => [~],
-  }
-};
-func singles(xs: List<@>) -> List<List<@>> { match xs { (h, t) => ([h], singles(t)), _ => ~, } };
-func prefixAll(xs: List<@>, tails: List<List<@>>) -> List<List<@>> {
-  match xs { (h, t) => catLL(prefixEach(h, tails), prefixAll(t, tails)), _ => ~, }
-};
-func prefixEach(h: @, tails: List<List<@>>) -> List<List<@>> { match tails { (tl, rest) => ((h, tl), prefixEach(h, rest)), _ => ~, } };
-func catLL(a: List<List<@>>, b: List<List<@>>) -> List<List<@>> { match a { (h, t) => (h, catLL(t, b)), _ => b, } };
+// built from the last part outward, each step a pass over (element, tail) pairs into an accumulator
+func cartesian(parts: List<List<@>>) -> List<List<@>> { cartFrom(revLLa(parts, ~), [~]) };
+func cartFrom(rparts: List<List<@>>, combos: List<List<@>>) -> List<List<@>> { match rparts { (p, rest) => cartFrom(rest, revLLa(prefixAll(p, combos, ~), ~)), _ => combos, } };
+// (h, tl) for h in xs, tl in tails, h slowest;  answered reversed
+func prefixAll(xs: List<@>, tails: List<List<@>>, acc: List<List<@>>) -> List<List<@>> { match xs { (h, t) => prefixAll(t, tails, prefixEach(h, tails, acc)), _ => acc, } };
+func prefixEach(h: @, tails: List<List<@>>, acc: List<List<@>>) -> List<List<@>> { match tails { (tl, rest) => prefixEach(h, rest, ((h, tl), acc)), _ => acc, } };
+func catLL(a: List<List<@>>, b: List<List<@>>) -> List<List<@>> { revLLa(revLLa(a, ~), b) };
+func singles(xs: List<@>) -> List<List<@>> { revLLa(singlesAcc(xs, ~), ~) };
+func singlesAcc(xs: List<@>, acc: List<List<@>>) -> List<List<@>> { match xs { (h, t) => singlesAcc(t, ([h], acc)), _ => acc, } };
 func lastDim(shp: List<@>) -> @ { match shp { (d, ds) => match ds { (d2, r) => lastDim(ds), _ => d, }, _ => 1, } };
 func firstDim(shp: List<@>) -> @ { match shp { (d, ds) => d, _ => 1, } };
 
@@ -249,15 +255,17 @@ func isSimpleScalar(a: Arr) -> Bool { a.kind != 5 and rank(a) == 0 };
 func classOf(a: Arr) -> @ { if a.kind == 4 { 1 } else { 0 } };     // 0 numeric, 1 character
 func countA(xs: List<Arr>) -> @ { match xs { (h, t) => 1 + countA(t), _ => 0, } };
 func nthA(xs: List<Arr>, i: @) -> Arr { match xs { (h, t) => if i == 0 { h } else { nthA(t, i - 1) }, _ => scalar(1, 0), } };
-func takeA(xs: List<Arr>, n: @) -> List<Arr> { if n == 0 { ~ } else { match xs { (h, t) => (h, takeA(t, n - 1)), _ => ~, } } };
+func takeA(xs: List<Arr>, n: @) -> List<Arr> { revA(takeAAcc(xs, n, ~), ~) };
+func takeAAcc(xs: List<Arr>, n: @, acc: List<Arr>) -> List<Arr> { if n == 0 { acc } else { match xs { (h, t) => takeAAcc(t, n - 1, (h, acc)), _ => acc, } } };
 func dropA(xs: List<Arr>, n: @) -> List<Arr> { if n == 0 { xs } else { match xs { (h, t) => dropA(t, n - 1), _ => ~, } } };
-func catA(a: List<Arr>, b: List<Arr>) -> List<Arr> { match a { (h, t) => (h, catA(t, b)), _ => b, } };
+func catA(a: List<Arr>, b: List<Arr>) -> List<Arr> { revA(revA(a, ~), b) };
 func revA(xs: List<Arr>, acc: List<Arr>) -> List<Arr> { match xs { (h, t) => revA(t, (h, acc)), _ => acc, } };
 func allSimpleScalars(xs: List<Arr>) -> Bool { match xs { (h, t) => if isSimpleScalar(h) { allSimpleScalars(t) } else { false }, _ => true, } };
 func oneClass(xs: List<Arr>, c: @) -> Bool { match xs { (h, t) => if classOf(h) == c { oneClass(t, c) } else { false }, _ => true, } };
 func maxKindA(xs: List<Arr>, k: @) -> @ { match xs { (h, t) => maxKindA(t, maxk(k, h.kind)), _ => k, } };
 func firstValsA(xs: List<Arr>, k: @) -> List<@> { let w = realWA(xs, 0); firstValsAt(xs, k, w) };
-func firstValsAt(xs: List<Arr>, k: @, w: @) -> List<@> { match xs { (h, t) => (first(promoteAt(h, k, w)), firstValsAt(t, k, w)), _ => ~, } };
+func firstValsAt(xs: List<Arr>, k: @, w: @) -> List<@> { revL(firstAcc(xs, k, w, ~), ~) };
+func firstAcc(xs: List<Arr>, k: @, w: @, acc: List<@>) -> List<@> { match xs { (h, t) => firstAcc(t, k, w, (first(promoteAt(h, k, w)), acc)), _ => acc, } };
 // the widest real width among the arrays, 6 when none is real (a join's width, D-15)
 func realWA(xs: List<Arr>, m: @) -> @ { match xs { (h, t) => realWA(t, if h.kind == 3 { maxW(m, bloqOf(h)) } else { m }), _ => if m == 0 { 6 } else { m }, } };
 // a box of the given shape over elements in ravel order
@@ -271,13 +279,14 @@ func normalize(shp: List<@>, xs: List<Arr>) -> Arr {
   } else { boxOf(shp, xs) }
 };
 func enclose(a: Arr) -> Arr { if isSimpleScalar(a) { a } else { boxOf(~, [a]) } };
-func scalarsOf(k: @, vs: List<@>) -> List<Arr> { match vs { (v, t) => (scalar(k, v), scalarsOf(k, t)), _ => ~, } };
+func scalarsOf(k: @, vs: List<@>) -> List<Arr> { revA(scalarsAcc(k, vs, ~), ~) };
+func scalarsAcc(k: @, vs: List<@>, acc: List<Arr>) -> List<Arr> { match vs { (v, t) => scalarsAcc(k, t, (scalar(k, v), acc)), _ => acc, } };
 // the elements in ravel order, each an array
 func itemsOf(a: Arr) -> List<Arr> { if isBox(a) { pickItems(a, vals(a)) } else { scalarsOf(a.kind, vals(a)) } };
 // the elements the index numbers name;  0 is the prototype
-func pickItems(a: Arr, ixs: List<@>) -> List<Arr> {
-  match ixs { (i, t) => (if i == 0 { proto(a) } else { nthA(a.items, i - 1) }, pickItems(a, t)), _ => ~, }
-};
+// one nthA per index:  linear in the indices, but each lookup walks the items (a box of many items regathers in O(n²))
+func pickItems(a: Arr, ixs: List<@>) -> List<Arr> { revA(pickAcc(a, ixs, ~), ~) };
+func pickAcc(a: Arr, ixs: List<@>, acc: List<Arr>) -> List<Arr> { match ixs { (i, t) => pickAcc(a, t, (if i == 0 { proto(a) } else { nthA(a.items, i - 1) }, acc)), _ => acc, } };
 // a box's index ray as a natural array;  a structural function runs on it
 func ixArr(a: Arr) -> Arr { Arr( kind: 1, ray: a.ray, items: ~ ) };
 // the moved index ray back to elements, in normal form
@@ -290,13 +299,16 @@ func proto(a: Arr) -> Arr {
 func typeOf(a: Arr) -> Arr {
   if isBox(a) { boxOf(shape(a), typeAll(itemsOf(a))) } else { make(a.kind, shape(a), repL(fillOf(a.kind), size(shape(a)))) }
 };
-func typeAll(xs: List<Arr>) -> List<Arr> { match xs { (h, t) => (typeOf(h), typeAll(t)), _ => ~, } };
+func typeAll(xs: List<Arr>) -> List<Arr> { revA(typeAcc(xs, ~), ~) };
+func typeAcc(xs: List<Arr>, acc: List<Arr>) -> List<Arr> { match xs { (h, t) => typeAcc(t, (typeOf(h), acc)), _ => acc, } };
 func depth(a: Arr) -> @ { if isBox(a) { 1 + maxDepth(a.items, 0) } else if rank(a) == 0 { 0 } else { 1 } };
 func maxDepth(xs: List<Arr>, d: @) -> @ { match xs { (h, t) => maxDepth(t, maxk(d, depth(h))), _ => d, } };
 
 // --- display (D-45) ----------------------------------------------------------------
 func strLen(s: String) -> @ { count(toCps(s.chars())) };
-func takeB(bs: List<Byte>, n: @) -> List<Byte> { if n == 0 { ~ } else { match bs { (h, t) => (h, takeB(t, n - 1)), _ => ~, } } };
+func takeB(bs: List<Byte>, n: @) -> List<Byte> { revB(takeBAcc(bs, n, ~), ~) };
+func takeBAcc(bs: List<Byte>, n: @, acc: List<Byte>) -> List<Byte> { if n == 0 { acc } else { match bs { (h, t) => takeBAcc(t, n - 1, (h, acc)), _ => acc, } } };
+func revB(xs: List<Byte>, acc: List<Byte>) -> List<Byte> { match xs { (h, t) => revB(t, (h, acc)), _ => acc, } };
 func dropB(bs: List<Byte>, n: @) -> List<Byte> { if n == 0 { bs } else { match bs { (h, t) => dropB(t, n - 1), _ => ~, } } };
 func zeros(n: @) -> String { if n == 0 { "" } else { "0" + zeros(n - 1) } };
 func spaces(n: @) -> String { if n == 0 { "" } else { " " + spaces(n - 1) } };
@@ -349,35 +361,41 @@ func fmtReal(x: @, pp: @) -> String {
 func fmtElem(k: @, x: @, pp: @) -> String {
   match k { 2 => fmtInt(x), 3 => fmtReal(x, pp), 4 => utf8([x as! UniChar]), _ => fmtNat(x), }
 };
-func fmtAll(k: @, xs: List<@>, pp: @) -> List<String> {
-  match xs { (h, t) => (fmtElem(k, h, pp), fmtAll(k, t, pp)), _ => ~, }
-};
+func fmtAll(k: @, xs: List<@>, pp: @) -> List<String> { revS(fmtAllAcc(k, xs, pp, ~), ~) };
+func fmtAllAcc(k: @, xs: List<@>, pp: @, acc: List<String>) -> List<String> { match xs { (h, t) => fmtAllAcc(k, t, pp, (fmtElem(k, h, pp), acc)), _ => acc, } };
+func revS(xs: List<String>, acc: List<String>) -> List<String> { match xs { (h, t) => revS(t, (h, acc)), _ => acc, } };
+// the bytes of every string and separator into one reversed list, cripped once:  joining by +
+// copies the growing tail at every step, quadratic in the text (P11b)
 func joinS(xs: List<String>, sep: String) -> String {
-  match xs { (h, t) => match t { (h2, t2) => h + sep + joinS(t, sep), _ => h, }, _ => "", }
+  match xs { (h, t) => hoon.crip(revB(joinAcc(t, sep.bytes(), pushB(h.bytes(), ~)), ~)), _ => "", }
 };
-func takeS(xs: List<String>, n: @) -> List<String> { if n == 0 { ~ } else { match xs { (h, t) => (h, takeS(t, n - 1)), _ => ~, } } };
+func joinAcc(xs: List<String>, sb: List<Byte>, acc: List<Byte>) -> List<Byte> { match xs { (h, t) => joinAcc(t, sb, pushB(h.bytes(), pushB(sb, acc))), _ => acc, } };
+func pushB(bs: List<Byte>, acc: List<Byte>) -> List<Byte> { match bs { (b, t) => pushB(t, (b, acc)), _ => acc, } };
+func takeS(xs: List<String>, n: @) -> List<String> { revS(takeSAcc(xs, n, ~), ~) };
+func takeSAcc(xs: List<String>, n: @, acc: List<String>) -> List<String> { if n == 0 { acc } else { match xs { (h, t) => takeSAcc(t, n - 1, (h, acc)), _ => acc, } } };
 func dropS(xs: List<String>, n: @) -> List<String> { if n == 0 { xs } else { match xs { (h, t) => dropS(t, n - 1), _ => ~, } } };
-func chunk(xs: List<String>, n: @) -> List<List<String>> {
-  match xs { (h, t) => (takeS(xs, n), chunk(dropS(xs, n), n)), _ => ~, }
-};
+func chunk(xs: List<String>, n: @) -> List<List<String>> { revSS(chunkAcc(xs, n, ~), ~) };
+func chunkAcc(xs: List<String>, n: @, acc: List<List<String>>) -> List<List<String>> { match xs { (h, t) => chunkAcc(dropS(xs, n), n, (takeS(xs, n), acc)), _ => acc, } };
+func revSS(xs: List<List<String>>, acc: List<List<String>>) -> List<List<String>> { match xs { (h, t) => revSS(t, (h, acc)), _ => acc, } };
 func widths(rows: List<List<String>>, acc: List<@>) -> List<@> {
   match rows { (r, rest) => widths(rest, zipMax(acc, r)), _ => acc, }
 };
-func zipMax(ws: List<@>, cells: List<String>) -> List<@> {
+func zipMax(ws: List<@>, cells: List<String>) -> List<@> { zipMaxAcc(ws, cells, ~) };
+func zipMaxAcc(ws: List<@>, cells: List<String>, acc: List<@>) -> List<@> {
   match cells {
-    (c, ct) => match ws { (w, wt) => (maxk(w, strLen(c)), zipMax(wt, ct)), _ => (strLen(c), zipMax(~, ct)), },
-    _ => ws,
+    (c, ct) => match ws { (w, wt) => zipMaxAcc(wt, ct, (maxk(w, strLen(c)), acc)), _ => zipMaxAcc(~, ct, (strLen(c), acc)), },
+    _ => revL(acc, ws),
   }
 };
-func padRow(ws: List<@>, cells: List<String>) -> List<String> {
+func padRow(ws: List<@>, cells: List<String>) -> List<String> { revS(padAcc(ws, cells, ~), ~) };
+func padAcc(ws: List<@>, cells: List<String>, acc: List<String>) -> List<String> {
   match cells {
-    (c, ct) => match ws { (w, wt) => (spaces(w - strLen(c)) + c, padRow(wt, ct)), _ => (c, padRow(~, ct)), },
-    _ => ~,
+    (c, ct) => match ws { (w, wt) => padAcc(wt, ct, (spaces(w - strLen(c)) + c, acc)), _ => padAcc(~, ct, (c, acc)), },
+    _ => acc,
   }
 };
-func fmtRows(rows: List<List<String>>, ws: List<@>, sep: String) -> List<String> {
-  match rows { (r, rest) => (joinS(padRow(ws, r), sep), fmtRows(rest, ws, sep)), _ => ~, }
-};
+func fmtRows(rows: List<List<String>>, ws: List<@>, sep: String) -> List<String> { revS(fmtRowsAcc(rows, ws, sep, ~), ~) };
+func fmtRowsAcc(rows: List<List<String>>, ws: List<@>, sep: String, acc: List<String>) -> List<String> { match rows { (r, rest) => fmtRowsAcc(rest, ws, sep, (joinS(padRow(ws, r), sep), acc)), _ => acc, } };
 // a rank-2 block: rows of `cols` cells;  chars abut, numbers right-align per column
 func fmtMatrix(k: @, cells: List<String>, cols: @) -> String {
   let rows = chunk(cells, cols);
@@ -393,18 +411,19 @@ func fmtPlanes(k: @, cells: List<String>, shp: List<@>) -> String {
   match last2(shp) { (rows, cols) => {
     let all = chunk(cells, cols);
     let lines = if k == 4 { fmtRows(all, ~, "") } else { fmtRows(all, widths(all, ~), " ") };
-    joinPlanes(lines, rows, dropL(revL(takeL(shp, count(shp) - 1), ~), 1), 1)
+    joinS(revS(planeLines(lines, rows, dropL(revL(takeL(shp, count(shp) - 1), ~), 1), 1, ~), ~), "\n")
   }, }
 };
-func joinPlanes(lines: List<String>, rows: @, outer: List<@>, i: @) -> String {
-  match lines { (l, rest) => match rest { (l2, r2) => l + "\n" + blanks(i, rows, outer) + joinPlanes(rest, rows, outer, i + 1), _ => l, }, _ => "", }
+// the lines with an empty line after line i for each axis whose cell ends there (all but the last line)
+func planeLines(lines: List<String>, rows: @, outer: List<@>, i: @, acc: List<String>) -> List<String> {
+  match lines { (l, rest) => match rest { (l2, r2) => planeLines(rest, rows, outer, i + 1, pushEmpty(nBlanks(i, rows, outer), (l, acc))), _ => (l, acc), }, _ => acc, }
 };
-func blanks(i: @, m: @, outer: List<@>) -> String {
-  match outer { (d, t) => if i % m == 0 { "\n" + blanks(i, m * d, t) } else { "" }, _ => "", }
-};
+func nBlanks(i: @, m: @, outer: List<@>) -> @ { match outer { (d, t) => if i % m == 0 { 1 + nBlanks(i, m * d, t) } else { 0 }, _ => 0, } };
+func pushEmpty(n: @, acc: List<String>) -> List<String> { if n == 0 { acc } else { pushEmpty(n - 1, ("", acc)) } };
 // --- display of a box (D-76): the strand that builds it ------------------------------
 func quoted(cs: List<@>) -> String { "'" + joinS(quoteEach(cs), "") + "'" };
-func quoteEach(cs: List<@>) -> List<String> { match cs { (c, t) => (if c == 39 { "''" } else { utf8([c as! UniChar]) }, quoteEach(t)), _ => ~, } };
+func quoteEach(cs: List<@>) -> List<String> { revS(quoteAcc(cs, ~), ~) };
+func quoteAcc(cs: List<@>, acc: List<String>) -> List<String> { match cs { (c, t) => quoteAcc(t, ((if c == 39 { "''" } else { utf8([c as! UniChar]) }), acc)), _ => acc, } };
 func shapeText(shp: List<@>) -> String { joinS(fmtAll(1, shp, 10), " ") };
 // a simple ravel as source: numbers spaced, characters quoted, none as ⍳0
 func ravelText(a: Arr, pp: @) -> String {
@@ -428,19 +447,13 @@ func fmtItem(a: Arr, pp: @) -> String {
   else { "(" + shapeText(shape(a)) + "⍴" + ravelText(a, pp) + ")" }
 };
 func fmtStrand(xs: List<Arr>, pp: @) -> String { joinS(fmtItems(xs, pp), " ") };
-func fmtItems(xs: List<Arr>, pp: @) -> List<String> { match xs { (h, t) => (fmtItem(h, pp), fmtItems(t, pp)), _ => ~, } };
-func fmtBoxRows(xs: List<Arr>, cols: @, pp: @) -> List<String> {
-  match xs { (h, t) => (fmtStrand(takeA(xs, cols), pp), fmtBoxRows(dropA(xs, cols), cols, pp)), _ => ~, }
-};
-func fmtBoxPlanes(xs: List<Arr>, rows: @, cols: @, pp: @) -> String {
-  match xs {
-    (h, t) => {
-      let n = rows * cols;
-      let here = joinS(fmtBoxRows(takeA(xs, n), cols, pp), "\n");
-      match dropA(xs, n) { (h2, t2) => here + "\n\n" + fmtBoxPlanes(dropA(xs, n), rows, cols, pp), _ => here, }
-    },
-    _ => "",
-  }
+func fmtItems(xs: List<Arr>, pp: @) -> List<String> { revS(fmtItemsAcc(xs, pp, ~), ~) };
+func fmtItemsAcc(xs: List<Arr>, pp: @, acc: List<String>) -> List<String> { match xs { (h, t) => fmtItemsAcc(t, pp, (fmtItem(h, pp), acc)), _ => acc, } };
+func fmtBoxRows(xs: List<Arr>, cols: @, pp: @) -> List<String> { revS(boxRowsAcc(xs, cols, pp, ~), ~) };
+func boxRowsAcc(xs: List<Arr>, cols: @, pp: @, acc: List<String>) -> List<String> { match xs { (h, t) => boxRowsAcc(dropA(xs, cols), cols, pp, (fmtStrand(takeA(xs, cols), pp), acc)), _ => acc, } };
+func fmtBoxPlanes(xs: List<Arr>, rows: @, cols: @, pp: @) -> String { joinS(revS(boxPlanesAcc(xs, rows * cols, cols, pp, ~), ~), "\n\n") };
+func boxPlanesAcc(xs: List<Arr>, n: @, cols: @, pp: @, acc: List<String>) -> List<String> {
+  match xs { (h, t) => boxPlanesAcc(dropA(xs, n), n, cols, pp, (joinS(fmtBoxRows(takeA(xs, n), cols, pp), "\n"), acc)), _ => acc, }
 };
 func fmtBox(a: Arr, pp: @) -> String {
   let r = rank(a);

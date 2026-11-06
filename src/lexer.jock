@@ -217,7 +217,9 @@ func lexFrom(cs: List<@>, col: @, bol: Bool, acc: List<Token>) -> Lexed {
       9053 => lexFrom(toLineEnd(rest), col, bol, acc),                                       // ⍝ comment to the line end (D-7)
       8900 => lexFrom(rest, col + 1, false, (tok(Kind.diamond, "⋄", 0, col), acc)),          // ⋄
       8592 => lexFrom(rest, col + 1, false, (tok(Kind.assign, "←", 0, col), acc)),           // ←
-      8711 => lexFrom(rest, col + 1, false, (tok(Kind.del, "∇", 0, col), acc)),              // ∇
+      8711 => match rest { (c2, r2) => if c2 == 8711 { lexFrom(r2, col + 2, false, (tok(Kind.name, "∇∇", 0, col), acc)) }   // ∇∇ the operator itself (D-95)
+          else { lexFrom(rest, col + 1, false, (tok(Kind.del, "∇", 0, col), acc)) },                                          // ∇
+        _ => lexFrom(rest, col + 1, false, (tok(Kind.del, "∇", 0, col), acc)), },
       123  => lexFrom(rest, col + 1, false, (tok(Kind.lbrace, "{{", 0, col), acc)),           // { (D-63)
       125  => lexFrom(rest, col + 1, false, (tok(Kind.rbrace, "}}", 0, col), acc)),           // }
       58   => lexFrom(rest, col + 1, false, (tok(Kind.colon, ":", 0, col), acc)),            // : (D-66)

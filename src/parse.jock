@@ -33,7 +33,9 @@ struct Lit { kind: @, vals: List<String> };               // 1 nat, 2 int, 3 rea
 struct Inner { f: Fn, g: Fn };
 struct Axis { f: Fn, k: @, half: Bool };                 // f[k] (D-82); half: a fractional k, kept as ⌊k⌋+1 (laminate, D-92)
 struct Dfn { body: List<String> };                        // source lines (D-63)
-struct Dop { op: Fn, l: Fn, r: Fn, two: Bool };           // a dfn operator applied: op is the dfn or its name, l (and r) the operands (D-95)
+// a dfn operator applied (D-95): op is the dfn or its name; l and r the operands, each a function
+// or, when la (ra) is set, the array expression lv (rv)
+struct Dop { op: Fn, l: Fn, r: Fn, two: Bool, la: Bool, lv: Ast, ra: Bool, rv: Ast };
 enum Fn { prim(@), user(String), reduce(Fn), reduce1(Fn), scan(Fn), scan1(Fn), each(Fn), inner(Inner), outer(Fn), dfn(Dfn), own, axis(Axis), dop(Dop) };
 enum Ast {
   empty, elide, fnend,
@@ -58,6 +60,7 @@ struct IArr { a: Ast, col: @, open: Bool, unbound: Bool };   // open: numerals f
 struct IFun { f: Fn, col: @ };
 enum Item { asg(@), arr(IArr), fun(IFun) };
 enum Items { err(PErr), ok(List<Item>) };
+enum Opnd { err(PErr), ok((Bool, Ast, List<lexer.Token>)) };      // an array operand: (found, the expression, the tokens after it)
 enum Asts { err(PErr), ok(List<Ast>) };
 
 // --- small helpers -----------------------------------------------------------
@@ -100,14 +103,40 @@ func isOpClass(c: @) -> Bool { c == 6 or c == 7 };
 func pushOperator(op: Fn, two: Bool, col: @, rest: List<lexer.Token>, sig: List<(String, @)>, acc: List<Item>) -> Items {
   match acc {
     (h, more) => match h {
-      .fun(x) => if two { match operandOf(rest, sig) {
-          (isf, gf, rest2) => if isf { items(rest2, sig, (funItem(Fn.dop(Dop( op: op, l: x.f, r: gf, two: true )), x.col), more)) }
-            else { sei(col, "a dyadic operator needs a function to its right (D-95)") },
-        } }
-        else { items(rest, sig, (funItem(Fn.dop(Dop( op: op, l: x.f, r: Fn.prim(0), two: false )), x.col), more)) },
-      _ => sei(col, "an operator needs a function to its left (D-95)"),
+      .fun(x) => rightOperand(op, two, false, x.f, Ast.empty, x.col, col, rest, sig, more),
+      .arr(x) => if x.unbound { Items.err(pe("%value-error", x.col, nameOf(x.a) + " is not defined")) }
+        else { rightOperand(op, two, true, Fn.prim(0), x.a, x.col, col, rest, sig, more) },
+      _ => sei(col, "an operator needs an operand to its left (D-95)"),
     },
-    _ => sei(col, "an operator needs a function to its left (D-95)"),
+    _ => sei(col, "an operator needs an operand to its left (D-95)"),
+  }
+};
+// a dyadic operator's right operand:  a function (glyph, function name, dfn), or an array that is one
+// numeral or character literal, an array name, or a parenthesised expression (D-95)
+func rightOperand(op: Fn, two: Bool, la: Bool, lf: Fn, lv: Ast, lcol: @, col: @, rest: List<lexer.Token>, sig: List<(String, @)>, more: List<Item>) -> Items {
+  if not two { items(rest, sig, (funItem(Fn.dop(Dop( op: op, l: lf, r: Fn.prim(0), two: false, la: la, lv: lv, ra: false, rv: Ast.empty )), lcol), more)) }
+  else { match operandOf(rest, sig) {
+    (isf, gf, rest2) => if isf { items(rest2, sig, (funItem(Fn.dop(Dop( op: op, l: lf, r: gf, two: true, la: la, lv: lv, ra: false, rv: Ast.empty )), lcol), more)) }
+      else { match arrayOperand(rest, sig) {
+        .err(e) => Items.err(e),
+        .ok(r) => match r { (found, av, rest3) => if found { items(rest3, sig, (funItem(Fn.dop(Dop( op: op, l: lf, r: Fn.prim(0), two: true, la: la, lv: lv, ra: true, rv: av )), lcol), more)) }
+          else { sei(col, "a dyadic operator needs an operand to its right (D-95)") }, },
+      } },
+  } }
+};
+func arrayOperand(ts: List<lexer.Token>, sig: List<(String, @)>) -> Opnd {
+  match ts {
+    (t, rest) => {
+      let k = kindOf(t);
+      if k >= 1 and k <= 4 { Opnd.ok((true, Ast.lit(Lit( kind: k, vals: [t.text] )), rest)) }
+      else if k == 5 and cls(sig, t.text) == 1 { Opnd.ok((true, Ast.name(t.text), rest)) }
+      else if k == 9 { match matchTo(rest, 9, 10, 0, ~) {
+        (inner, rest2, closed) => if not closed { Opnd.err(pe("%syntax-error", t.col, "unbalanced (")) }
+          else { match parseExpr(inner, sig) { .err(e) => Opnd.err(e), .ok(a) => Opnd.ok((true, a, rest2)), } },
+      } }
+      else { Opnd.ok((false, Ast.empty, ts)) }
+    },
+    _ => Opnd.ok((false, Ast.empty, ts)),
   }
 };
 // token kind as a number, so a match can dispatch on it
@@ -787,7 +816,7 @@ func showFn(f: Fn) -> String {
     .outer(g) => "∘." + showFn(g),
     .dfn(d) => "{{" + joinS(d.body, " ⋄ ") + "}}",
     .own => "∇",
-    .dop(x) => "(" + showFn(x.l) + " " + showFn(x.op) + (if x.two { " " + showFn(x.r) } else { "" }) + ")",
+    .dop(x) => "(" + (if x.la { showAst(x.lv) } else { showFn(x.l) }) + " " + showFn(x.op) + (if x.two { " " + (if x.ra { showAst(x.rv) } else { showFn(x.r) }) } else { "" }) + ")",
     .axis(x) => if not x.half { showFn(x.f) + "[{x.k}]" } else if x.k == 0 { showFn(x.f) + "[¯0.5]" } else { showFn(x.f) + "[{x.k - 1}.5]" },
   }
 };

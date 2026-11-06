@@ -12,3 +12,5 @@ F←{⍺÷⍵}
 ⍝ expect: lbrace chr:it's glyph:⍳ name:⍵ rbrace chr:s
 ⍺⍺ ⍵⍵ ⍺⍵⍺
 ⍝ expect: name:⍺⍺ name:⍵⍵ name:⍺ name:⍵ name:⍺
+∇∇ ∇
+⍝ expect: name:∇∇ del

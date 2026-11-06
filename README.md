@@ -239,7 +239,7 @@ Measured under jojo with `tools/bench-repl.py` on 2026-11-04. Jojo jets the floa
 ## What is held back
 
 - A nested array is a list of arrays on the Jock side, outside the specialised gates. Its structural work runs on a `%uint` index ray, so it needs no Lagoon layout of its own (P11).
-- Dfns have guards and nothing else for control flow (D-32, D-63); `→` and labels are omitted for good.  A dfn operator takes function operands only; array operands and `∇∇` are held back (D-95).
+- Dfns have guards and nothing else for control flow (D-32, D-63); `→` and labels are omitted for good.  A derived function with an array operand applies monadically; `1 (2 OP) 3` is held back (D-95).
 - `⎕PP` stops at 17 digits, so a `REAL128` value prints fewer digits than it carries (D-15).
 
 ## Layout
