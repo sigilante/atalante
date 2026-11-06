@@ -1,4 +1,4 @@
-numerics pin: the numerics checkout at 9eb9500b75684ce76c606877a754c5bab18e2c31 (vendored by tools/vendor-numerics.py)
+numerics pin: the numerics checkout at 0611fac5e3c943828cff3987b4aafed7353e4ecc (vendored by tools/vendor-numerics.py)
 files:
   sur/lagoon.hoon  <- lagoon/desk/sur/lagoon.hoon
   lib/lagoon.hoon  <- lagoon/desk/lib/lagoon.hoon
