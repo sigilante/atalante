@@ -180,7 +180,32 @@ Vectors: `atl/types` (52), `atl/ascii` (20), `atl/readme-ascii` (30), `atl/unbou
 
 At the live jojo prompt, on the jam staged in jojo#16 and each case on a fresh session, all 21 cases tried reproduce in full: `readme-red` 28/28, `readme-ascii` 30/30, `types` 52/52, `ascii` 20/20, `errors` 8/8, `unbound-column` 5/5, `dfn-lines` 25/25, `dfns` 33/33, `nested` 75/75, `axis` 14/14, `execute` 11/11, `solve` 6/6, `format` 16/16, `laminate` 17/17, `partition` 13/13, `find` 11/11, `rank3` 18/18, `dfn-defaults` 9/9, `error-guards` 18/18, `dfn-operators` 13/13, `path` 8/8. The blank-line limit of P10 was the harness's: `tools/repl-test.py` dropped every empty pane row, a rank-3 display's plane separators with the screen's empty tail. It now drops only the tail, and the multi-plane displays reproduce.
 
-**Deferred:** the Gall host, SoftBLAS jets (vere fork only), array operands of a dfn operator and `∇∇` (D-95), the rest of the P11b sweep.
+**P11b, the sweep (2026-11-06).** Every list builder that runs over an array's elements now builds by tail calls over an accumulator, about 80 functions across `src/array.jock` and `src/interp.jock`. The two problems they had are the frame-copy cost found at P11b and the copying `+` string join. Four algorithmic fixes came with the sweep:
+- **`joinS`** collects bytes into one accumulator and `crip`s once.
+- **`colsOf`** peels a head off every row per column, where an `nth` per cell made a wide transpose quadratic in its columns.
+- **`gatherAt`** walks forward once for increasing positions and sorts in O(n log n) for positions in any order.
+- **`⍋ ⍒`** use a stable merge sort in place of insertion; equal elements keep their order as before.
+
+`⍷` on a vector matches the pattern against the tail at each position.
+
+| at 30,000 elements, default path | before | after |
+|---|---|---|
+| `⍴⍕v` | 345 s | 2.2 s |
+| `⍴⍕1.5×v` | 507 s | 26 s |
+| `x←⍉2 15000⍴v` | 219 s | 0.32 s |
+| `x←⍉3 100 100⍴v` | 227 s | 3.8 s |
+| `x←v[⍳30000]` | 466 s | 0.95 s |
+| `x←1 2 3⍷v` | 520 s | 1.6 s |
+| `x←(30000⍴1 0)/v` | 5.6 s | 0.63 s |
+| `x←⍋v` | — | 1.3 s |
+
+What remains of P11b is the per-element cost of printing a real, about 0.9 ms in Hoon's unjetted `+drg`. Regathering a box of many items is still quadratic, since each `nthA` walks the items.
+
+**Dfn operators, the rest of D-95 (2026-11-06).** An array may be an operand. On the left it is the array directly left of the operator. On the right of a dyadic operator it is a numeral or character literal, an array name, or a parenthesised expression. It is evaluated where the operator is applied and bound in the body as an array. Function operands are resolved there as well, so a named operator, which runs over the store alone, can run `⍺⍺`, `⍵⍵` and a caller's local dfn. `∇∇` lexes as one name and is the operator itself, and inside an operator `∇` keeps its operands. Applying a derived function that has an array operand dyadically, `1 (2 OP) 3`, is still held back.
+
+Vectors: `atl/dfn-operators` (+17), `parse/dfn-extras` (+3), `lex/dfns` (+1). Corpus 722/722, 51/51 cases; parse 136/136; lex 42/42; oracle 14/14; kernel-test 5/5.
+
+**Deferred:** the Gall host, SoftBLAS jets (vere fork only), `1 (2 OP) 3` (D-95), printing reals faster than `+drg` allows, regathering large boxes.
 
 ## 4. The shakedown ledger
 

@@ -19,3 +19,34 @@
 🍎> DIV←{⍺÷⍵}
 🍎> 1 DIV{⍺ ⍺⍺ ⍵}4
 ⍝ expect: 0.25
+⍝ array operands:  an array to the left, and an array to the right of a dyadic operator
+🍎> 2 {⍺⍺+⍵} 3
+⍝ expect: 5
+🍎> (1 2) {⍺⍺×⍵} 3
+⍝ expect: 3 6
+🍎> K←10
+🍎> K {⍺⍺-⍵} 3
+⍝ expect: 7
+🍎> P←{⍺⍺*⍵}
+🍎> 2 P 3
+⍝ expect: 8
+🍎> +{⍺⍺/⍵⍵↑⍵}2 ⍳5
+⍝ expect: 3
+🍎> ×{⍵⍵ ⍺⍺ ⍵}10⊢5
+⍝ expect: 50
+⍝ ∇∇ is the operator itself; ∇ inside an operator keeps its operands
+🍎> C←{⍵≤0: ⍺⍺ 100 ⋄ ⍺⍺ ∇∇ ⍵-1}
+🍎> ÷C 3
+⍝ expect: 0.01
+🍎> E←{⍵≤0: ⍺⍺ 4 ⋄ ∇ ⍵-1}
+🍎> ÷E 3
+⍝ expect: 0.25
+🍎> S←{⍵≤1: ⍺⍺ ⍵ ⋄ (⍺⍺ ∇∇ ⍵-1)+⍺⍺ ∇∇ ⍵-2}
+🍎> ⊢S 10
+⍝ expect: 55
+⍝ a local dfn as the operand of a named operator
+🍎> W←{G←{⍵×10} ⋄ G C ⍵}
+🍎> W 2
+⍝ expect: 1000
+🍎> {⍺⍺/⍵} 1 2
+⍝ refuse: %syntax-error

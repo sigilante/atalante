@@ -163,8 +163,9 @@ func scanExp(cs: List<@>) -> (Bool, @) {
   }
 };
 func litVals(k: @, items: List<String>) -> List<@> { litValsAt(k, 6, items) };
-func litValsAt(k: @, w: @, items: List<String>) -> List<@> {
-  match items { (h, t) => (match k { 2 => intOf(h), 3 => realAt(h, w), _ => natOf(h), }, litValsAt(k, w, t)), _ => ~, }
+func litValsAt(k: @, w: @, items: List<String>) -> List<@> { array.revL(litAcc(k, w, items, ~), ~) };
+func litAcc(k: @, w: @, items: List<String>, acc: List<@>) -> List<@> {
+  match items { (h, t) => litAcc(k, w, t, (match k { 2 => intOf(h), 3 => realAt(h, w), _ => natOf(h), }, acc)), _ => acc, }
 };
 // a numeral that does not fit the session's width of its kind is a DOMAIN ERROR (D-15): a natural
 // of 2^w or more, an integer outside −2^(w−1)..2^(w−1)−1, a real that rounds to infinity
@@ -474,8 +475,12 @@ func backIn(r: Ev, frames: List<Frame>) -> Ev { match r { .ok(x) => match x { (v
 // an operand runs where the operator was applied:  the frames outside the operator's own
 func outerFrames(fs: List<Frame>) -> List<Frame> { match fs { (f, rest) => rest, _ => ~, } };
 // ∇ inside a body: the dfn the innermost frame runs (D-63)
+// inside an operator, ∇ is the derived function:  the same operands again (D-95)
 func callOwn(dyadic: Bool, a: array.Arr, b: array.Arr, env: Env) -> Ev {
-  match env.frames { (f, rest) => callDfn(f.name, f.own, dyadic, a, b, env), _ => fail("%syntax-error", "∇ names a dfn only inside one"), }
+  match env.frames { (f, rest) => callDfnOps(f.name, f.own, dyadic, a, b, f.ops, opndVarsOf(f.vars, ~), env), _ => fail("%syntax-error", "∇ names a dfn only inside one"), }
+};
+func opndVarsOf(vs: List<(String, array.Arr)>, acc: List<(String, array.Arr)>) -> List<(String, array.Arr)> {
+  match vs { ((n, v), t) => opndVarsOf(t, if n == "⍺⍺" or n == "⍵⍵" { ((n, v), acc) } else { acc }), _ => acc, }
 };
 func applyDyad0(f: parse.Fn, a: array.Arr, b: array.Arr, env: Env) -> Ev {
   match f {
@@ -553,23 +558,28 @@ func axisOf(k: @, r: @, env: Env) -> (Bool, @) { if k >= env.io and (k - env.io)
 func withoutAt(xs: List<@>, k: @) -> List<@> { array.catL(array.takeL(xs, k), array.dropL(xs, k + 1)) };
 func insertAt(xs: List<@>, k: @, v: @) -> List<@> { if k == 0 { (v, xs) } else { match xs { (h, t) => (h, insertAt(t, k - 1, v)), _ => [v], } } };
 func rangesOf(shp: List<@>) -> List<List<@>> { match shp { (d, t) => (array.iotaL(d, 0), rangesOf(t)), _ => ~, } };
-func lineAt(st: @, step: @, len: @) -> List<@> { if len == 0 { ~ } else { (st, lineAt(st + step, step, len - 1)) } };
+// built from its last position back, so the tail call conses in order
+func lineAt(st: @, step: @, len: @) -> List<@> { if len == 0 { ~ } else { lineBack(st + step * (len - 1), step, len, ~) } };
+func lineBack(p: @, step: @, len: @, acc: List<@>) -> List<@> { if len == 1 { (p, acc) } else { lineBack(p - step, step, len - 1, (p, acc)) } };
 // the lines along axis k as position lists, outer index slowest
 func axisLines(shp: List<@>, k: @) -> List<List<@>> {
   let outer = array.cartesian(rangesOf(withoutAt(shp, k)));
   linesFrom(outer, shp, k, array.nth(shp, k), array.size(array.dropL(shp, k + 1)))
 };
-func linesFrom(outer: List<List<@>>, shp: List<@>, k: @, len: @, step: @) -> List<List<@>> {
-  match outer { (ix, rest) => (lineAt(array.flatIx(shp, insertAt(ix, k, 0)), step, len), linesFrom(rest, shp, k, len, step)), _ => ~, }
+func linesFrom(outer: List<List<@>>, shp: List<@>, k: @, len: @, step: @) -> List<List<@>> { revLL(linesAcc(outer, shp, k, len, step, ~), ~) };
+func linesAcc(outer: List<List<@>>, shp: List<@>, k: @, len: @, step: @, acc: List<List<@>>) -> List<List<@>> {
+  match outer { (ix, rest) => linesAcc(rest, shp, k, len, step, (lineAt(array.flatIx(shp, insertAt(ix, k, 0)), step, len), acc)), _ => acc, }
 };
 func nthLL(xss: List<List<@>>, i: @) -> List<@> { match xss { (h, t) => if i == 0 { h } else { nthLL(t, i - 1) }, _ => ~, } };
-func gatherLines(vs: List<@>, lines: List<List<@>>) -> List<List<@>> { match lines { (l, rest) => (gatherAt(vs, l), gatherLines(vs, rest)), _ => ~, } };
+func gatherLines(vs: List<@>, lines: List<List<@>>) -> List<List<@>> { revLL(gLinesAcc(vs, lines, ~), ~) };
+func gLinesAcc(vs: List<@>, lines: List<List<@>>, acc: List<List<@>>) -> List<List<@>> { match lines { (l, rest) => gLinesAcc(vs, rest, (gatherAt(vs, l), acc)), _ => acc, } };
 // the ravel of shape shp2 whose lines along k are `lines`, in outer order
 func fromLines(shp2: List<@>, k: @, lines: List<List<@>>) -> List<@> { fromLinesAt(shp2, k, withoutAt(shp2, k), lines, 0, array.size(shp2)) };
-func fromLinesAt(shp2: List<@>, k: @, rest: List<@>, lines: List<List<@>>, p: @, n: @) -> List<@> {
-  if p == n { ~ } else {
+func fromLinesAt(shp2: List<@>, k: @, rest: List<@>, lines: List<List<@>>, p: @, n: @) -> List<@> { array.revL(fromLinesAcc(shp2, k, rest, lines, p, n, ~), ~) };
+func fromLinesAcc(shp2: List<@>, k: @, rest: List<@>, lines: List<List<@>>, p: @, n: @, acc: List<@>) -> List<@> {
+  if p == n { acc } else {
     let ix = array.unflatIx(shp2, p);
-    (array.nth(nthLL(lines, array.flatIx(rest, withoutAt(ix, k))), array.nth(ix, k)), fromLinesAt(shp2, k, rest, lines, p + 1, n))
+    fromLinesAcc(shp2, k, rest, lines, p + 1, n, (array.nth(nthLL(lines, array.flatIx(rest, withoutAt(ix, k))), array.nth(ix, k)), acc))
   }
 };
 // an array of a's kind with axis k rewritten to the given lines of a new length
@@ -583,7 +593,8 @@ func rebox(a: array.Arr, r: array.Arr) -> array.Arr { if array.isBox(a) { array.
 func lineItems(a: array.Arr, pos: List<@>) -> List<array.Arr> {
   if array.isBox(a) { array.pickItems(a, gatherAt(array.vals(a), pos)) } else { array.scalarsOf(a.kind, gatherAt(array.vals(a), pos)) }
 };
-func revLines(ls: List<List<@>>) -> List<List<@>> { match ls { (l, rest) => (array.revL(l, ~), revLines(rest)), _ => ~, } };
+func revLines(ls: List<List<@>>) -> List<List<@>> { revLL(revLinesAcc(ls, ~), ~) };
+func revLinesAcc(ls: List<List<@>>, acc: List<List<@>>) -> List<List<@>> { match ls { (l, rest) => revLinesAcc(rest, (array.revL(l, ~), acc)), _ => acc, } };
 func reverseAxis(a: array.Arr, k: @) -> array.Arr {
   let x = unbox(a);
   rebox(a, rebuildAxis(x, k, array.nth(array.shape(x), k), revLines(gatherLines(array.vals(x), axisLines(array.shape(x), k)))))
@@ -592,13 +603,18 @@ func reverseAxis(a: array.Arr, k: @) -> array.Arr {
 func intCounts(a: array.Arr) -> (Bool, List<(Bool, @)>) {
   match a.kind { 1 => (true, natSigned(array.vals(a))), 2 => (true, intSigned(array.vals(a))), _ => (false, ~), }
 };
-func natSigned(xs: List<@>) -> List<(Bool, @)> { match xs { (h, t) => ((false, h), natSigned(t)), _ => ~, } };
-func intSigned(xs: List<@>) -> List<(Bool, @)> { match xs { (h, t) => ((array.isNeg(h), lagoon.tabs(h)), intSigned(t)), _ => ~, } };
-func repPair(c: (Bool, @), n: @) -> List<(Bool, @)> { if n == 0 { ~ } else { (c, repPair(c, n - 1)) } };
+func natSigned(xs: List<@>) -> List<(Bool, @)> { revC(natSignedAcc(xs, ~), ~) };
+func natSignedAcc(xs: List<@>, acc: List<(Bool, @)>) -> List<(Bool, @)> { match xs { (h, t) => natSignedAcc(t, ((false, h), acc)), _ => acc, } };
+func intSigned(xs: List<@>) -> List<(Bool, @)> { revC(intSignedAcc(xs, ~), ~) };
+func intSignedAcc(xs: List<@>, acc: List<(Bool, @)>) -> List<(Bool, @)> { match xs { (h, t) => intSignedAcc(t, ((array.isNeg(h), lagoon.tabs(h)), acc)), _ => acc, } };
+func revC(xs: List<(Bool, @)>, acc: List<(Bool, @)>) -> List<(Bool, @)> { match xs { (h, t) => revC(t, (h, acc)), _ => acc, } };
+func repPair(c: (Bool, @), n: @) -> List<(Bool, @)> { repPairAcc(c, n, ~) };
+func repPairAcc(c: (Bool, @), n: @, acc: List<(Bool, @)>) -> List<(Bool, @)> { if n == 0 { acc } else { repPairAcc(c, n - 1, (c, acc)) } };
 func countPairs(xs: List<(Bool, @)>) -> @ { match xs { (h, t) => 1 + countPairs(t), _ => 0, } };
 func rotBy(neg: Bool, mag: @, n: @) -> @ { if n == 0 { 0 } else if neg { (n - (mag % n)) % n } else { mag % n } };
-func rotLines(ls: List<List<@>>, cs: List<(Bool, @)>, n: @) -> List<List<@>> {
-  match ls { (l, rest) => match cs { ((neg, mag), ct) => (rotateL(l, rotBy(neg, mag, n)), rotLines(rest, ct, n)), _ => ~, }, _ => ~, }
+func rotLines(ls: List<List<@>>, cs: List<(Bool, @)>, n: @) -> List<List<@>> { revLL(rotLinesAcc(ls, cs, n, ~), ~) };
+func rotLinesAcc(ls: List<List<@>>, cs: List<(Bool, @)>, n: @, acc: List<List<@>>) -> List<List<@>> {
+  match ls { (l, rest) => match cs { ((neg, mag), ct) => rotLinesAcc(rest, ct, n, (rotateL(l, rotBy(neg, mag, n)), acc)), _ => acc, }, _ => acc, }
 };
 // A⌽[k]B: a scalar count or one per line, in the shape of B without the axis
 func rotateAxis(a: array.Arr, b: array.Arr, k: @, env: Env) -> Ev {
@@ -705,8 +721,9 @@ func catenateAxis(a0: array.Arr, b0: array.Arr, k: @, env: Env) -> Ev {
     }
   }
 };
-func catPairs(xs: List<List<@>>, ys: List<List<@>>) -> List<List<@>> {
-  match xs { (x, xt) => match ys { (y, yt) => (array.catL(x, y), catPairs(xt, yt)), _ => ~, }, _ => ~, }
+func catPairs(xs: List<List<@>>, ys: List<List<@>>) -> List<List<@>> { revLL(catPairsAcc(xs, ys, ~), ~) };
+func catPairsAcc(xs: List<List<@>>, ys: List<List<@>>, acc: List<List<@>>) -> List<List<@>> {
+  match xs { (x, xt) => match ys { (y, yt) => catPairsAcc(xt, yt, (array.catL(x, y), acc)), _ => acc, }, _ => acc, }
 };
 // a scalar, or an argument of rank r-1, as rank r with axis k of length 1 against the other's shape
 func fitAxis(a: array.Arr, other: array.Arr, k: @, r: @) -> array.Arr {
@@ -857,7 +874,7 @@ func reverseLast(a: array.Arr) -> array.Arr {
     mk(a.kind, array.shape(a), array.flatten(revRows(array.chunks(array.vals(a), n))))
   }
 };
-func revRows(rows: List<List<@>>) -> List<List<@>> { match rows { (r, rest) => (array.revL(r, ~), revRows(rest)), _ => ~, } };
+func revRows(rows: List<List<@>>) -> List<List<@>> { revLines(rows) };
 func reverseFirst(a: array.Arr) -> array.Arr {
   if array.rank(a) == 0 or array.size(array.shape(a)) == 0 { a } else {
     let n = array.size(array.shape(a)) / array.firstDim(array.shape(a));
@@ -870,11 +887,14 @@ func transposeArr(a: array.Arr) -> array.Arr {
     let shp = array.shape(a);
     let tshp = array.revL(shp, ~);
     let vs = array.vals(a);
-    mk(a.kind, tshp, transposeGather(shp, tshp, vs, 0, array.size(shp)))
+    // rank 2: the columns, peeled a head from every row at a time (linear); past rank 2, the gather
+    if array.rank(a) == 2 { mk(a.kind, tshp, array.flatten(array.colsOf(array.chunks(vs, array.lastDim(shp)), array.lastDim(shp), 0))) }
+    else { mk(a.kind, tshp, transposeGather(shp, tshp, vs, 0, array.size(shp))) }
   }
 };
-func transposeGather(shp: List<@>, tshp: List<@>, vs: List<@>, k: @, n: @) -> List<@> {
-  if k == n { ~ } else { (array.nth(vs, array.flatIx(shp, array.revL(array.unflatIx(tshp, k), ~))), transposeGather(shp, tshp, vs, k + 1, n)) }
+func transposeGather(shp: List<@>, tshp: List<@>, vs: List<@>, k: @, n: @) -> List<@> { gatherAt(vs, transposePos(shp, tshp, k, n, ~)) };
+func transposePos(shp: List<@>, tshp: List<@>, k: @, n: @, acc: List<@>) -> List<@> {
+  if k == n { array.revL(acc, ~) } else { transposePos(shp, tshp, k + 1, n, (array.flatIx(shp, array.revL(array.unflatIx(tshp, k), ~)), acc)) }
 };
 // stable insertion of (index, value) into a list sorted up or down
 func gradeIns(i: @, v: @, k: @, up: Bool, sorted: List<(@, @)>) -> List<(@, @)> {
@@ -886,12 +906,52 @@ func gradeIns(i: @, v: @, k: @, up: Bool, sorted: List<(@, @)>) -> List<(@, @)> 
 func gradeAll(vs: List<@>, i: @, k: @, up: Bool, sorted: List<(@, @)>) -> List<(@, @)> {
   match vs { (v, rest) => gradeAll(rest, i + 1, k, up, gradeIns(i, v, k, up, sorted)), _ => sorted, }
 };
-func gradeIdx(sorted: List<(@, @)>, io: @) -> List<@> { match sorted { ((i, v), t) => (i + io, gradeIdx(t, io)), _ => ~, } };
+func gradeIdx(sorted: List<(@, @)>, io: @) -> List<@> { array.revL(gradeIdxAcc(sorted, io, ~), ~) };
+func gradeIdxAcc(sorted: List<(@, @)>, io: @, acc: List<@>) -> List<@> { match sorted { ((i, v), t) => gradeIdxAcc(t, io, (i + io, acc)), _ => acc, } };
 func grade(a: array.Arr, up: Bool, env: Env) -> Ev {
   if array.rank(a) != 1 { fail("%rank-error", "grade takes a vector") }
-  else if array.isBox(a) { okv(vec(1, gradeIdxA(gradeAllA(array.itemsOf(a), 0, up, ~), env.io)), env) }
-  else { okv(vec(1, gradeIdx(gradeAll(array.vals(a), 0, a.kind, up, ~), env.io)), env) }
+  else if array.isBox(a) { okv(vec(1, gradeIdxA(msortA(runsA(array.itemsOf(a), 0, ~), up), env.io)), env) }
+  else { okv(vec(1, gradeIdx(msortV(runsV(array.vals(a), 0, ~), a.kind, up), env.io)), env) }
 };
+// --- a stable merge sort for ⍋ ⍒ (P11b): runs of one, merged pairwise until one remains.  A merge
+// takes the right run's head only when it strictly precedes the left's, so equal elements keep
+// their order (D-42), as the insertion it replaces did, in O(n log n) comparisons
+func runsV(vs: List<@>, i: @, acc: List<List<(@, @)>>) -> List<List<(@, @)>> { match vs { (v, rest) => runsV(rest, i + 1, ([(i, v)], acc)), _ => revRunsV(acc, ~), } };
+func revRunsV(xs: List<List<(@, @)>>, acc: List<List<(@, @)>>) -> List<List<(@, @)>> { match xs { (h, t) => revRunsV(t, (h, acc)), _ => acc, } };
+func msortV(runs: List<List<(@, @)>>, k: @, up: Bool) -> List<(@, @)> {
+  match runs { (r, rest) => match rest { (r2, r3) => msortV(mergePassV(runs, k, up, ~), k, up), _ => r, }, _ => ~, }
+};
+func mergePassV(runs: List<List<(@, @)>>, k: @, up: Bool, acc: List<List<(@, @)>>) -> List<List<(@, @)>> {
+  match runs { (a, rest) => match rest { (b, r2) => mergePassV(r2, k, up, (mergeV(a, b, k, up, ~), acc)), _ => revRunsV((a, acc), ~), }, _ => revRunsV(acc, ~), }
+};
+func mergeV(a: List<(@, @)>, b: List<(@, @)>, k: @, up: Bool, acc: List<(@, @)>) -> List<(@, @)> {
+  match a {
+    ((i, x), at) => match b {
+      ((j, y), bt) => if (up and gtK(k, x, y)) or ((not up) and gtK(k, y, x)) { mergeV(a, bt, k, up, ((j, y), acc)) } else { mergeV(at, b, k, up, ((i, x), acc)) },
+      _ => revPV(acc, a),
+    },
+    _ => revPV(acc, b),
+  }
+};
+func revPV(xs: List<(@, @)>, acc: List<(@, @)>) -> List<(@, @)> { match xs { (h, t) => revPV(t, (h, acc)), _ => acc, } };
+func runsA(xs: List<array.Arr>, i: @, acc: List<List<(@, array.Arr)>>) -> List<List<(@, array.Arr)>> { match xs { (v, rest) => runsA(rest, i + 1, ([(i, v)], acc)), _ => revRunsA(acc, ~), } };
+func revRunsA(xs: List<List<(@, array.Arr)>>, acc: List<List<(@, array.Arr)>>) -> List<List<(@, array.Arr)>> { match xs { (h, t) => revRunsA(t, (h, acc)), _ => acc, } };
+func msortA(runs: List<List<(@, array.Arr)>>, up: Bool) -> List<(@, array.Arr)> {
+  match runs { (r, rest) => match rest { (r2, r3) => msortA(mergePassA(runs, up, ~), up), _ => r, }, _ => ~, }
+};
+func mergePassA(runs: List<List<(@, array.Arr)>>, up: Bool, acc: List<List<(@, array.Arr)>>) -> List<List<(@, array.Arr)>> {
+  match runs { (a, rest) => match rest { (b, r2) => mergePassA(r2, up, (mergeA(a, b, up, ~), acc)), _ => revRunsA((a, acc), ~), }, _ => revRunsA(acc, ~), }
+};
+func mergeA(a: List<(@, array.Arr)>, b: List<(@, array.Arr)>, up: Bool, acc: List<(@, array.Arr)>) -> List<(@, array.Arr)> {
+  match a {
+    ((i, x), at) => match b {
+      ((j, y), bt) => if (up and cmpArr(x, y) == 2) or ((not up) and cmpArr(y, x) == 2) { mergeA(a, bt, up, ((j, y), acc)) } else { mergeA(at, b, up, ((i, x), acc)) },
+      _ => revPA(acc, a),
+    },
+    _ => revPA(acc, b),
+  }
+};
+func revPA(xs: List<(@, array.Arr)>, acc: List<(@, array.Arr)>) -> List<(@, array.Arr)> { match xs { (h, t) => revPA(t, (h, acc)), _ => acc, } };
 // the total order on arrays (D-75): 0 less, 1 equal, 2 greater
 func cmpArr(a: array.Arr, b: array.Arr) -> @ {
   if array.isBox(a) != array.isBox(b) { if array.isBox(a) { 2 } else { 0 } }
@@ -924,7 +984,8 @@ func gradeInsA(i: @, v: array.Arr, up: Bool, sorted: List<(@, array.Arr)>) -> Li
 func gradeAllA(xs: List<array.Arr>, i: @, up: Bool, sorted: List<(@, array.Arr)>) -> List<(@, array.Arr)> {
   match xs { (v, rest) => gradeAllA(rest, i + 1, up, gradeInsA(i, v, up, sorted)), _ => sorted, }
 };
-func gradeIdxA(sorted: List<(@, array.Arr)>, io: @) -> List<@> { match sorted { ((i, v), t) => (i + io, gradeIdxA(t, io)), _ => ~, } };
+func gradeIdxA(sorted: List<(@, array.Arr)>, io: @) -> List<@> { array.revL(gradeIdxAAcc(sorted, io, ~), ~) };
+func gradeIdxAAcc(sorted: List<(@, array.Arr)>, io: @, acc: List<@>) -> List<@> { match sorted { ((i, v), t) => gradeIdxAAcc(t, io, (i + io, acc)), _ => acc, } };
 // match (D-73): same shape, same class, every element equal
 func matchArr(a: array.Arr, b: array.Arr) -> Bool {
   if array.isBox(a) != array.isBox(b) { false }
@@ -945,7 +1006,8 @@ func eqVals(k: @, xs: List<@>, ys: List<@>) -> Bool {
 // enlist (D-73): every leaf in ravel order
 func enlist(a: array.Arr) -> array.Arr { let ls = leaves(a); array.normalize([array.countA(ls)], ls) };
 func leaves(a: array.Arr) -> List<array.Arr> { if array.isBox(a) { leavesAll(array.itemsOf(a)) } else { array.scalarsOf(a.kind, array.vals(a)) } };
-func leavesAll(xs: List<array.Arr>) -> List<array.Arr> { match xs { (h, t) => array.catA(leaves(h), leavesAll(t)), _ => ~, } };
+func leavesAll(xs: List<array.Arr>) -> List<array.Arr> { array.revA(leavesAcc(xs, ~), ~) };
+func leavesAcc(xs: List<array.Arr>, acc: List<array.Arr>) -> List<array.Arr> { match xs { (h, t) => leavesAcc(t, array.revA(leaves(h), acc)), _ => acc, } };
 // disclose (D-73): simple scalar or vector elements of one class, padded to the longest
 func disclose(a: array.Arr, env: Env) -> Ev {
   let xs = array.itemsOf(a);
@@ -959,7 +1021,8 @@ func disclose(a: array.Arr, env: Env) -> Ev {
     }
   }
 };
-func itemsOfAll(xs: List<array.Arr>) -> List<array.Arr> { match xs { (h, t) => array.catA(array.itemsOf(h), itemsOfAll(t)), _ => ~, } };
+func itemsOfAll(xs: List<array.Arr>) -> List<array.Arr> { array.revA(itemsAllAcc(xs, ~), ~) };
+func itemsAllAcc(xs: List<array.Arr>, acc: List<array.Arr>) -> List<array.Arr> { match xs { (h, t) => itemsAllAcc(t, array.revA(array.itemsOf(h), acc)), _ => acc, } };
 func maxRank(xs: List<array.Arr>, m: @) -> @ { match xs { (h, t) => maxRank(t, array.maxk(m, array.rank(h))), _ => m, } };
 func ranksOk(xs: List<array.Arr>, r: @) -> Bool { match xs { (h, t) => if array.rank(h) == r or array.rank(h) == 0 { ranksOk(t, r) } else { false }, _ => true, } };
 func maxShape(xs: List<array.Arr>, m: List<@>) -> List<@> { match xs { (h, t) => maxShape(t, if array.rank(h) == 0 { zipMax1(m) } else { zipMaxL(m, array.shape(h)) }), _ => m, } };
@@ -975,10 +1038,11 @@ func padEach(xs: List<array.Arr>, r: @, shp2: List<@>, env: Env, acc: List<array
 };
 func simpleRank1(xs: List<array.Arr>) -> Bool { match xs { (h, t) => if array.isBox(h) or array.rank(h) > 1 { false } else { simpleRank1(t) }, _ => true, } };
 func maxLen(xs: List<array.Arr>, m: @) -> @ { match xs { (h, t) => maxLen(t, array.maxk(m, array.size(array.shape(h)))), _ => m, } };
-func padAll(xs: List<array.Arr>, k: @, l: @) -> List<@> {
+func padAll(xs: List<array.Arr>, k: @, l: @) -> List<@> { array.revL(padAllAcc(xs, k, l, array.realWA(xs, 0), ~), ~) };
+func padAllAcc(xs: List<array.Arr>, k: @, l: @, w: @, acc: List<@>) -> List<@> {
   match xs {
-    (h, t) => array.catL(array.vals(array.promoteAt(h, k, array.realWA(xs, 0))), array.catL(array.repL(array.fillOf(k), l - array.size(array.shape(h))), padAll(t, k, l))),
-    _ => ~,
+    (h, t) => padAllAcc(t, k, l, w, array.revL(array.repL(array.fillOf(k), l - array.size(array.shape(h))), array.revL(array.vals(array.promoteAt(h, k, w)), acc))),
+    _ => acc,
   }
 };
 // pick (D-73): an index, or a path of indices through nested boxes
@@ -1077,15 +1141,17 @@ func indexOf(a: array.Arr, b: array.Arr, env: Env) -> Ev {
     okv(mk(1, array.shape(b), indexAll(a.kind, xs, b.kind, array.vals(b), env.io)), env)
   }
 };
-func indexAll(ka: @, xs: List<@>, kb: @, ys: List<@>, io: @) -> List<@> {
-  match ys { (y, rest) => (findIn(ka, xs, kb, y, 0) + io, indexAll(ka, xs, kb, rest, io)), _ => ~, }
+func indexAll(ka: @, xs: List<@>, kb: @, ys: List<@>, io: @) -> List<@> { array.revL(indexAcc(ka, xs, kb, ys, io, ~), ~) };
+func indexAcc(ka: @, xs: List<@>, kb: @, ys: List<@>, io: @, acc: List<@>) -> List<@> {
+  match ys { (y, rest) => indexAcc(ka, xs, kb, rest, io, (findIn(ka, xs, kb, y, 0) + io, acc)), _ => acc, }
 };
 func member(a: array.Arr, b: array.Arr, env: Env) -> Ev {
   let ys = array.vals(b);
   okv(mk(1, array.shape(a), memberAll(a.kind, array.vals(a), b.kind, ys, array.count(ys))), env)
 };
-func memberAll(ka: @, xs: List<@>, kb: @, ys: List<@>, n: @) -> List<@> {
-  match xs { (x, rest) => (if findIn(kb, ys, ka, x, 0) < n { 1 } else { 0 }, memberAll(ka, rest, kb, ys, n)), _ => ~, }
+func memberAll(ka: @, xs: List<@>, kb: @, ys: List<@>, n: @) -> List<@> { array.revL(memberAcc(ka, xs, kb, ys, n, ~), ~) };
+func memberAcc(ka: @, xs: List<@>, kb: @, ys: List<@>, n: @, acc: List<@>) -> List<@> {
+  match xs { (x, rest) => memberAcc(ka, rest, kb, ys, n, ((if findIn(kb, ys, ka, x, 0) < n { 1 } else { 0 }), acc)), _ => acc, }
 };
 func findA(xs: List<array.Arr>, y: array.Arr, i: @) -> @ {
   match xs { (x, rest) => if matchArr(x, y) { i } else { findA(rest, y, i + 1) }, _ => i, }
@@ -1094,16 +1160,14 @@ func indexOfA(a: array.Arr, b: array.Arr, env: Env) -> Ev {
   if array.rank(a) != 1 { fail("%rank-error", "the left argument of ⍳ is a vector") }
   else { okv(mk(1, array.shape(b), indexAllA(array.itemsOf(a), array.itemsOf(b), env.io)), env) }
 };
-func indexAllA(xs: List<array.Arr>, ys: List<array.Arr>, io: @) -> List<@> {
-  match ys { (y, rest) => (findA(xs, y, 0) + io, indexAllA(xs, rest, io)), _ => ~, }
-};
+func indexAllA(xs: List<array.Arr>, ys: List<array.Arr>, io: @) -> List<@> { array.revL(indexAAcc(xs, ys, io, ~), ~) };
+func indexAAcc(xs: List<array.Arr>, ys: List<array.Arr>, io: @, acc: List<@>) -> List<@> { match ys { (y, rest) => indexAAcc(xs, rest, io, (findA(xs, y, 0) + io, acc)), _ => acc, } };
 func memberA(a: array.Arr, b: array.Arr, env: Env) -> Ev {
   let ys = array.itemsOf(b);
   okv(mk(1, array.shape(a), memberAllA(array.itemsOf(a), ys, array.countA(ys))), env)
 };
-func memberAllA(xs: List<array.Arr>, ys: List<array.Arr>, n: @) -> List<@> {
-  match xs { (x, rest) => (if findA(ys, x, 0) < n { 1 } else { 0 }, memberAllA(rest, ys, n)), _ => ~, }
-};
+func memberAllA(xs: List<array.Arr>, ys: List<array.Arr>, n: @) -> List<@> { array.revL(memberAAcc(xs, ys, n, ~), ~) };
+func memberAAcc(xs: List<array.Arr>, ys: List<array.Arr>, n: @, acc: List<@>) -> List<@> { match xs { (x, rest) => memberAAcc(rest, ys, n, ((if findA(ys, x, 0) < n { 1 } else { 0 }), acc)), _ => acc, } };
 func reshape(a: array.Arr, b: array.Arr, env: Env) -> Ev {
   match natVec(a) {
     (ok, shp) => if not ok { dom("the left argument of ⍴ is a vector of non-negative integers") }
@@ -1157,9 +1221,7 @@ func catenateA(a: array.Arr, b: array.Arr, env: Env) -> Ev {
     .ok(r) => match r { (v, env2) => okv(array.regather(array.boxOf([na + nb], array.catA(ia, ib)), v), env2), },
   }
 };
-func catRows(xs: List<List<@>>, ys: List<List<@>>) -> List<List<@>> {
-  match xs { (r, rest) => match ys { (r2, rest2) => (array.catL(r, r2), catRows(rest, rest2)), _ => ~, }, _ => ~, }
-};
+func catRows(xs: List<List<@>>, ys: List<List<@>>) -> List<List<@>> { catPairs(xs, ys) };
 // a matrix m and a scalar or vector v joined along the last axis;  v after m when `after`
 func catColumn(m: array.Arr, v: array.Arr, after: Bool, k: @, env: Env) -> Ev {
   let nrows = array.firstDim(array.shape(m));
@@ -1178,7 +1240,8 @@ func rotate(a: array.Arr, b: array.Arr, first: Bool, env: Env) -> Ev {
   if array.rank(b) == 0 { if array.size(array.shape(a)) == 1 { okv(b, env) } else { fail("%rank-error", "a scalar rotates by a scalar") } }
   else { rotateAxis(a, b, if first { 0 } else { array.rank(b) - 1 }, env) }
 };
-func rotRows(rows: List<List<@>>, by: @) -> List<List<@>> { match rows { (r, rest) => (rotateL(r, by), rotRows(rest, by)), _ => ~, } };
+func rotRows(rows: List<List<@>>, by: @) -> List<List<@>> { revLL(rotRowsAcc(rows, by, ~), ~) };
+func rotRowsAcc(rows: List<List<@>>, by: @, acc: List<List<@>>) -> List<List<@>> { match rows { (r, rest) => rotRowsAcc(rest, by, (rotateL(r, by), acc)), _ => acc, } };
 func rotLL(rows: List<List<@>>, by: @) -> List<List<@>> {
   if by == 0 { rows } else { match rows { (r, rest) => rotLL(array.catLL(rest, [r]), by - 1), _ => ~, } }
 };
@@ -1230,10 +1293,11 @@ func takeShape(cs: List<(Bool, @)>, shp: List<@>) -> List<@> { match cs { ((neg,
 func dropShape(cs: List<(Bool, @)>, shp: List<@>) -> List<@> {
   match cs { ((neg, m), t) => match shp { (d, ds) => (if m >= d { 0 } else { d - m }, dropShape(t, ds)), _ => ~, }, _ => ~, }
 };
-func takeCells(cs: List<(Bool, @)>, shp: List<@>, shp2: List<@>, vs: List<@>, take: Bool, fill: @, p: @, n: @) -> List<@> {
-  if p == n { ~ } else {
+func takeCells(cs: List<(Bool, @)>, shp: List<@>, shp2: List<@>, vs: List<@>, take: Bool, fill: @, p: @, n: @) -> List<@> { array.revL(takeCellsAcc(cs, shp, shp2, vs, take, fill, p, n, ~), ~) };
+func takeCellsAcc(cs: List<(Bool, @)>, shp: List<@>, shp2: List<@>, vs: List<@>, take: Bool, fill: @, p: @, n: @, acc: List<@>) -> List<@> {
+  if p == n { acc } else {
     match sourceIx(cs, shp, array.unflatIx(shp2, p), take, ~) {
-      (inside, ix) => (if inside { array.nth(vs, array.flatIx(shp, ix)) } else { fill }, takeCells(cs, shp, shp2, vs, take, fill, p + 1, n)),
+      (inside, ix) => takeCellsAcc(cs, shp, shp2, vs, take, fill, p + 1, n, ((if inside { array.nth(vs, array.flatIx(shp, ix)) } else { fill }), acc)),
     }
   }
 };
@@ -1269,10 +1333,13 @@ func compress(a: array.Arr, b: array.Arr, env: Env) -> Ev {
   }
 };
 func sumL(xs: List<@>) -> @ { match xs { (h, t) => h + sumL(t), _ => 0, } };
-func repRows(rows: List<List<@>>, counts: List<@>) -> List<List<@>> { match rows { (r, rest) => (repRow(r, counts), repRows(rest, counts)), _ => ~, } };
-func repRow(r: List<@>, counts: List<@>) -> List<@> {
-  match r { (x, xs) => match counts { (c, cs) => array.catL(array.repL(x, c), repRow(xs, cs)), _ => ~, }, _ => ~, }
+func repRows(rows: List<List<@>>, counts: List<@>) -> List<List<@>> { revLL(repRowsAcc(rows, counts, ~), ~) };
+func repRowsAcc(rows: List<List<@>>, counts: List<@>, acc: List<List<@>>) -> List<List<@>> { match rows { (r, rest) => repRowsAcc(rest, counts, (repRow(r, counts), acc)), _ => acc, } };
+func repRow(r: List<@>, counts: List<@>) -> List<@> { array.revL(repRowAcc(r, counts, ~), ~) };
+func repRowAcc(r: List<@>, counts: List<@>, acc: List<@>) -> List<@> {
+  match r { (x, xs) => match counts { (c, cs) => repRowAcc(xs, cs, pushN(x, c, acc)), _ => acc, }, _ => acc, }
 };
+func pushN(x: @, n: @, acc: List<@>) -> List<@> { if n == 0 { acc } else { pushN(x, n - 1, (x, acc)) } };
 // A\B along the last axis:  a 0 in A inserts a fill, a count n takes the next element n times
 func expand(a: array.Arr, b: array.Arr, env: Env) -> Ev {
   match natVec(a) {
@@ -1294,13 +1361,13 @@ func expand(a: array.Arr, b: array.Arr, env: Env) -> Ev {
   }
 };
 func countNonzero(xs: List<@>) -> @ { match xs { (h, t) => (if h == 0 { 0 } else { 1 }) + countNonzero(t), _ => 0, } };
-func expRows(rows: List<List<@>>, counts: List<@>, fill: @) -> List<List<@>> {
-  match rows { (r, rest) => (expRow(r, counts, fill), expRows(rest, counts, fill)), _ => ~, }
-};
-func expRow(r: List<@>, counts: List<@>, fill: @) -> List<@> {
+func expRows(rows: List<List<@>>, counts: List<@>, fill: @) -> List<List<@>> { revLL(expRowsAcc(rows, counts, fill, ~), ~) };
+func expRowsAcc(rows: List<List<@>>, counts: List<@>, fill: @, acc: List<List<@>>) -> List<List<@>> { match rows { (r, rest) => expRowsAcc(rest, counts, fill, (expRow(r, counts, fill), acc)), _ => acc, } };
+func expRow(r: List<@>, counts: List<@>, fill: @) -> List<@> { array.revL(expRowAcc(r, counts, fill, ~), ~) };
+func expRowAcc(r: List<@>, counts: List<@>, fill: @, acc: List<@>) -> List<@> {
   match counts {
-    (c, cs) => if c == 0 { (fill, expRow(r, cs, fill)) } else { match r { (x, xs) => array.catL(array.repL(x, c), expRow(xs, cs, fill)), _ => ~, } },
-    _ => ~,
+    (c, cs) => if c == 0 { expRowAcc(r, cs, fill, (fill, acc)) } else { match r { (x, xs) => expRowAcc(xs, cs, fill, pushN(x, c, acc)), _ => acc, } },
+    _ => acc,
   }
 };
 func decode(a: array.Arr, b: array.Arr, env: Env) -> Ev {
@@ -1421,11 +1488,11 @@ func partitionAxis(a: array.Arr, b: array.Arr, k: @, env: Env) -> Ev {
 };
 // the groups the counts open: a count above the one before it, after a 0 or at the start
 func countStarts(cs: List<@>, prev: @) -> @ { match cs { (c, t) => (if c != 0 and c > prev { 1 } else { 0 }) + countStarts(t, c), _ => 0, } };
-func partLines(cs: List<@>, b: array.Arr, lines: List<List<@>>) -> List<array.Arr> {
-  match lines { (l, rest) => array.catA(partGroups(cs, lineItems(b, l), 0, ~, ~), partLines(cs, b, rest)), _ => ~, }
-};
+func partLines(cs: List<@>, b: array.Arr, lines: List<List<@>>) -> List<array.Arr> { array.revA(partLinesAcc(cs, b, lines, ~), ~) };
+func partLinesAcc(cs: List<@>, b: array.Arr, lines: List<List<@>>, acc: List<array.Arr>) -> List<array.Arr> { match lines { (l, rest) => partLinesAcc(cs, b, rest, array.revA(partGroups(cs, lineItems(b, l), 0, ~, ~), acc)), _ => acc, } };
 // line i's groups are numbered from i*g+1
-func numberLines(nl: @, g: @, from: @) -> List<List<@>> { if nl == 0 { ~ } else { (array.iotaL(g, from), numberLines(nl - 1, g, from + g)) } };
+func numberLines(nl: @, g: @, from: @) -> List<List<@>> { revLL(numberAcc(nl, g, from, ~), ~) };
+func numberAcc(nl: @, g: @, from: @, acc: List<List<@>>) -> List<List<@>> { if nl == 0 { acc } else { numberAcc(nl - 1, g, from + g, (array.iotaL(g, from), acc)) } };
 func partitionVec(a: array.Arr, b: array.Arr, env: Env) -> Ev {
   match natVec(a) {
     (ok, cs0) => if not ok { dom("the left argument of ⊂ is a vector of non-negative integers") }
@@ -1497,16 +1564,15 @@ func minShape(axes: List<@>, shp: List<@>, j: @, r: @) -> List<@> { if j == r { 
 func minOver(axes: List<@>, shp: List<@>, j: @, m: @) -> @ {
   match axes { (x, xt) => match shp { (d, dt) => minOver(xt, dt, j, if x == j and d < m { d } else { m }), _ => m, }, _ => m, }
 };
-func transposeCells(axes: List<@>, shp: List<@>, shp2: List<@>, vs: List<@>, p: @, n: @) -> List<@> {
-  if p == n { ~ } else {
-    let ix2 = array.unflatIx(shp2, p);
-    (array.nth(vs, array.flatIx(shp, pickAxes(axes, ix2))), transposeCells(axes, shp, shp2, vs, p + 1, n))
-  }
+func transposeCells(axes: List<@>, shp: List<@>, shp2: List<@>, vs: List<@>, p: @, n: @) -> List<@> { gatherAt(vs, transposeCellPos(axes, shp, shp2, p, n, ~)) };
+func transposeCellPos(axes: List<@>, shp: List<@>, shp2: List<@>, p: @, n: @, acc: List<@>) -> List<@> {
+  if p == n { array.revL(acc, ~) } else { transposeCellPos(axes, shp, shp2, p + 1, n, (array.flatIx(shp, pickAxes(axes, array.unflatIx(shp2, p))), acc)) }
 };
 // A⍷B (D-87): 1 where a copy of A begins, both as matrices
 func pickAxes(axes: List<@>, ix2: List<@>) -> List<@> { match axes { (x, t) => (array.nth(ix2, x), pickAxes(t, ix2)), _ => ~, } };
 func find(a: array.Arr, b: array.Arr, env: Env) -> Ev {
   if array.rank(a) > array.rank(b) { fail("%rank-error", "the pattern outranks the array") }
+  else if array.rank(b) == 1 { okv(mk(1, array.shape(b), array.revL(findVecAcc(array.itemsOf(a), array.itemsOf(b), ~), ~)), env) }
   else if array.rank(b) > 2 {
     let sb = array.shape(b);
     let sa = array.catL(array.repL(1, array.rank(b) - array.rank(a)), array.shape(a));
@@ -1520,10 +1586,11 @@ func find(a: array.Arr, b: array.Arr, env: Env) -> Ev {
   }
 };
 // ⍷ at any rank (D-87): position p of B begins a copy of A when A fits there and every cell matches
-func findN(ia: List<array.Arr>, sa: List<@>, na: @, ib: List<array.Arr>, sb: List<@>, p: @, n: @) -> List<@> {
-  if p == n { ~ } else {
+func findN(ia: List<array.Arr>, sa: List<@>, na: @, ib: List<array.Arr>, sb: List<@>, p: @, n: @) -> List<@> { array.revL(findNAcc(ia, sa, na, ib, sb, p, n, ~), ~) };
+func findNAcc(ia: List<array.Arr>, sa: List<@>, na: @, ib: List<array.Arr>, sb: List<@>, p: @, n: @, acc: List<@>) -> List<@> {
+  if p == n { acc } else {
     let ix = array.unflatIx(sb, p);
-    (b2n(fitsAt(ix, sa, sb) and findAtN(ia, sa, ib, sb, ix, 0, na)), findN(ia, sa, na, ib, sb, p + 1, n))
+    findNAcc(ia, sa, na, ib, sb, p + 1, n, (b2n(fitsAt(ix, sa, sb) and findAtN(ia, sa, ib, sb, ix, 0, na)), acc))
   }
 };
 func fitsAt(ix: List<@>, sa: List<@>, sb: List<@>) -> Bool {
@@ -1535,15 +1602,23 @@ func findAtN(ia: List<array.Arr>, sa: List<@>, ib: List<array.Arr>, sb: List<@>,
     if matchArr(array.nthA(ia, q), array.nthA(ib, array.flatIx(sb, addIx(ix, array.unflatIx(sa, q))))) { findAtN(ia, sa, ib, sb, ix, q + 1, m) } else { false }
   }
 };
+// ⍷ on a vector (D-87): at each position, the pattern against the items from there, one walk of the tail
+func findVecAcc(ia: List<array.Arr>, ib: List<array.Arr>, acc: List<@>) -> List<@> {
+  match ib { (h, t) => findVecAcc(ia, t, (b2n(startsWithA(ib, ia)), acc)), _ => acc, }
+};
+func startsWithA(xs: List<array.Arr>, pat: List<array.Arr>) -> Bool {
+  match pat { (p, pt) => match xs { (x, xt) => if matchArr(x, p) { startsWithA(xt, pt) } else { false }, _ => false, }, _ => true, }
+};
 func matDims(a: array.Arr) -> (@, @) {
   match array.rank(a) { 0 => (1, 1), 1 => (1, array.firstDim(array.shape(a))), _ => (array.firstDim(array.shape(a)), array.lastDim(array.shape(a))), }
 };
-func findCells(ia: List<array.Arr>, pr: @, pc: @, ib: List<array.Arr>, br: @, bc: @, p: @, n: @) -> List<@> {
-  if p == n { ~ } else {
+func findCells(ia: List<array.Arr>, pr: @, pc: @, ib: List<array.Arr>, br: @, bc: @, p: @, n: @) -> List<@> { array.revL(findCellsAcc(ia, pr, pc, ib, br, bc, p, n, ~), ~) };
+func findCellsAcc(ia: List<array.Arr>, pr: @, pc: @, ib: List<array.Arr>, br: @, bc: @, p: @, n: @, acc: List<@>) -> List<@> {
+  if p == n { acc } else {
     let i = p / bc;
     let j = p % bc;
     let hit = i + pr <= br and j + pc <= bc and findAt(ia, pr, pc, ib, bc, i, j, 0, pr * pc);
-    (b2n(hit), findCells(ia, pr, pc, ib, br, bc, p + 1, n))
+    findCellsAcc(ia, pr, pc, ib, br, bc, p + 1, n, (b2n(hit), acc))
   }
 };
 func findAt(ia: List<array.Arr>, pr: @, pc: @, ib: List<array.Arr>, bc: @, i: @, j: @, q: @, m: @) -> Bool {
@@ -1554,12 +1629,15 @@ func findAt(ia: List<array.Arr>, pr: @, pc: @, ib: List<array.Arr>, bc: @, i: @,
   }
 };
 // --- format (D-88) ------------------------------------------------------------------------------
-func toUni(cs: List<@>) -> List<UniChar> { match cs { (c, t) => (c as! UniChar, toUni(t)), _ => ~, } };
+func toUni(cs: List<@>) -> List<UniChar> { revU(toUniAcc(cs, ~), ~) };
+func toUniAcc(cs: List<@>, acc: List<UniChar>) -> List<UniChar> { match cs { (c, t) => toUniAcc(t, (c as! UniChar, acc)), _ => acc, } };
+func revU(xs: List<UniChar>, acc: List<UniChar>) -> List<UniChar> { match xs { (h, t) => revU(t, (h, acc)), _ => acc, } };
 func splitNl(cs: List<@>, cur: List<@>, acc: List<List<@>>) -> List<List<@>> {
   match cs { (c, t) => if c == 10 { splitNl(t, ~, (array.revL(cur, ~), acc)) } else { splitNl(t, (c, cur), acc) }, _ => revLL((array.revL(cur, ~), acc), ~), }
 };
 func maxLenL(xss: List<List<@>>, m: @) -> @ { match xss { (h, t) => maxLenL(t, array.maxk(m, array.count(h))), _ => m, } };
-func padRows(xss: List<List<@>>, w: @) -> List<List<@>> { match xss { (h, t) => (array.catL(h, array.repL(32, w - array.count(h))), padRows(t, w)), _ => ~, } };
+func padRows(xss: List<List<@>>, w: @) -> List<List<@>> { revLL(padRowsAcc(xss, w, ~), ~) };
+func padRowsAcc(xss: List<List<@>>, w: @, acc: List<List<@>>) -> List<List<@>> { match xss { (h, t) => padRowsAcc(t, w, (array.catL(h, array.repL(32, w - array.count(h))), acc)), _ => acc, } };
 // a display text as a character array: one row per line
 func charsOf(text: String) -> array.Arr {
   let rows = splitNl(cps(text), ~, ~);
@@ -1580,7 +1658,8 @@ func formatArr(a: array.Arr, env: Env) -> Ev {
 };
 func rankUp(m: array.Arr, b: array.Arr) -> array.Arr { if array.rank(b) > 2 { charsRank(m, array.shape(b)) } else { m } };
 // the rows of a display without the blank lines that part its planes
-func dropBlank(rows: List<List<@>>) -> List<List<@>> { match rows { (r, t) => match r { (c, ct) => (r, dropBlank(t)), _ => dropBlank(t), }, _ => ~, } };
+func dropBlank(rows: List<List<@>>) -> List<List<@>> { revLL(dropBlankAcc(rows, ~), ~) };
+func dropBlankAcc(rows: List<List<@>>, acc: List<List<@>>) -> List<List<@>> { match rows { (r, t) => match r { (c, ct) => dropBlankAcc(t, (r, acc)), _ => dropBlankAcc(t, acc), }, _ => acc, } };
 // a character matrix of rows, as an array of B's leading axes by the text width (⍕ past rank 2)
 func charsRank(m: array.Arr, shp: List<@>) -> array.Arr {
   let w = if array.rank(m) == 2 { array.lastDim(array.shape(m)) } else { array.size(array.shape(m)) };
@@ -1603,7 +1682,8 @@ func fmtFixed(k: @, x: @, d: @) -> String {
     },
   }
 };
-func fmtFixedAll(k: @, xs: List<@>, d: @) -> List<String> { match xs { (h, t) => (fmtFixed(k, h, d), fmtFixedAll(k, t, d)), _ => ~, } };
+func fmtFixedAll(k: @, xs: List<@>, d: @) -> List<String> { array.revS(fmtFixedAcc(k, xs, d, ~), ~) };
+func fmtFixedAcc(k: @, xs: List<@>, d: @, acc: List<String>) -> List<String> { match xs { (h, t) => fmtFixedAcc(k, t, d, (fmtFixed(k, h, d), acc)), _ => acc, } };
 func fitWidth(cells: List<String>, w: @) -> (Bool, List<String>) {
   match cells {
     (c, t) => if array.strLen(c) > w { (false, ~) } else { match fitWidth(t, w) { (ok, rest) => (ok, (array.spaces(w - array.strLen(c)) + c, rest)), } },
@@ -1667,7 +1747,8 @@ func identityOf(b: array.Arr) -> array.Arr {
   let n = array.firstDim(array.shape(b));
   mk(1, [n, n], identCells(0, n * n, n))
 };
-func identCells(p: @, n2: @, n: @) -> List<@> { if p == n2 { ~ } else { (if (p / n) == (p % n) { 1 } else { 0 }, identCells(p + 1, n2, n)) } };
+func identCells(p: @, n2: @, n: @) -> List<@> { array.revL(identAcc(p, n2, n, ~), ~) };
+func identAcc(p: @, n2: @, n: @, acc: List<@>) -> List<@> { if p == n2 { acc } else { identAcc(p + 1, n2, n, ((if (p / n) == (p % n) { 1 } else { 0 }), acc)) } };
 func solve(a: array.Arr, b: array.Arr, inverse: Bool, env: Env) -> Ev {
   if a.kind == 4 or b.kind == 4 or array.isBox(a) or array.isBox(b) { dom("⌹ takes numeric arrays") }
   else if array.rank(b) != 2 or array.rank(a) > 2 { fail("%rank-error", "⌹ takes a matrix") }
@@ -1797,7 +1878,7 @@ func scanEach(f: parse.Fn, k: @, groups: List<List<@>>, env: Env, acc: List<arra
     _ => Evs.ok((revArrs(acc, ~), env)),
   }
 };
-func catArrs(a: List<array.Arr>, b: List<array.Arr>) -> List<array.Arr> { match a { (h, t) => (h, catArrs(t, b)), _ => b, } };
+func catArrs(a: List<array.Arr>, b: List<array.Arr>) -> List<array.Arr> { array.catA(a, b) };
 // f/ and f\ over a box vector fold its elements (D-72); the reduction is enclosed
 func reduceBox(f: parse.Fn, a: array.Arr, env: Env) -> Ev {
   if array.rank(a) == 0 { okv(a, env) }
@@ -1885,7 +1966,8 @@ func innerItems(f: parse.Fn, g: parse.Fn, a: array.Arr, b: array.Arr, env: Env) 
     }
   }
 };
-func chunksA(xs: List<array.Arr>, n: @) -> List<List<array.Arr>> { match xs { (h, t) => (array.takeA(xs, n), chunksA(array.dropA(xs, n), n)), _ => ~, } };
+func chunksA(xs: List<array.Arr>, n: @) -> List<List<array.Arr>> { revAA(chunksAAcc(xs, n, ~), ~) };
+func chunksAAcc(xs: List<array.Arr>, n: @, acc: List<List<array.Arr>>) -> List<List<array.Arr>> { match xs { (h, t) => chunksAAcc(array.dropA(xs, n), n, (array.takeA(xs, n), acc)), _ => acc, } };
 func colA(rows: List<List<array.Arr>>, j: @) -> List<array.Arr> { match rows { (r, rest) => (array.nthA(r, j), colA(rest, j)), _ => ~, } };
 func colsA(rows: List<List<array.Arr>>, ncols: @, j: @) -> List<List<array.Arr>> { if j == ncols { ~ } else { (colA(rows, j), colsA(rows, ncols, j + 1)) } };
 func innerRowsA(f: parse.Fn, g: parse.Fn, arows: List<List<array.Arr>>, bcols: List<List<array.Arr>>, env: Env, acc: List<array.Arr>) -> Evs {
@@ -1906,7 +1988,8 @@ func innerRowA(f: parse.Fn, g: parse.Fn, r: List<array.Arr>, bcols: List<List<ar
     _ => Evs.ok((array.revA(acc, ~), env)),
   }
 };
-func spreadEach(xs: List<@>, n: @) -> List<@> { match xs { (h, t) => array.catL(array.repL(h, n), spreadEach(t, n)), _ => ~, } };
+func spreadEach(xs: List<@>, n: @) -> List<@> { array.revL(spreadAcc(xs, n, ~), ~) };
+func spreadAcc(xs: List<@>, n: @, acc: List<@>) -> List<@> { match xs { (h, t) => spreadAcc(t, n, pushN(h, n, acc)), _ => acc, } };
 // A f.g B for ranks up to 2:  rows of A against columns of B, g then f/
 func inner(f: parse.Fn, g: parse.Fn, a: array.Arr, b: array.Arr, env: Env) -> Ev {
   if array.isBox(a) or array.isBox(b) { innerItems(f, g, a, b, env) } else { innerSimple(f, g, a, b, env) }
@@ -1969,13 +2052,39 @@ func evalParts(ixs: List<parse.Ast>, x: array.Arr, env: Env, acc: List<List<@>>,
     _ => Parts.ok((revLL(acc, ~), shp, env)),
   }
 };
-func shiftIo(xs: List<@>, io: @) -> List<@> { match xs { (h, t) => (if h < io { 4294967295 } else { h - io }, shiftIo(t, io)), _ => ~, } };
+func shiftIo(xs: List<@>, io: @) -> List<@> { array.revL(shiftAcc(xs, io, ~), ~) };
+func shiftAcc(xs: List<@>, io: @, acc: List<@>) -> List<@> { match xs { (h, t) => shiftAcc(t, io, ((if h < io { 4294967295 } else { h - io }), acc)), _ => acc, } };
 func inBounds(parts: List<List<@>>, shp: List<@>) -> Bool {
   match parts { (p, rest) => match shp { (d, ds) => array.allL(p, lambda (i: @) -> Bool { i < d }) and inBounds(rest, ds), _ => false, }, _ => true, }
 };
 func positions(parts: List<List<@>>, shp: List<@>) -> List<@> { flatAll(array.cartesian(parts), shp) };
-func flatAll(ixs: List<List<@>>, shp: List<@>) -> List<@> { match ixs { (ix, rest) => (array.flatIx(shp, ix), flatAll(rest, shp)), _ => ~, } };
-func gatherAt(vs: List<@>, pos: List<@>) -> List<@> { match pos { (p, rest) => (array.nth(vs, p), gatherAt(vs, rest)), _ => ~, } };
+func flatAll(ixs: List<List<@>>, shp: List<@>) -> List<@> { array.revL(flatAcc(ixs, shp, ~), ~) };
+func flatAcc(ixs: List<List<@>>, shp: List<@>, acc: List<@>) -> List<@> { match ixs { (ix, rest) => flatAcc(rest, shp, (array.flatIx(shp, ix), acc)), _ => acc, } };
+// the values at the positions:  one forward walk while the positions increase (every axis line
+// does), a fresh walk from the start for any position behind (P11b)
+func gatherAt(vs: List<@>, pos: List<@>) -> List<@> { if increasing(pos, 0) { array.revL(gatherAcc(vs, vs, 0, pos, ~), ~) } else { gatherSorted(vs, pos) } };
+func increasing(xs: List<@>, prev: @) -> Bool { match xs { (x, t) => if x >= prev { increasing(t, x) } else { false }, _ => true, } };
+// positions in any order (a transpose):  sorted by position with their slots, the values picked in one
+// walk, sorted back by slot -- O(n log n) where an nth per position is O(n²)
+func gatherSorted(vs: List<@>, pos: List<@>) -> List<@> {
+  let byPos = msortV(runsV(pos, 0, ~), 1, true);
+  let picked = pickWalk(vs, 0, byPos, ~);
+  firstsP(msortV(runsP(picked, ~), 1, true), ~)
+};
+// (slot, position) in position order -> (value, slot) runs of one
+func pickWalk(cur: List<@>, at: @, byPos: List<(@, @)>, acc: List<(@, @)>) -> List<(@, @)> {
+  match byPos { ((i, p), rest) => { let here = array.dropL(cur, p - at); pickWalk(here, p, rest, ((headOr0(here), i), acc)) }, _ => acc, }
+};
+func runsP(xs: List<(@, @)>, acc: List<List<(@, @)>>) -> List<List<(@, @)>> { match xs { (h, t) => runsP(t, ([h], acc)), _ => acc, } };
+func firstsP(xs: List<(@, @)>, acc: List<@>) -> List<@> { match xs { ((v, i), t) => firstsP(t, (v, acc)), _ => array.revL(acc, ~), } };
+func gatherAcc(all: List<@>, cur: List<@>, at: @, pos: List<@>, acc: List<@>) -> List<@> {
+  match pos {
+    (p, rest) => if p >= at { let here = array.dropL(cur, p - at); gatherAcc(all, here, p, rest, (headOr0(here), acc)) }
+      else { let here = array.dropL(all, p); gatherAcc(all, here, p, rest, (headOr0(here), acc)) },
+    _ => acc,
+  }
+};
+func headOr0(xs: List<@>) -> @ { match xs { (h, t) => h, _ => 0, } };
 func indexed(x: array.Arr, parts: List<List<@>>, rshp: List<@>, env: Env) -> Ev {
   let shp = array.shape(x);
   if array.countLL(parts) != array.count(shp) { fail("%rank-error", "the number of indices is the rank") }
@@ -2012,7 +2121,8 @@ func assignItems(x0: array.Arr, parts: List<List<@>>, v0: array.Arr, env: Env) -
   if array.countA(vs) != n { fail("%length-error", "the value does not fit the indices") }
   else { okv(array.normalize(shp, setAllA(array.itemsOf(x0), pos, vs)), env) }
 };
-func repA(x: array.Arr, n: @) -> List<array.Arr> { if n == 0 { ~ } else { (x, repA(x, n - 1)) } };
+func repA(x: array.Arr, n: @) -> List<array.Arr> { repAAcc(x, n, ~) };
+func repAAcc(x: array.Arr, n: @, acc: List<array.Arr>) -> List<array.Arr> { if n == 0 { acc } else { repAAcc(x, n - 1, (x, acc)) } };
 func setAllA(xs: List<array.Arr>, pos: List<@>, vs: List<array.Arr>) -> List<array.Arr> {
   match pos { (p, prest) => match vs { (v, vrest) => setAllA(setNthA(xs, p, v), prest, vrest), _ => xs, }, _ => xs, }
 };
@@ -2210,7 +2320,7 @@ func lookupFn(fs: List<(String, Fndef)>, nm: String) -> (Bool, Fndef) {
 // so a local shadows a global; inside a dfn `∇` is an ambivalent function
 func sigOf(env: Env) -> List<(String, @)> {
   let globals = sigDfns(env.dfns, sigFns(env.fns, sigStore(env.store, ~)));
-  match env.frames { (f, rest) => (("∇", 4), sigFrames(env.frames, globals)), _ => globals, }
+  match env.frames { (f, rest) => { let oc = parse.dfnClass(f.own); let base = (("∇", 4), sigFrames(env.frames, globals)); if oc == 6 or oc == 7 { (("∇∇", oc), base) } else { base } }, _ => globals, }
 };
 func sigDfns(ds: List<(String, Dfndef)>, acc: List<(String, @)>) -> List<(String, @)> {
   match ds { ((n, d), t) => sigDfns(t, ((n, parse.dfnClass(d.d)), acc)), _ => acc, }
@@ -2359,16 +2469,51 @@ func runBodyStmt(a: parse.Ast, f: *, env: Env) -> EnvR {
 // the trees and formulas of the lines a call reached, keyed by the entry
 // signature (which carries ⍺ only when bound, D-67); a later call that
 // reaches further parses on from there and extends the cache.
-func callDfn(nm: String, d: parse.Dfn, dyadic: Bool, a: array.Arr, b: array.Arr, env: Env) -> Ev { callDfnOps(nm, d, dyadic, a, b, ~, env) };
+func callDfn(nm: String, d: parse.Dfn, dyadic: Bool, a: array.Arr, b: array.Arr, env: Env) -> Ev { callDfnOps(nm, d, dyadic, a, b, ~, ~, env) };
 // a dfn operator applied (D-95): its body runs as a dfn's, with the operands as ⍺⍺ and ⍵⍵
+// a function operand is bound among the frame's operands, an array operand (evaluated here, in the
+// caller's environment) among its variables, where the body's signature sees an array (D-95)
 func callOp(x: parse.Dop, dyadic: Bool, a: array.Arr, b: array.Arr, env: Env) -> Ev {
-  let ops = if x.two { [("⍺⍺", x.l), ("⍵⍵", x.r)] } else { [("⍺⍺", x.l)] };
-  match x.op {
-    .dfn(d) => callDfnOps("", d, dyadic, a, b, ops, env),
-    .user(nm) => match lookupLocalFn(env.frames, nm) {
-      (local, ld) => if local { callDfnOps("", ld, dyadic, a, b, ops, env) }
-        else { match lookupDfn(env.dfns, nm) { (global, gd) => if global { callDfnOps(nm, gd.d, dyadic, a, b, ops, env) } else { fail("%value-error", nm + " is not defined") }, } },
-    },
+  match opndVal(x.la, x.lv, env) { .err(e) => Ev.err(e), .ok(lr) => match lr { (lval, env1) => callOpR(x, dyadic, a, b, lval, env1), }, }
+};
+func callOpR(x: parse.Dop, dyadic: Bool, a: array.Arr, b: array.Arr, lval: array.Arr, env: Env) -> Ev {
+  match opndVal(x.ra and x.two, x.rv, env) { .err(e) => Ev.err(e), .ok(rr) => match rr { (rval, env2) => callOpWith(x.op, dyadic, a, b, resolveOps(array2ops(x, false), env2), opndVars(x, lval, rval), env2), }, }
+};
+func opndVal(isArr: Bool, v: parse.Ast, env: Env) -> Ev { if isArr { evalAst(v, env) } else { okv(array.scalar(1, 0), env) } };
+// function operands resolved where the operator is applied:  ⍺⍺ and ⍵⍵ to the frame's own operands,
+// a local dfn's name to the dfn, so the operator's frame (over the store alone when it is named, D-65)
+// can run them
+func resolveOps(os: List<(String, parse.Fn)>, env: Env) -> List<(String, parse.Fn)> {
+  match os { ((n, g), t) => ((n, resolveFn(g, env)), resolveOps(t, env)), _ => ~, }
+};
+func resolveFn(g: parse.Fn, env: Env) -> parse.Fn {
+  match g {
+    .user(nm) => if nm == "⍺⍺" or nm == "⍵⍵" { match lookupOp(env.frames, nm) { (found, h) => if found { h } else { g }, } }
+      else { match lookupLocalFn(env.frames, nm) { (local, ld) => if local { parse.Fn.dfn(ld) } else { g }, } },
+    _ => g,
+  }
+};
+func array2ops(x: parse.Dop, unused: Bool) -> List<(String, parse.Fn)> {
+  let l = if x.la { ~ } else { [("⍺⍺", x.l)] };
+  if x.two and not x.ra { catOps(l, [("⍵⍵", x.r)]) } else { l }
+};
+func catOps(a: List<(String, parse.Fn)>, b: List<(String, parse.Fn)>) -> List<(String, parse.Fn)> { match a { (h, t) => (h, catOps(t, b)), _ => b, } };
+func opndVars(x: parse.Dop, lval: array.Arr, rval: array.Arr) -> List<(String, array.Arr)> {
+  let l = if x.la { [("⍺⍺", lval)] } else { ~ };
+  if x.two and x.ra { catVars(l, [("⍵⍵", rval)]) } else { l }
+};
+func catVars(a: List<(String, array.Arr)>, b: List<(String, array.Arr)>) -> List<(String, array.Arr)> { match a { (h, t) => (h, catVars(t, b)), _ => b, } };
+func callOpWith(op: parse.Fn, dyadic: Bool, a: array.Arr, b: array.Arr, ops: List<(String, parse.Fn)>, vars: List<(String, array.Arr)>, env: Env) -> Ev {
+  match op {
+    .dfn(d) => callDfnOps("", d, dyadic, a, b, ops, vars, env),
+    .user(nm) => if nm == "∇∇" { match env.frames {
+        (f, rest) => callDfnOps(f.name, f.own, dyadic, a, b, ops, vars, env),
+        _ => fail("%syntax-error", "∇∇ names an operator only inside one (D-95)"),
+      } }
+      else { match lookupLocalFn(env.frames, nm) {
+        (local, ld) => if local { callDfnOps("", ld, dyadic, a, b, ops, vars, env) }
+          else { match lookupDfn(env.dfns, nm) { (global, gd) => if global { callDfnOps(nm, gd.d, dyadic, a, b, ops, vars, env) } else { fail("%value-error", nm + " is not defined") }, } },
+      } },
     _ => fail("%syntax-error", "an operator is a dfn naming ⍺⍺ (D-95)"),
   }
 };
@@ -2378,9 +2523,9 @@ func lookupOp(frames: List<Frame>, nm: String) -> (Bool, parse.Fn) {
 func lookupOpIn(os: List<(String, parse.Fn)>, nm: String) -> (Bool, parse.Fn) {
   match os { ((n, g), t) => if n == nm { (true, g) } else { lookupOpIn(t, nm) }, _ => (false, parse.Fn.prim(0)), }
 };
-func callDfnOps(nm: String, d: parse.Dfn, dyadic: Bool, a: array.Arr, b: array.Arr, ops: List<(String, parse.Fn)>, env: Env) -> Ev {
+func callDfnOps(nm: String, d: parse.Dfn, dyadic: Bool, a: array.Arr, b: array.Arr, ops: List<(String, parse.Fn)>, opvars: List<(String, array.Arr)>, env: Env) -> Ev {
   let global = nm != "";
-  let args = if dyadic { [("⍺", a), ("⍵", b)] } else { [("⍵", b)] };
+  let args = catVars(opvars, if dyadic { [("⍺", a), ("⍵", b)] } else { [("⍵", b)] });
   let frame = Frame( vars: args, fns: ~, own: d, name: nm, ops: ops );
   let entry = setFrames(env, if global { [frame] } else { (frame, env.frames) });
   let key = sigOf(entry);
@@ -2701,10 +2846,10 @@ func gMmul(l: Ev, r: Ev) -> Ev {
 };
 func mmulFn() -> parse.Fn { parse.Fn.inner(parse.Inner( f: parse.Fn.prim(43), g: parse.Fn.prim(215) )) };
 func dotK(k: @, xs: List<@>, ys: List<@>) -> @ { foldK(addK, k, zipK(mulK, k, xs, ys)) };
-func mmulK(k: @, rows: List<List<@>>, cols: List<List<@>>) -> List<@> {
-  match rows { (r, rest) => array.catL(dotRow(k, r, cols), mmulK(k, rest, cols)), _ => ~, }
-};
-func dotRow(k: @, r: List<@>, cols: List<List<@>>) -> List<@> { match cols { (c, rest) => (dotK(k, r, c), dotRow(k, r, rest)), _ => ~, } };
+func mmulK(k: @, rows: List<List<@>>, cols: List<List<@>>) -> List<@> { array.revL(mmulAcc(k, rows, cols, ~), ~) };
+func mmulAcc(k: @, rows: List<List<@>>, cols: List<List<@>>, acc: List<@>) -> List<@> { match rows { (r, rest) => mmulAcc(k, rest, cols, dotRowAcc(k, r, cols, acc)), _ => acc, } };
+func dotRow(k: @, r: List<@>, cols: List<List<@>>) -> List<@> { array.revL(dotRowAcc(k, r, cols, ~), ~) };
+func dotRowAcc(k: @, r: List<@>, cols: List<List<@>>, acc: List<@>) -> List<@> { match cols { (c, rest) => dotRowAcc(k, r, rest, (dotK(k, r, c), acc)), _ => acc, } };
 func gTranspose(x: Ev) -> Ev {
   match x { .err(e) => x, .ok(p) => match p { (xv, env) =>
     if plain1(env, xv) and array.rank(xv) == 2 and array.size(array.shape(xv)) > 0 { okv(array.Arr( kind: xv.kind, ray: lagoon.transpose(xv.ray), items: xv.items ), env) }

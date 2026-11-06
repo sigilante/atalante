@@ -8,9 +8,11 @@
 F R a
 ⍝ expect: (F R)(a)
 R a
-⍝ expect: %syntax-error col:1 an operator needs a function to its left (D-95)
+⍝ expect: %syntax-error col:1 an operator needs an operand to its left (D-95)
 ⌽D a
-⍝ expect: %syntax-error col:2 a dyadic operator needs a function to its right (D-95)
+⍝ expect: %syntax-error col:1 a function needs a right argument
+⌽D
+⍝ expect: %syntax-error col:2 a dyadic operator needs an operand to its right (D-95)
 0 5::⍵
 ⍝ expect: ::(0 5, ⍵)
 ⍺←1
@@ -23,3 +25,7 @@ R a
 ⍝ expect: ←(⎕IO, 0) ⋄ ,[¯0.5](1 2, a)
 ,[1.5E1]a
 ⍝ expect: %syntax-error col:2 an axis is a natural or a fraction between two axes (D-82, D-92)
+2 R a
+⍝ expect: (2 R)(a)
++D 2 a
+⍝ expect: (+ D 2)(a)
