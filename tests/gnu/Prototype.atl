@@ -1,0 +1,15 @@
+⍝ from GNU APL Prototype.tc (GPLv3, tests/gnu/README.md)
+🍎> R←(2 3⍴1 'A' 2 3 'B' 'C') 'WORD' (9 10 11)
+🍎> R
+⍝ expect:  1 A 2   WORD  9 10 11 
+⍝ expect:  3 B C                 
+⍝ skipped (system name ⎕CR): 4 ⎕CR ↑0⍴⊂R
+⍝ skipped (system name ⎕CR): 4 ⎕CR ↑0⍴⊂↑R
+🍎> A←'abcdefg' 'bcdefgh'
+🍎> A0←A[⍳0]
+🍎> A1←A[⍳1]
+🍎> A0
+🍎> A1
+⍝ expect:  abcdefg 
+⍝ skipped (system name ⎕CR): 4 ⎕CR A0
+⍝ skipped (system name ⎕CR): 4 ⎕CR A1

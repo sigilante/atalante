@@ -1,0 +1,8 @@
+⍝ from GNU APL PiTimes.tc (GPLv3, tests/gnu/README.md)
+🍎> ○1
+⍝ expect: 3.141592654
+⍝ skipped (complex numbers): ○3J2
+🍎> ○¯2
+⍝ expect: ¯6.283185307
+🍎> ○2.75⋆2
+⍝ expect: 23.75829444

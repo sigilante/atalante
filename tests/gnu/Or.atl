@@ -1,0 +1,29 @@
+⍝ from GNU APL Or.tc (GPLv3, tests/gnu/README.md)
+🍎> 0 1 ∘.∨ 0 1
+⍝ expect: 0 1
+⍝ expect: 1 1
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+🍎> 30 ∨ 36
+⍝ expect: 6
+🍎> 3 ∨ 3.6
+⍝ expect: 0.6
+⍝ skipped (complex numbers): ¯29J53 ∨ ¯1J107
+🍎> ¯3   ∨ ¯3
+⍝ expect: 3
+⍝ skipped (complex numbers): ¯3J0 ∨ ¯3J0
+⍝ skipped (complex numbers): ¯1J0 ∨ ¯3J0
+⍝ skipped (complex numbers): ¯1J0 ∨ ¯1J0
+🍎> 0 ∨ ¯5
+⍝ expect: 5
+🍎> ¯5 ∨ 0
+⍝ expect: 5
+🍎> 0.0 ∨ ¯5
+⍝ expect: 5
+🍎> 0 ∨ 0
+⍝ expect: 0
+🍎> N←¯9223372036854775807-1
+🍎> N ∨ 3
+⍝ expect: 1
+🍎> N ∨ N
+⍝ expect: 9.223372037E18
+🍎> )ERASE N

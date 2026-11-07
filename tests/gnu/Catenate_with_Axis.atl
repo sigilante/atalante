@@ -1,0 +1,69 @@
+⍝ from GNU APL Catenate_with_Axis.tc (GPLv3, tests/gnu/README.md)
+🍎> M1←2 2⍴⍳4
+🍎> M2←2 2⍴'ABCD'
+🍎> M2,[1]M1
+⍝ expect: A B
+⍝ expect: C D
+⍝ expect: 1 2
+⍝ expect: 3 4
+🍎> A←3 4⍴'BATHBEATBIND'
+🍎> A
+⍝ expect: BATH
+⍝ expect: BEAT
+⍝ expect: BIND
+🍎> A,[1]'X'
+⍝ expect: BATH
+⍝ expect: BEAT
+⍝ expect: BIND
+⍝ expect: XXXX
+🍎> 0,[1]2 5⍴⍳10
+⍝ expect: 0 0 0 0  0
+⍝ expect: 1 2 3 4  5
+⍝ expect: 6 7 8 9 10
+🍎> A
+⍝ expect: BATH
+⍝ expect: BEAT
+⍝ expect: BIND
+🍎> B←2 4⍴'ZOOMZERO'
+🍎> B
+⍝ expect: ZOOM
+⍝ expect: ZERO
+🍎> A,[1]B
+⍝ expect: BATH
+⍝ expect: BEAT
+⍝ expect: BIND
+⍝ expect: ZOOM
+⍝ expect: ZERO
+🍎> C←2 2 3⍴⍳12
+🍎> D←2 3 3⍴-⍳18
+🍎> C,[2]D
+⍝ expect:   1   2   3
+⍝ expect:   4   5   6
+⍝ expect:  ¯1  ¯2  ¯3
+⍝ expect:  ¯4  ¯5  ¯6
+⍝ expect:  ¯7  ¯8  ¯9
+⍝ expect: 
+⍝ expect:   7   8   9
+⍝ expect:  10  11  12
+⍝ expect: ¯10 ¯11 ¯12
+⍝ expect: ¯13 ¯14 ¯15
+⍝ expect: ¯16 ¯17 ¯18
+🍎> H←'words'
+🍎> H
+⍝ expect: words
+🍎> K←2 5⍴'STRAWBERRY'
+🍎> K
+⍝ expect: STRAW
+⍝ expect: BERRY
+🍎> H,[1]K
+⍝ expect: words
+⍝ expect: STRAW
+⍝ expect: BERRY
+🍎> Q←3 5⍴⍳15
+🍎> S←3 3 5⍴∣⍳45
+🍎> Z←Q,[1]S
+🍎> ⍴Z
+⍝ expect: 4 3 5
+🍎> Z←Q,[2]S
+🍎> ⍴Z
+⍝ expect: 3 4 5

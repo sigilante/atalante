@@ -31,7 +31,7 @@ import lexer;
 
 struct Lit { kind: @, vals: List<String> };               // 1 nat, 2 int, 3 real, 4 chr (D-10)
 struct Inner { f: Fn, g: Fn };
-struct Axis { f: Fn, k: @, half: Bool };                 // f[k] (D-82); half: a fractional k, kept as ⌊k⌋+1 (laminate, D-92)
+struct Axis { f: Fn, k: @, half: Bool, ks: List<@> };    // f[k] (D-82); half: a fractional k, kept as ⌊k⌋+1 (laminate, D-92); ks: every axis, [k] or a scalar function's [k1 k2 …] (D-96)
 struct Dfn { body: List<String> };                        // source lines (D-63)
 // a dfn operator applied (D-95): op is the dfn or its name; l and r the operands, each a function
 // or, when la (ra) is set, the array expression lv (rv)
@@ -151,6 +151,14 @@ func inBody(sig: List<(String, @)>) -> Bool { cls(sig, "∇") == 4 };   // parsi
 func isOp(cp: @) -> Bool { cp == 47 or cp == 92 or cp == 9023 or cp == 9024 or cp == 168 or cp == 46 or cp == 8728 };  // / \ ⌿ ⍀ ¨ . ∘
 func maxk(a: @, b: @) -> @ { if a > b { a } else { b } };
 func natText(s: String) -> @ { natDigits(lexer.toCps(s.chars()), 0) };
+// a scalar dyadic glyph: its axis may name several axes of the higher-rank argument (D-96)
+func scalarGlyph(f: Fn) -> Bool {
+  match f { .prim(cp) => cp == 43 or cp == 8722 or cp == 215 or cp == 247 or cp == 8968 or cp == 8970 or cp == 8739 or cp == 8902
+    or cp == 9055 or cp == 9675 or cp == 33 or cp == 60 or cp == 8804 or cp == 61 or cp == 8805 or cp == 62
+    or cp == 8800 or cp == 8744 or cp == 8743 or cp == 9073 or cp == 9074, _ => false, }
+};
+func allNat(ts: List<lexer.Token>) -> Bool { match ts { (t, rest) => if kindOf(t) == 1 { allNat(rest) } else { false }, _ => true, } };
+func natTexts(ts: List<lexer.Token>, acc: List<@>) -> List<@> { match ts { (t, rest) => natTexts(rest, (natText(t.text), acc)), _ => revN(acc, ~), } };
 // a fractional axis numeral (D-92):  `1.5` -> ⌊k⌋+1 = 2, `0.5` -> 1, `¯0.5` -> 0;  an integer, a
 // negative below ¯1 or an exponent is refused
 func halfAxis(cs: List<@>) -> (Bool, @) {
@@ -501,10 +509,11 @@ func pushBrack(t: lexer.Token, rest: List<lexer.Token>, sig: List<(String, @)>, 
         (inner, rest2, closed) => if not closed { sei(t.col, "unbalanced [") }
           else { match inner {
             (k, krest) => match krest {
-              (k2, krest2) => sei(t.col, "an axis is one numeral (D-82)"),
-              _ => if kindOf(k) == 1 { items(rest2, sig, (funItem(Fn.axis(Axis( f: x.f, k: natText(k.text), half: false )), x.col), more)) }
+              (k2, krest2) => if scalarGlyph(x.f) and allNat(inner) { items(rest2, sig, (funItem(Fn.axis(Axis( f: x.f, k: natText(k.text), half: false, ks: natTexts(inner, ~) )), x.col), more)) }
+                else { sei(t.col, "an axis is one numeral (D-82)") },
+              _ => if kindOf(k) == 1 { items(rest2, sig, (funItem(Fn.axis(Axis( f: x.f, k: natText(k.text), half: false, ks: [natText(k.text)] )), x.col), more)) }
                 else if kindOf(k) == 3 or kindOf(k) == 2 { match halfAxis(lexer.toCps(k.text.chars())) {
-                  (ok, kk) => if ok { items(rest2, sig, (funItem(Fn.axis(Axis( f: x.f, k: kk, half: true )), x.col), more)) }
+                  (ok, kk) => if ok { items(rest2, sig, (funItem(Fn.axis(Axis( f: x.f, k: kk, half: true, ks: [kk] )), x.col), more)) }
                     else { sei(t.col, "an axis is a natural or a fraction between two axes (D-82, D-92)") },
                 } }
                 else { sei(t.col, "an axis is one numeral (D-82)") },
@@ -803,6 +812,7 @@ func braceDepth(ts: List<lexer.Token>, depth: @) -> @ {
 func joinS(xs: List<String>, sep: String) -> String {
   match xs { (h, t) => match t { (h2, t2) => h + sep + joinS(t, sep), _ => h, }, _ => "", }
 };
+func showNats(xs: List<@>) -> List<String> { match xs { (h, t) => ("{h}", showNats(t)), _ => ~, } };
 func showFn(f: Fn) -> String {
   match f {
     .prim(cp) => lexer.text([cp]),
@@ -817,7 +827,7 @@ func showFn(f: Fn) -> String {
     .dfn(d) => "{{" + joinS(d.body, " ⋄ ") + "}}",
     .own => "∇",
     .dop(x) => "(" + (if x.la { showAst(x.lv) } else { showFn(x.l) }) + " " + showFn(x.op) + (if x.two { " " + (if x.ra { showAst(x.rv) } else { showFn(x.r) }) } else { "" }) + ")",
-    .axis(x) => if not x.half { showFn(x.f) + "[{x.k}]" } else if x.k == 0 { showFn(x.f) + "[¯0.5]" } else { showFn(x.f) + "[{x.k - 1}.5]" },
+    .axis(x) => if not x.half { showFn(x.f) + "[" + joinS(showNats(x.ks), " ") + "]" } else if x.k == 0 { showFn(x.f) + "[¯0.5]" } else { showFn(x.f) + "[{x.k - 1}.5]" },
   }
 };
 func showAsts(xs: List<Ast>, sep: String) -> String {

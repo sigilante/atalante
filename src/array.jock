@@ -24,15 +24,39 @@ func metaB(k: @, b: @, shp: List<@>) -> lagoon.Meta { lagoon.Meta( shape: shp, b
 // Naturals and integers are built at 64 bits, the computing width; reals at the width their
 // values carry (D-15: a real of another width than 64 travels tagged, see `tagged` below)
 func make(k: @, shp: List<@>, vs: List<@>) -> Arr {
-  if k == 3 and not allRaw(vs) { makeReal(maxTagW(vs, 0), shp, vs) } else { Arr( kind: k, ray: lagoon.from(metaOf(k, shp), vs), items: ~ ) }
+  if k == 3 and not allRaw(vs) { makeReal(maxTagW(vs, 0), shp, vs) }
+  else if (k == 1 or k == 2) and anyGE(vs, two64()) { Arr( kind: k, ray: fromL(metaB(k, 7, shp), clampL(vs, two64(), two64(), ~)), items: ~ ) }
+  else { Arr( kind: k, ray: fromL(metaOf(k, shp), vs), items: ~ ) }
 };
+// --- integer overflow (D-15, RULED 2026-11-07) -------------------------------------------------------
+// A natural or an integer is a 64-bit pattern, so a value of 2^64 or more can only be a result that
+// overflowed:  the kernels return the exact value or 2^64.  +make stores such an array at bloq 7, a
+// width no session gives naturals or integers, and the width layer refuses it as a DOMAIN ERROR.
+func overflowed(a: Arr) -> Bool { (a.kind == 1 or a.kind == 2) and bloqOf(a) == 7 };
+func two63() -> @ { 9223372036854775808 };
+func anyGE(vs: List<@>, m: @) -> Bool { match vs { (v, t) => if v >= m { true } else { anyGE(t, m) }, _ => false, } };
+// every value of m or more replaced by r
+func clampL(vs: List<@>, m: @, r: @, acc: List<@>) -> List<@> { match vs { (v, t) => clampL(t, m, r, ((if v >= m { r } else { v }), acc)), _ => revL(acc, ~), } };
+// an array fits the session's widths:  a natural below 2^w, an integer in −2^(w−1)..2^(w−1)−1
+func fitsW(a: Arr, nb: @, ib: @) -> Bool {
+  if a.kind == 1 and nb < 6 { not anyGE(vals(a), pow2(pow2(nb))) }
+  else if a.kind == 2 and ib < 6 { intsFit(vals(a), pow2(pow2(ib) - 1)) }
+  else { true }
+};
+func intsFit(vs: List<@>, h: @) -> Bool { match vs { (v, t) => if v < h or v >= two64() - h { intsFit(t, h) } else { false }, _ => true, } };
+// a ray from its meta and values;  an empty shape skips Lagoon's +zeros,
+// whose shape fold (+roll with +mul, unjetted inside the package) costs one
+// step per unit of a long axis even when another axis is 0
+func fromL(m: lagoon.Meta, vs: List<@>) -> lagoon.Ray { if hasZero(m.shape) { lagoon.Ray( meta: m, data: 1 ) } else { lagoon.from(m, vs) } };
+func hasZero(shp: List<@>) -> Bool { match shp { (h, t) => if h == 0 { true } else { hasZero(t) }, _ => false, } };
 func allRaw(vs: List<@>) -> Bool { match vs { (v, t) => if v < two128() { allRaw(t) } else { false }, _ => true, } };
-// at bloq b: naturals and integers wrap to it (Lagoon's +rep keeps each element's low bits)
+// at bloq b:  naturals and integers stored in it (Lagoon's +rep keeps each element's low bits, so the
+// caller checks they fit first:  atWidths, D-15)
 func makeB(k: @, b: @, shp: List<@>, vs: List<@>) -> Arr {
-  if k == 3 { makeReal(b, shp, vs) } else { Arr( kind: k, ray: lagoon.from(metaB(k, b, shp), vs), items: ~ ) }
+  if k == 3 { makeReal(b, shp, vs) } else { Arr( kind: k, ray: fromL(metaB(k, b, shp), vs), items: ~ ) }
 };
 // a real array at width w:  every value converted to w and stored untagged
-func makeReal(w: @, shp: List<@>, vs: List<@>) -> Arr { Arr( kind: 3, ray: lagoon.from(metaB(3, w, shp), rawsAt(vs, w, ~)), items: ~ ) };
+func makeReal(w: @, shp: List<@>, vs: List<@>) -> Arr { Arr( kind: 3, ray: fromL(metaB(3, w, shp), rawsAt(vs, w, ~)), items: ~ ) };
 func rawsAt(vs: List<@>, w: @, acc: List<@>) -> List<@> { match vs { (v, t) => rawsAt(t, w, (rawAt(v, w), acc)), _ => revL(acc, ~), } };
 func scalar(k: @, v: @) -> Arr { make(k, ~, [v]) };
 func shape(a: Arr) -> List<@> { a.ray.meta.shape };
@@ -224,7 +248,8 @@ func toRealAt(a: Arr, w: @) -> Arr {
 };
 func natsAt(w: @, xs: List<@>, acc: List<@>) -> List<@> { match xs { (x, t) => natsAt(w, t, (natToRealAt(w, x), acc)), _ => revL(acc, ~), } };
 func intsAt(w: @, xs: List<@>, acc: List<@>) -> List<@> { match xs { (x, t) => intsAt(w, t, (intToRealAt(w, x), acc)), _ => revL(acc, ~), } };
-func toInt(a: Arr) -> Arr { match a.kind { 1 => if bloqOf(a) == 6 { Arr( kind: 2, ray: relabel(a.ray, %int2), items: ~ ) } else { make(2, shape(a), vals(a)) }, _ => a, } };
+// a natural of 2^63 or more has no integer:  it becomes the overflow mark
+func toInt(a: Arr) -> Arr { match a.kind { 1 => if anyGE(vals(a), two63()) { make(2, shape(a), clampL(vals(a), two63(), two64(), ~)) } else if bloqOf(a) == 6 { Arr( kind: 2, ray: relabel(a.ray, %int2), items: ~ ) } else { make(2, shape(a), vals(a)) }, _ => a, } };
 func promote(a: Arr, k: @) -> Arr { match k { 3 => toReal(a), 2 => toInt(a), _ => a, } };
 func promoteAt(a: Arr, k: @, w: @) -> Arr { match k { 3 => toRealAt(a, w), 2 => toInt(a), _ => a, } };
 // an array as the session would make it (D-15):  naturals at nb, integers at ib, reals at rb
@@ -239,7 +264,7 @@ func maxk(a: @, b: @) -> @ { if a > b { a } else { b } };
 
 // --- scalar extension (D-25):  (a', b', tag);  tag "" when the shapes agree
 // a scalar repeated to a shape: Lagoon's +fill builds through +reap, unjetted under jojo and quadratic as a non-tail recursion (P11b)
-func spread(a: Arr, shp: List<@>) -> Arr { if a.kind == 3 { makeReal(bloqOf(a), shp, repL(first(a), size(shp))) } else { Arr( kind: a.kind, ray: lagoon.from(metaB(a.kind, bloqOf(a), shp), repL(rawFirst(a), size(shp))), items: a.items ) } };
+func spread(a: Arr, shp: List<@>) -> Arr { if a.kind == 3 { makeReal(bloqOf(a), shp, repL(first(a), size(shp))) } else { Arr( kind: a.kind, ray: fromL(metaB(a.kind, bloqOf(a), shp), repL(rawFirst(a), size(shp))), items: a.items ) } };
 func rawFirst(a: Arr) -> @ { match lagoon.ravel(a.ray) { (h, t) => h, _ => 0, } };
 func extend(a: Arr, b: Arr) -> (Arr, Arr, String) {
   if shape(a) == shape(b) { (a, b, "") }
@@ -269,7 +294,7 @@ func firstAcc(xs: List<Arr>, k: @, w: @, acc: List<@>) -> List<@> { match xs { (
 // the widest real width among the arrays, 6 when none is real (a join's width, D-15)
 func realWA(xs: List<Arr>, m: @) -> @ { match xs { (h, t) => realWA(t, if h.kind == 3 { maxW(m, bloqOf(h)) } else { m }), _ => if m == 0 { 6 } else { m }, } };
 // a box of the given shape over elements in ravel order
-func boxOf(shp: List<@>, xs: List<Arr>) -> Arr { Arr( kind: 5, ray: lagoon.from(metaOf(1, shp), iotaL(countA(xs), 1)), items: xs ) };
+func boxOf(shp: List<@>, xs: List<Arr>) -> Arr { Arr( kind: 5, ray: fromL(metaOf(1, shp), iotaL(countA(xs), 1)), items: xs ) };
 // D-70's normal form: all simple scalars of one class make a simple array
 func oneClassAll(xs: List<Arr>) -> Bool { match xs { (h, t) => oneClass(t, classOf(h)), _ => true, } };
 func normalize(shp: List<@>, xs: List<Arr>) -> Arr {

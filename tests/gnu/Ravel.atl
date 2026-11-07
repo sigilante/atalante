@@ -1,0 +1,48 @@
+⍝ from GNU APL Ravel.tc (GPLv3, tests/gnu/README.md)
+🍎> A←3 3⍴⍳9
+🍎> A
+⍝ expect: 1 2 3
+⍝ expect: 4 5 6
+⍝ expect: 7 8 9
+🍎> Z←,A
+🍎> Z
+⍝ expect: 1 2 3 4 5 6 7 8 9
+🍎> ⍴Z
+⍝ expect: 9
+🍎> B←2 2 4⍴'BAD FOG GO  SLOW'
+🍎> B
+⍝ expect: BAD 
+⍝ expect: FOG 
+⍝ expect: 
+⍝ expect: GO  
+⍝ expect: SLOW
+🍎> ⍴B
+⍝ expect: 2 2 4
+🍎> M←,B
+🍎> M
+⍝ expect: BAD FOG GO  SLOW
+🍎> ⍴M
+⍝ expect: 16
+🍎> C←4
+🍎> ⍴C
+🍎> ≡C
+⍝ expect: 0
+🍎> W←,C
+🍎> ⍴W
+⍝ expect: 1
+🍎> ≡W
+⍝ expect: 1
+🍎> S←2 2⍴(1 2) (3 4) (5 6) (7 8)
+🍎> S
+⍝ expect:  1 2  3 4 
+⍝ expect:  5 6  7 8 
+🍎> ≡S
+⍝ expect: 2
+🍎> (,S)←'ABCD'
+🍎> S
+⍝ expect: AB
+⍝ expect: CD
+🍎> ⍴S
+⍝ expect: 2 2
+🍎> ≡S
+⍝ expect: 1

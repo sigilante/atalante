@@ -1,0 +1,66 @@
+⍝ from GNU APL Index_Of.tc (GPLv3, tests/gnu/README.md)
+🍎> ⎕IO←1
+🍎> 8 4 2 7 3⍳3 8 4
+⍝ expect: 5 1 2
+🍎> 'SPORT'⍳'TOP'
+⍝ expect: 5 3 2
+🍎> ⎕IO←0
+🍎> 8 4 2 7 3⍳3 8 4
+⍝ expect: 4 0 1
+🍎> 'SPORT'⍳'TOP'
+⍝ expect: 4 2 1
+🍎> ⎕IO←1
+🍎> A←(2 3) (⍳0) 'ME'
+🍎> A⍳'ME' (⍳0)
+⍝ expect: 3 2
+⍝ skipped (system name ⎕CR): 4 ⎕CR A ⍳ 13 4 ¯5 'SUB'
+🍎> ⎕IO←0
+⍝ skipped (system name ⎕CR): 4 ⎕CR A ⍳ 13 4 ¯5 'SUB'
+🍎> ⎕IO←1
+🍎> 8 9 5⍳2 5 8
+⍝ expect: 4 3 1
+🍎> L←'OH' 'NO' 'I'
+🍎> L⍳'NO' 'ON'
+⍝ expect: 2 4
+🍎> 'OHNOI'⍳'NO' 'ON'
+⍝ expect: 6 6
+🍎> 'WIZARD'⍳'OZ'
+⍝ expect: 7 3
+🍎> 6 7 4⍳4 7 (⍳0)
+⍝ expect: 3 2 4
+🍎> 5 5 8 8 9⍳8 9 5
+⍝ expect: 3 5 1
+🍎> 'BANANA'⍳'BANANA'
+⍝ expect: 1 2 3 2 3 2
+⍝ skipped (system name ⎕RL): ⎕RL←42
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+🍎> (⍳100) ⍳ ?10 10⍴100
+⍝ expect: 69 71 81 91 39 33  15 18 44 95
+⍝ expect: 56 29 83 88  9 18  60 51 81 51
+⍝ expect: 10 85 50 71 24 25  43 64 88 95
+⍝ expect: 26 47 24 33 14 53  87 56  7 85
+⍝ expect: 26 46 75  9 89 78  29 67 80 12
+⍝ expect: 59 33 87 56 12 75  66 88 17  3
+⍝ expect: 16  3 93 98 24 84  71 47 38 42
+⍝ expect: 65 91 54 60 47 94  42 73 30 53
+⍝ expect: 95 42 72 90 47 20 100 20 44 60
+⍝ expect: 86 40 30 95 99 38  60 86  1 45
+🍎> ⍳2 2
+⍝ expect:  1 1  1 2 
+⍝ expect:  2 1  2 2 
+⍝ skipped (system name ⎕CR): 4 ⎕CR ⍳2 0
+⍝ skipped (system name ⎕CR): 4 ⎕CR ⍳0 2
+⍝ skipped (user command): ]FILE_CTL NO_SKIP
+🍎> A←⌽⍳64 ⋄ B←⍳6 ⋄ B≡A[A⍳B]
+⍝ expect: 1
+🍎> A←64?64 ⋄ B←⍳6 ⋄ B≡A[A⍳B]
+⍝ expect: 1
+🍎> A←3×⍳64 ⋄ B←⍳6 ⋄ B≡A[A⍳B]
+⍝ refuse: %index-error
+🍎> B≡A[A⍳B]
+⍝ skipped (system command): )SIC
+🍎> A←⎕IO+64|3×⍳64 ⋄ B←⍳6 ⋄ B≡A[A⍳B]
+⍝ expect: 1
+🍎> M←2 3⍴⍳6
+🍎> M⍳[1]2
+⍝ refuse: %axis-error

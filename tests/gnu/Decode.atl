@@ -1,0 +1,38 @@
+⍝ from GNU APL Decode.tc (GPLv3, tests/gnu/README.md)
+🍎> 2⊥1 0 0 1
+⍝ expect: 9
+🍎> 60 60 60⊥1 30 20
+⍝ expect: 5420
+🍎> 3⊥1 2 1
+⍝ expect: 16
+⍝ skipped (complex numbers): 1J1⊥1 2 3 4
+🍎> 2⊥1 1 1 1
+⍝ expect: 15
+🍎> L←2 1⍴2 10
+🍎> L
+⍝ expect:  2
+⍝ expect: 10
+🍎> R←3 2⍴1 4 0 3 1 2
+🍎> R
+⍝ expect: 1 4
+⍝ expect: 0 3
+⍝ expect: 1 2
+🍎> L⊥R
+⍝ expect:   5  24
+⍝ expect: 101 432
+🍎> 24 60 60⊥2 23 12
+⍝ expect: 8592
+🍎> 2⊥1 1 1 1
+⍝ expect: 15
+🍎> 2⊥64⍴1
+⍝ expect: 1.844674407E19
+🍎> 1E300⊥1 1 1
+⍝ refuse: %domain-error
+⍝ skipped (system command): )SIC
+🍎> 10⊥1E308 1
+⍝ refuse: %domain-error
+⍝ skipped (system command): )SIC
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+🍎> 2⊥63⍴1
+⍝ expect: 9223372036854775807
+⍝ skipped (system name ⎕CR): 26⎕CR 2⊥63⍴1

@@ -1,0 +1,12 @@
+⍝ from GNU APL apl2lrm.tc (GPLv3, tests/gnu/README.md)
+⍝ skipped (system command): )SAVE
+🍎> )ERASE F
+🍎> ∇Z←F X
+🍎> Z←10÷X
+🍎> ∇
+🍎> F 0
+⍝ refuse: %domain-error
+⍝ skipped (system command): )SIS
+⍝ skipped (system command): )SIC
+🍎> )ERASE F
+⍝ skipped (system name ⎕CT): ⎕CT←1E¯13

@@ -1,0 +1,41 @@
+⍝ from GNU APL Reduce_N_wise_with_axis.tc (GPLv3, tests/gnu/README.md)
+🍎> R←4 3⍴⍳12
+🍎> R
+⍝ expect:  1  2  3
+⍝ expect:  4  5  6
+⍝ expect:  7  8  9
+⍝ expect: 10 11 12
+🍎> 4+/[1]R
+⍝ expect: 22 26 30
+🍎> 2+/[1]R
+⍝ expect:  5  7  9
+⍝ expect: 11 13 15
+⍝ expect: 17 19 21
+🍎> 3+/[1]R
+⍝ expect: 12 15 18
+⍝ expect: 21 24 27
+🍎> 1+/[1]R
+⍝ expect:  1  2  3
+⍝ expect:  4  5  6
+⍝ expect:  7  8  9
+⍝ expect: 10 11 12
+🍎> C←3 2⍴(1 2)(3 4)(5 6)(7 8)(9 10)(11 12)
+🍎> C
+⍝ expect:  1 2   3 4   
+⍝ expect:  5 6   7 8   
+⍝ expect:  9 10  11 12 
+🍎> ⍴C
+⍝ expect: 3 2
+🍎> 2×/[1]C
+⍝ expect:  5 12   21 32 
+⍝ expect:  45 60  77 96 
+🍎> ¯2-/10 20 30 40
+⍝ expect: 10 10 10
+🍎> ¯2-/10 8 20 ¯3
+⍝ expect: ¯2 12 ¯23
+🍎> 0×/[1]R
+⍝ expect: 1 1 1
+⍝ expect: 1 1 1
+⍝ expect: 1 1 1
+⍝ expect: 1 1 1
+⍝ expect: 1 1 1

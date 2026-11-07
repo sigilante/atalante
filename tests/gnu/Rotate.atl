@@ -1,0 +1,86 @@
+⍝ from GNU APL Rotate.tc (GPLv3, tests/gnu/README.md)
+🍎> A←1 2 3 4 5 6 7
+🍎> 1⌽A
+⍝ expect: 2 3 4 5 6 7 1
+🍎> B←2 5⍴'ANGLEASIDE'
+🍎> B
+⍝ expect: ANGLE
+⍝ expect: ASIDE
+🍎> 2⌽B
+⍝ expect: GLEAN
+⍝ expect: IDEAS
+🍎> ¯2⌽A
+⍝ expect: 6 7 1 2 3 4 5
+🍎> D←2 4⍴'ACHEINKS'
+🍎> D
+⍝ expect: ACHE
+⍝ expect: INKS
+🍎> ¯1⌽D
+⍝ expect: EACH
+⍝ expect: SINK
+🍎> H←3 3⍴'ATEEATTEA'
+🍎> H
+⍝ expect: ATE
+⍝ expect: EAT
+⍝ expect: TEA
+🍎> ¯1 0 1⌽H
+⍝ expect: EAT
+⍝ expect: EAT
+⍝ expect: EAT
+🍎> K←2 3⍴'CAT' 'BEAR' 'PONY' 'GNU' 'BIRD' 'FOX'
+🍎> K
+⍝ expect:  CAT BEAR PONY 
+⍝ expect:  GNU BIRD FOX  
+🍎> ⍴K
+⍝ expect: 2 3
+🍎> ≡K
+⍝ expect: 2
+🍎> 1 2⌽K
+⍝ expect:  BEAR PONY CAT  
+⍝ expect:  FOX  GNU  BIRD 
+🍎> S←2 3 5⍴'TARESSMARTEARTHSETONLAGERSHEAR'
+🍎> S
+⍝ expect: TARES
+⍝ expect: SMART
+⍝ expect: EARTH
+⍝ expect: 
+⍝ expect: SETON
+⍝ expect: LAGER
+⍝ expect: SHEAR
+🍎> ⍴S
+⍝ expect: 2 3 5
+🍎> Q←2 3⍴4 0 ¯1 ¯2 5 1
+🍎> Q
+⍝ expect:  4 0 ¯1
+⍝ expect: ¯2 5  1
+🍎> Q⌽S
+⍝ expect: STARE
+⍝ expect: SMART
+⍝ expect: HEART
+⍝ expect: 
+⍝ expect: ONSET
+⍝ expect: LAGER
+⍝ expect: HEARS
+🍎> W←'STRIPE'
+🍎> 2⌽W
+⍝ expect: RIPEST
+🍎> (2⌽W)←'THERMO'
+🍎> W
+⍝ expect: MOTHER
+🍎> B←2 3⍴⍳6
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+🍎> 7023828131934356245 ¯2726503875690172446⌽B
+⍝ expect: 2 3 1
+⍝ expect: 4 5 6
+⍝ skipped (user command): ]FILE_CTL NO_SKIP
+🍎> 100000000000⌽5
+⍝ expect: 5
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+🍎> ¯99999999999⌽1 2 3 4 5
+⍝ expect: 2 3 4 5 1
+🍎> 9223372036854775807⌽⍳10
+⍝ expect: 8 9 10 1 2 3 4 5 6 7
+🍎> 9223372036854775807⊖3 4⍴⍳12
+⍝ expect: 5  6  7  8
+⍝ expect: 9 10 11 12
+⍝ expect: 1  2  3  4

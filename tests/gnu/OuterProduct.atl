@@ -1,0 +1,36 @@
+⍝ from GNU APL OuterProduct.tc (GPLv3, tests/gnu/README.md)
+🍎> (⍳4)∘.+⍳5
+⍝ expect: 2 3 4 5 6
+⍝ expect: 3 4 5 6 7
+⍝ expect: 4 5 6 7 8
+⍝ expect: 5 6 7 8 9
+🍎> 10 20∘.,1 2 3
+⍝ expect:  10 1  10 2  10 3 
+⍝ expect:  20 1  20 2  20 3 
+🍎> (⍳4)∘.=⍳4
+⍝ expect: 1 0 0 0
+⍝ expect: 0 1 0 0
+⍝ expect: 0 0 1 0
+⍝ expect: 0 0 0 1
+⍝ skipped (system name ⎕): R←'⎕⎕⎕⎕' '∆∆∆∆∆'
+🍎> 3 4∘.↑R
+⍝ expect:  ⎕⎕⎕  ∆∆∆  
+⍝ expect:  ⎕⎕⎕⎕ ∆∆∆∆ 
+🍎> 3 0 2 ∘./ 5 1 7
+⍝ refuse: %syntax-error
+🍎> 3 0 2∘./5 1 7
+⍝ skipped (system command): )SIC
+🍎> X←0⍴⊂1 2
+⍝ skipped (system name ⎕TF): Z←3∘.,X ⋄ 2 ⎕TF 'Z'
+⍝ skipped (system name ⎕TF): Z←3,¨X ⋄ 2 ⎕TF 'Z'
+⍝ skipped (system name ⎕TF): Z←⍬∘.{⍺+⍵}1 2 3 ⋄ 2 ⎕TF 'Z'
+⍝ skipped (glyph ⍬): (⍬∘.{⍺+⍵}1 2 3)≡0 3⍴0
+⍝ skipped (system name ⎕TF): Z←⍬∘.{⍺+⍵}'ab' ⋄ 2 ⎕TF 'Z'
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+⍝ skipped (system name ⎕TF): Z←⍬∘.,1 2 3 ⋄ 2 ⎕TF 'Z'
+🍎> 1 2 3∘.{⎕IO←0 ⋄ ⍺+⍳⍵}1 2
+⍝ expect:  1  1 2 
+⍝ expect:  2  2 3 
+⍝ expect:  3  3 4 
+⍝ skipped (user command): ]FILE_CTL NO_SKIP
+🍎> ⎕IO←1

@@ -1,0 +1,95 @@
+⍝ from GNU APL Divide.tc (GPLv3, tests/gnu/README.md)
+🍎> 3÷2
+⍝ expect: 1.5
+🍎> 9 4 7 10÷0.25
+⍝ expect: 36 16 28 40
+⍝ skipped (complex numbers): 0J12÷4
+⍝ skipped (complex numbers): 0.3 5 1÷0J1 ¯2 1
+🍎> 0÷5
+⍝ expect: 0
+⍝ skipped (complex numbers): 0 0.0 0J0  ∘.÷  0 0.0 0J0
+🍎> M←5 5⍴0
+⍝ skipped (complex numbers): M[1;1] ← ¯0.3603193969J¯0.4564203136
+⍝ skipped (complex numbers): M[1;2] ← ¯0.2669233459J¯0.3091121749
+⍝ skipped (complex numbers): M[1;3] ← ¯0.3116981746J¯0.3694049157
+⍝ skipped (complex numbers): M[1;4] ← ¯0.4084505908J¯0.4133227651
+⍝ skipped (complex numbers): M[1;5] ← ¯0.4511570408J¯0.3994212076
+⍝ skipped (complex numbers): M[2;1] ← ¯0.4698663798J¯0.4777925578
+⍝ skipped (complex numbers): M[2;2] ← ¯0.2687135583J¯0.4456391542
+⍝ skipped (complex numbers): M[2;3] ← ¯0.4580289583J¯0.4799091152
+⍝ skipped (complex numbers): M[2;4] ← ¯0.406056681J¯0.3418088457
+⍝ skipped (complex numbers): M[2;5] ← ¯0.3588914955J¯0.4170317493
+⍝ skipped (complex numbers): M[3;1] ← ¯0.4998517975J¯0.3336313771
+⍝ skipped (complex numbers): M[3;2] ← ¯0.2975505553J¯0.4760295661
+⍝ skipped (complex numbers): M[3;3] ← ¯0.4531648927J¯0.4023509944
+⍝ skipped (complex numbers): M[3;4] ← ¯0.2785952682J¯0.435685231
+⍝ skipped (complex numbers): M[3;5] ← ¯0.3167980633J¯0.3309000268
+⍝ skipped (complex numbers): M[4;1] ← ¯0.2965976459J¯0.3283864804
+⍝ skipped (complex numbers): M[4;2] ← ¯0.2965912517J¯0.3005199407
+⍝ skipped (complex numbers): M[4;3] ← ¯0.3021890274J¯0.3478387028
+⍝ skipped (complex numbers): M[4;4] ← ¯0.4168816862J¯0.3965254026
+⍝ skipped (complex numbers): M[4;5] ← ¯0.251037764J¯0.4470255674
+⍝ skipped (complex numbers): M[5;1] ← ¯0.4161050584J¯0.4695951338
+⍝ skipped (complex numbers): M[5;2] ← ¯0.351421574J¯0.3065182412
+⍝ skipped (complex numbers): M[5;3] ← ¯0.3421324135J¯0.4939490541
+⍝ skipped (complex numbers): M[5;4] ← ¯0.4132560578J¯0.2933765781
+⍝ skipped (complex numbers): M[5;5] ← ¯0.3688424669J¯0.3811714548
+🍎> V←5⍴0
+⍝ skipped (complex numbers): V[1] ← ¯0.3603193969J¯0.4564203136
+⍝ skipped (complex numbers): V[2] ← ¯0.2669233459J¯0.3091121749
+⍝ skipped (complex numbers): V[3] ← ¯0.3116981746J¯0.3694049157
+⍝ skipped (complex numbers): V[4] ← ¯0.4084505908J¯0.4133227651
+⍝ skipped (complex numbers): V[5] ← ¯0.4511570408J¯0.3994212076
+🍎> M1←¯9○M ⋄ M2←¯11○M ⋄ V1←¯9○V ⋄ V2←¯11○V
+⍝ skipped (complex numbers): 0 2⍕Q←V ⌹ M
+🍎> 1E¯14 > P←+/ V - M +.× Q
+⍝ expect: 1
+🍎> Q11 ← V1 ⌹ M1
+🍎> Q12 ← V1 ⌹ M2
+🍎> Q21 ← V2 ⌹ M1
+🍎> Q22 ← V2 ⌹ M2
+⍝ skipped (complex numbers): 0 2⍕Q11,Q12,Q21,⍪Q22
+🍎> P11 ← +/ V1 - M1 +.× Q11
+🍎> P12 ← +/ V1 - M2 +.× Q12
+🍎> P21 ← +/ V2 - M1 +.× Q21
+🍎> P22 ← +/ V2 - M2 +.× Q22
+🍎> 1E14 > ∣∣ P11 P12 P21 P22
+⍝ expect: 1 1 1 1
+⍝ skipped (complex numbers): MM←5 4⍴M
+⍝ skipped (complex numbers): 0 4⍕ +/ V - MM +.× Q
+🍎> MM←4 5⍴M
+🍎> V ⌹ MM
+⍝ refuse: %length-error
+🍎> V⌹MM
+⍝ skipped (system command): )MORE
+🍎> MM←6 5⍴M
+🍎> V ⌹ MM
+⍝ refuse: %length-error
+🍎> V⌹MM
+⍝ skipped (system command): )MORE
+🍎> MM←M ⋄ MM[3;] ← 1.2×MM[1;] + 1.4×MM[2;]
+⍝ expect:        V ⌹ MM
+⍝ expect: DOMAIN ERROR+
+🍎> V⌹MM
+⍝ skipped (system command): )MORE
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+⍝ skipped (complex numbers): 2 2.2 2J2  ∘.{(⎕EC (⍕⍺),"÷",(⍕⍵))[2]}  0 0.0 0J0
+⍝ skipped (user command): ]FILE_CTL NO_SKIP
+⍝ skipped (complex numbers): 0 0.0 0J0  ∘.÷  2 2.2 2J2
+⍝ skipped (system name ⎕CT): SAVE_CT←⎕CT ⋄ ⎕CT←1.2E¯16
+🍎> MM←2 2⍴2E20 1E20 0 15000
+🍎> ⌹MM
+⍝ refuse: %domain-error
+⍝ skipped (system name ⎕CT): ⎕CT←0
+🍎> MM←2 2⍴1 2 2 4
+🍎> ⌹MM
+⍝ refuse: %domain-error
+⍝ skipped (system command): )SIC
+⍝ skipped (system name ⎕CT): ⎕CT←1E¯300
+🍎> ⌹MM
+⍝ refuse: %domain-error
+⍝ skipped (system command): )SIC
+🍎> ⌹2 2⍴1 0 0 1
+⍝ refuse: %domain-error
+⍝ skipped (system command): )SIC
+⍝ skipped (system name ⎕CT): ⎕CT←SAVE_CT

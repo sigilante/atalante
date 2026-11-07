@@ -1,0 +1,29 @@
+⍝ from GNU APL And.tc (GPLv3, tests/gnu/README.md)
+🍎> 0 0 1 1∧0 1 0 1
+⍝ expect: 0 0 0 1
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+🍎> 2028259601 ∧ 9094863431
+⍝ expect: 1.844674407E19
+🍎> 2028259601 ∧ 9094863431
+⍝ expect: 1.844674407E19
+⍝ skipped (user command): ]FILE_CTL NO_SKIP
+🍎> 0 1 ∘.∧ 0 1
+⍝ expect: 0 0
+⍝ expect: 0 1
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+🍎> 30 ∧ 36
+⍝ expect: 180
+🍎> 3 ∧ 3.6
+⍝ expect: 18
+⍝ skipped (complex numbers): ¯29J53 ∧ ¯1J107
+⍝ skipped (complex numbers): 2028259601 ∧ 9094863431J0
+🍎> 1E30 ∨ 1E10
+⍝ expect: 1E10
+🍎> 1E30 ∧ 1E10
+⍝ expect: 1E30
+🍎> 1E200 ∨ 1E100
+⍝ expect: 1E100
+🍎> 1E¯9 ∨ 1
+⍝ expect: 1E¯9
+🍎> 1E17 ∨ 1E16
+⍝ expect: 10000000000000000

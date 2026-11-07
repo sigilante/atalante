@@ -1,0 +1,14 @@
+⍝ from GNU APL Reciprocal.tc (GPLv3, tests/gnu/README.md)
+🍎> ÷4
+⍝ expect: 0.25
+⍝ skipped (complex numbers): ÷2J2
+🍎> ÷1 0.2 ¯3
+⍝ expect: 1 5 ¯0.3333333333
+⍝ skipped (complex numbers): ÷0J1 0J¯1
+⍝ skipped (complex numbers): ÷0J1E¯11
+⍝ skipped (complex numbers): ÷1E¯20J1E¯20
+⍝ skipped (complex numbers): ÷0J0
+⍝ skipped (complex numbers): ÷8E307J8E307
+⍝ skipped (complex numbers): ÷9E307J9E307
+⍝ skipped (complex numbers): ÷1E308J1E308
+⍝ skipped (complex numbers): ÷1E150J1E150

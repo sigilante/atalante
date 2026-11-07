@@ -1,0 +1,50 @@
+⍝ from GNU APL Find.tc (GPLv3, tests/gnu/README.md)
+⍝ skipped (glyph ⋸): 1 ⋸ 1 2 3
+🍎> 1 ⍷1 2 3
+⍝ expect: 1 0 0
+🍎> 'AB'⍷'ABABABABA'
+⍝ expect: 1 0 1 0 1 0 1 0 0
+🍎> 1 2 3⍷1 2 3 4 1 2 3
+⍝ expect: 1 0 0 0 1 0 0
+🍎> H←4 5⍴'ABCABA'
+🍎> H
+⍝ expect: ABCAB
+⍝ expect: AABCA
+⍝ expect: BAABC
+⍝ expect: ABAAB
+🍎> K←2 3⍴'BCAABC'
+🍎> K
+⍝ expect: BCA
+⍝ expect: ABC
+🍎> K⍷H
+⍝ expect: 0 1 0 0 0
+⍝ expect: 0 0 1 0 0
+⍝ expect: 0 0 0 0 0
+⍝ expect: 0 0 0 0 0
+🍎> 'BA'⍷H
+⍝ expect: 0 0 0 0 0
+⍝ expect: 0 0 0 0 0
+⍝ expect: 1 0 0 0 0
+⍝ expect: 0 1 0 0 0
+🍎> Q←2 3⍴'ABCABB'
+🍎> Q
+⍝ expect: ABC
+⍝ expect: ABB
+🍎> Q⍷'ABCABB'
+⍝ expect: 0 0 0 0 0 0
+🍎> S←'GO' 'ON' 'GO' 'TO'
+🍎> S
+⍝ expect:  GO ON GO TO 
+🍎> ⍴S
+⍝ expect: 4
+🍎> ≡S
+⍝ expect: 2
+🍎> 'GO' 'TO'⍷S
+⍝ expect: 0 0 1 0
+🍎> 'GOTO'⍷S
+⍝ expect: 0 0 0 0
+🍎> 'GO' 'TO'⍷S
+⍝ expect: 0 0 1 0
+🍎> S←'AB    DEF'
+🍎> (∼'  '⍷S)/S
+⍝ expect: AB DEF

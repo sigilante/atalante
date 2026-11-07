@@ -1,0 +1,8 @@
+⍝ from GNU APL Domino_stress.tc (GPLv3, tests/gnu/README.md)
+🍎> ID←{ (⍳⍺) ∘.= (⍳⍵)}
+🍎> UT←{ (⍳⍺) ∘.> (⍳⍵)}
+🍎> TOL←0.001
+⍝ skipped (system name ⎕RVAL): ∇TEST COUNT;A;B;Z;M;N;REAL;∆;T;Ti
+🍎> TEST 500
+⍝ expect: OK
+⍝ skipped (system command): )CHECK

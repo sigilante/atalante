@@ -1,0 +1,128 @@
+⍝ from GNU APL Take.tc (GPLv3, tests/gnu/README.md)
+🍎> 3↑34 12 73 53 41
+⍝ expect: 34 12 73
+🍎> ¯3↑34 12 73 53 41
+⍝ expect: 73 53 41
+🍎> Y←4 5⍴'TRIADFIELDMOOSEDINER'
+🍎> Y
+⍝ expect: TRIAD
+⍝ expect: FIELD
+⍝ expect: MOOSE
+⍝ expect: DINER
+🍎> ¯2 3↑Y
+⍝ expect: MOO
+⍝ expect: DIN
+🍎> W←3 3 4⍴'BEATMYTHANTETONEMEANHEREUPONWEEKDOES'
+🍎> W
+⍝ expect: BEAT
+⍝ expect: MYTH
+⍝ expect: ANTE
+⍝ expect: 
+⍝ expect: TONE
+⍝ expect: MEAN
+⍝ expect: HERE
+⍝ expect: 
+⍝ expect: UPON
+⍝ expect: WEEK
+⍝ expect: DOES
+🍎> V←¯1 ¯2 2
+🍎> Z←V↑W
+🍎> Z
+⍝ expect: WE
+⍝ expect: DO
+🍎> ⍴Z
+⍝ expect: 1 2 2
+🍎> 5↑21 33 52
+⍝ expect: 21 33 52 0 0
+🍎> ¯5↑21 33 52
+⍝ expect: 0 0 21 33 52
+🍎> 5↑'RED'
+⍝ expect: RED  
+🍎> ¯5↑'RED'
+⍝ expect:   RED
+🍎> U←2 3⍴⍳6
+🍎> U
+⍝ expect: 1 2 3
+⍝ expect: 4 5 6
+🍎> H←4 4↑U
+🍎> ⍴H
+⍝ expect: 4 4
+🍎> H
+⍝ expect: 1 2 3 0
+⍝ expect: 4 5 6 0
+⍝ expect: 0 0 0 0
+⍝ expect: 0 0 0 0
+🍎> N←(1 2) (3 4)
+🍎> 4↑N
+⍝ expect:  1 2  3 4  0 0  0 0 
+🍎> ¯6↑'A' 1 'B' 2
+⍝ expect:   A 1 B 2
+🍎> ¯6↑1 'A' 2 'B'
+⍝ expect: 0 0 1 A 2 B
+🍎> 3↑⍳0
+⍝ expect: 0 0 0
+🍎> 2 3↑0 2⍴⊂0 0 0
+⍝ expect:  0 0 0  0 0 0  0 0 0 
+⍝ expect:  0 0 0  0 0 0  0 0 0 
+🍎> E←1↑2
+🍎> ⍴E
+⍝ expect: 1
+🍎> E
+⍝ expect: 2
+🍎> F←(⍳0)↑2
+🍎> F
+⍝ expect: 2
+🍎> ⍴F
+🍎> G←1 1 1↑2
+🍎> G
+⍝ expect: 2
+🍎> ⍴G
+⍝ expect: 1 1 1
+🍎> 2 3↑2
+⍝ expect: 2 0 0
+⍝ expect: 0 0 0
+🍎> T←'T' 'TO' ('TOT' 'TOTE')
+🍎> J←1↑T
+🍎> J
+⍝ expect: T
+🍎> ≡J
+⍝ expect: 1
+🍎> K←2↑T
+🍎> K
+⍝ expect:  T TO 
+🍎> ≡K
+⍝ expect: 2
+🍎> S←8 ((6 5) (4 3))
+🍎> S
+⍝ expect:  8   6 5  4 3  
+🍎> ≡S
+⍝ expect: 3
+🍎> 3↑S
+⍝ expect:  8   6 5  4 3   0 
+🍎> Q←⌽S
+🍎> Q
+⍝ expect:   6 5  4 3   8 
+🍎> 3↑Q
+⍝ expect:   6 5  4 3   8   0 0  0 0  
+🍎> P←'ABCDE'
+🍎> (2↑P)←1 2
+🍎> P
+⍝ expect: 1 2 CDE
+🍎> KY←3 4⍴'ABCDEFGHIJKL'
+🍎> KY
+⍝ expect: ABCD
+⍝ expect: EFGH
+⍝ expect: IJKL
+🍎> (¯2 1↑KY)←1 2
+🍎> KY
+⍝ expect: A BCD
+⍝ expect: 1 FGH
+⍝ expect: 2 JKL
+🍎> A←10 20 30 40 50
+⍝ skipped (glyph ⍬): (3↑A)←⍬
+⍝ skipped (system command): )SIC
+🍎> A←10 20 30
+🍎> (2↑A)←0 2⍴0
+⍝ refuse: %length-error
+⍝ skipped (system command): )SIC
+🍎> ⊣{0 0⍴⍵}¨ 'a' 'b'

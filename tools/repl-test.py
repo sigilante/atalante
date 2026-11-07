@@ -51,8 +51,14 @@ def trimmed():
 
 
 def send(line, timeout=120, open_brace=False, continued=False):
+    # the capture holds the last 500 lines: clear the history before every line so the count of
+    # lines before it is the visible screen's, and a long case cannot push the count off the end
+    subprocess.run(["tmux", "clear-history", "-t", SESSION])
     before = len(trimmed())
-    subprocess.run(["tmux", "send-keys", "-t", SESSION, line, "Enter"])
+    # -l sends the text literally and -- ends tmux's options, so a line that opens with `-` (`-/⍳4`)
+    # is typed rather than read as a flag;  Enter goes as its own key
+    subprocess.run(["tmux", "send-keys", "-t", SESSION, "-l", "--", line])
+    subprocess.run(["tmux", "send-keys", "-t", SESSION, "Enter"])
     time.sleep(0.3)
     if open_brace:                  # jojo reads on to the closing brace: no prompt yet (D-69)
         time.sleep(0.5)

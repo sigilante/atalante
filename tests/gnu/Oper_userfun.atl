@@ -1,0 +1,96 @@
+⍝ from GNU APL Oper_userfun.tc (GPLv3, tests/gnu/README.md)
+🍎> )ERASE PLUS
+🍎> ∇Z←A PLUS B
+	Z←A + B
+	∇
+🍎> )ERASE MINUS
+🍎> ∇Z←A MINUS B
+	Z←A - B
+	∇
+🍎> )ERASE TIMES
+🍎> ∇Z←A TIMES B
+	Z←A × B
+	∇
+🍎> )ERASE ENCODE
+🍎> ∇Z←A ENCODE B
+	Z←A ⊤ B
+	∇
+🍎> )ERASE NEG
+🍎> ∇Z←NEG B
+	Z← - B
+	∇
+🍎> )ERASE INDEX
+🍎> ∇Z←INDEX B
+	Z← ⍳B
+	∇
+🍎> 3 4 5 + 4 5 6
+⍝ expect: 7 9 11
+🍎> 3 4 5 PLUS 4 5 6
+⍝ expect: 7 9 11
+🍎> NEG 0 2 4
+⍝ expect: 0 ¯2 ¯4
+🍎> 3 4 5 +¨ 4 5 6 ⋄ 3 4 5 PLUS¨ 4 5 6
+⍝ expect: 7 9 11
+⍝ expect: 7 9 11
+🍎> -¨ 0 2 4 ⋄ NEG¨ 0 2 4
+⍝ expect: 0 ¯2 ¯4
+⍝ expect: 0 ¯2 ¯4
+🍎> +/⍳6 ⋄ PLUS/⍳6
+⍝ expect: 21
+⍝ expect: 21
+🍎> 2 +/⍳6 ⋄ 2 PLUS/⍳6
+⍝ expect: 3 5 7 9 11
+⍝ expect: 3 5 7 9 11
+🍎> ¯2 +/⍳6 ⋄ ¯2 PLUS/⍳6
+⍝ expect: 3 5 7 9 11
+⍝ expect: 3 5 7 9 11
+🍎> 4 +/ ⍳6 ⋄ 4 PLUS/ ⍳6 ⋄
+⍝ expect: 10 14 18
+⍝ expect: 10 14 18
+🍎> ¯4 +/ ⍳6 ⋄ ¯4 PLUS/ ⍳6 ⋄
+⍝ expect: 10 14 18
+⍝ expect: 10 14 18
+🍎> 2 -/⍳6 ⋄ 2 MINUS/⍳6
+⍝ expect: ¯1 ¯1 ¯1 ¯1 ¯1
+⍝ expect: ¯1 ¯1 ¯1 ¯1 ¯1
+🍎> ¯2 -/⍳6 ⋄ ¯2 MINUS/⍳6
+⍝ expect: 1 1 1 1 1
+⍝ expect: 1 1 1 1 1
+🍎> 4 -/ ⍳6 ⋄ 4 MINUS/ ⍳6
+⍝ expect: ¯2 ¯2 ¯2
+⍝ expect: ¯2 ¯2 ¯2
+🍎> ¯4 -/ ⍳6 ⋄ ¯4 MINUS/ ⍳6
+⍝ expect: 2 2 2
+⍝ expect: 2 2 2
+🍎> +\⍳6 ⋄ PLUS\⍳6 ⋄
+⍝ expect: 1 3 6 10 15 21
+⍝ expect: 1 3 6 10 15 21
+🍎> -\⍳6 ⋄ MINUS\⍳6 ⋄
+⍝ expect: 1 ¯1 2 ¯2 3 ¯3
+⍝ expect: 1 ¯1 2 ¯2 3 ¯3
+⍝ skipped (glyph ⍨): +⍨1 2 3 ⋄ PLUS⍨1 2 3 ⋄
+⍝ skipped (glyph ⍨): 5 -⍨ 4 ⋄ 5 MINUS ⍨ 4 ⋄
+🍎> 1 2 3 ∘.+ 10 20 30 ⋄ 1 2 3 ∘.PLUS 10 20 30
+⍝ expect: 11 21 31
+⍝ expect: 12 22 32
+⍝ expect: 13 23 33
+⍝ expect: 11 21 31
+⍝ expect: 12 22 32
+⍝ expect: 13 23 33
+⍝ skipped (glyph ⍨): +.× ⍨ 4 4⍴⍳16
+⍝ skipped (glyph ⍨): +.TIMES ⍨ 4 4⍴⍳16
+⍝ skipped (glyph ⍨): PLUS.× ⍨ 4 4⍴⍳16
+⍝ skipped (glyph ⍨): PLUS.TIMES ⍨ 4 4⍴⍳16
+⍝ skipped (system name ⎕): ⎕←N3←⍳3
+⍝ skipped (glyph ⍤): ⍳⍤0 N3
+⍝ skipped (glyph ⍤): INDEX⍤0 N3
+🍎> N5←⍳5
+⍝ skipped (glyph ⍤): 2 2 2⊤⍤1 0 N5
+⍝ skipped (glyph ⍤): 2 2 2 ENCODE ⍤1 0 N5
+🍎> A←5 5⍴1 2
+🍎> ,[2]/A A
+⍝ expect:  1 2 1 2 1 1 2 1 2 1 
+⍝ expect:  2 1 2 1 2 2 1 2 1 2 
+⍝ expect:  1 2 1 2 1 1 2 1 2 1 
+⍝ expect:  2 1 2 1 2 2 1 2 1 2 
+⍝ expect:  1 2 1 2 1 1 2 1 2 1 
