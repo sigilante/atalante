@@ -1,0 +1,47 @@
+⍝ D-77: an empty box keeps its prototype
+🍎> H←0⍴⊂1 2 3
+🍎> ⍴H
+⍝ expect: 0
+🍎> ≡H
+⍝ expect: 2
+🍎> ↑H
+⍝ expect: 0 0 0
+🍎> 2↑H
+⍝ expect: (0 0 0) (0 0 0)
+🍎> H≡0⍴⊂4 5 6
+⍝ expect: 1
+🍎> H≡0⍴⊂'abc'
+⍝ expect: 0
+🍎> ''≡⊃⊂''
+⍝ expect: 1
+⍝ errors in GNU APL's order:  rank, then domain, then range;  an integer outside the axis is an INDEX ERROR
+🍎> V←10 20 30
+🍎> V[1;2]
+⍝ refuse: %rank-error
+🍎> 5[0.5]
+⍝ refuse: %rank-error
+🍎> V[0.5]
+⍝ refuse: %domain-error
+🍎> V[¯1]
+⍝ refuse: %index-error
+🍎> V[1E30]
+⍝ refuse: %index-error
+🍎> V[2.0]
+⍝ expect: 20
+🍎> V[2-0]
+⍝ expect: 20
+🍎> M←2 2⍴⍳4
+🍎> ⌽[1E10]M
+⍝ refuse: %axis-error
+🍎> M+['a']M
+⍝ refuse: %axis-error
+🍎> ⌽[1 2]M
+⍝ refuse: %axis-error
+🍎> +/[1][2]M
+⍝ refuse: %syntax-error
+🍎> ⍎''
+⍝ refuse: %value-error
+🍎> ⌹4
+⍝ expect: 0.25
+🍎> ⌹0
+⍝ refuse: %domain-error

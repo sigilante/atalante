@@ -1,0 +1,10 @@
+⍝ from GNU APL Domino_stress.tc (GPLv3, tests/gnu/README.md)
+🍎> ⌹0
+⍝ refuse: %domain-error
+⍝ skipped (system command): )SIC
+🍎> ⌹0.0
+⍝ refuse: %domain-error
+🍎> ⌹0
+⍝ skipped (system command): )SIC
+🍎> ⌹4
+⍝ expect: 0.25

@@ -1,0 +1,18 @@
+⍝ from GNU APL Scan.tc (GPLv3, tests/gnu/README.md)
+🍎> +\1 2 3 4 5
+⍝ expect: 1 3 6 10 15
+🍎> +\(1 2)(3 4)(5 6)
+⍝ expect:  1 2  4 6  9 12 
+🍎> ∨\0 0 1 1 0
+⍝ expect: 0 0 1 1 1
+🍎> ,\'AB' 'CD' 'EF'
+⍝ expect:  AB ABCD ABCDEF 
+🍎> ,\2 3⍴⍳6
+⍝ expect:  1  1 2  1 2 3 
+⍝ expect:  4  4 5  4 5 6 
+🍎> LO←{⍺+⍵}
+🍎> ⍴LO\(0 3⍴0)
+⍝ expect: 0 3
+🍎> LO\(0 3⍴0)
+🍎> ⍴LO\(3 0⍴0)
+⍝ expect: 3 0

@@ -1,0 +1,22 @@
+⍝ from GNU APL Oper_negative.tc (GPLv3, tests/gnu/README.md)
+⍝ skipped (system command): )SIC
+🍎> )ERASE A B LEFT RIGHT
+⍝ skipped (system name ⎕): ⎕←A←10×2 3⍴⍳6
+⍝ skipped (system name ⎕): ⎕←B←1000×2 3⍴⍳6
+🍎> A +.× ⍉B
+⍝ expect: 140000 320000
+⍝ expect: 320000 770000
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+🍎> A {⍺+⍵}.{⍺×⍵} ⍉B
+⍝ expect: 140000 320000
+⍝ expect: 320000 770000
+⍝ skipped (user command): ]FILE_CTL NO_SKIP
+🍎> A +.× B
+⍝ refuse: %length-error
+🍎> A+.×B
+⍝ skipped (system name ⎕): LEFT←{(⍺+⍵)⊣⎕←'LEFT: ⍺=',(⍕⍺),', ⍵=',(⍕⍵)}
+⍝ skipped (system name ⎕): RIGHT←{(⍺×⍵)⊣⎕←'RIGHT: ⍺=',(⍕⍺),', ⍵=',(⍕⍵)}
+🍎> A LEFT.RIGHT B
+⍝ refuse: %length-error
+⍝ skipped (system command): )SIC
+⍝ skipped (system command): )CHECK

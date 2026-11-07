@@ -1,0 +1,53 @@
+⍝ from GNU APL Boolean.tc (GPLv3, tests/gnu/README.md)
+🍎> L←0 0 1 1
+🍎> R←0 1 0 1
+🍎> 0 ∧ R
+⍝ expect: 0 0 0 0
+🍎> L ∧ R
+⍝ expect: 0 0 0 1
+🍎> L > R
+⍝ expect: 0 0 1 0
+🍎> L
+⍝ expect: 0 0 1 1
+🍎> L < R
+⍝ expect: 0 1 0 0
+🍎> R
+⍝ expect: 0 1 0 1
+🍎> L ≠ R
+⍝ expect: 0 1 1 0
+🍎> L ∨ R
+⍝ expect: 0 1 1 1
+🍎> L ⍱ R
+⍝ expect: 1 0 0 0
+🍎> L = R
+⍝ expect: 1 0 0 1
+🍎> ∼R
+⍝ expect: 1 0 1 0
+🍎> L ≥ R
+⍝ expect: 1 0 1 1
+🍎> ∼L
+⍝ expect: 1 1 0 0
+🍎> L ≤ R
+⍝ expect: 1 1 0 1
+🍎> L ⍲ R
+⍝ expect: 1 1 1 0
+🍎> 1 ∨ R
+⍝ expect: 1 1 1 1
+⍝ skipped (complex numbers): 0J0 = 0J0
+⍝ skipped (complex numbers): 0J0 ≠ 0J0
+⍝ skipped (complex numbers): 0J¯1E¯15 = 0J1E¯15
+⍝ skipped (complex numbers): 1E¯15J¯1E¯15 = ¯1E¯15J1E¯15
+🍎> ¯1E¯15 = 1E¯15
+⍝ expect: 0
+⍝ skipped (complex numbers): 1J1E¯15 = 1J1E¯14
+⍝ skipped (complex numbers): 1E¯15J0 = 1E¯14J0
+🍎> 1E¯15 = 1E¯14
+⍝ expect: 0
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+⍝ skipped (system name ⎕CR): 5 ⎕CR (4⍴256)⊤  $FFCC ⊤∧ $0CF0
+⍝ skipped (system name ⎕CR): 5 ⎕CR (4⍴256)⊤  $FFCC ⊤∨ $0CF0
+⍝ skipped (system name ⎕CR): 5 ⎕CR (4⍴256)⊤  $FFCC ⊤⍲ $0CF0
+⍝ skipped (system name ⎕CR): 5 ⎕CR (4⍴256)⊤  $FFCC ⊤⍱ $0CF0
+⍝ skipped (system name ⎕CR): 5 ⎕CR (4⍴256)⊤  $FFCC ⊤= $0CF0
+⍝ skipped (system name ⎕CR): 5 ⎕CR (4⍴256)⊤  $FFCC ⊤≠ $0CF0
+⍝ skipped (system name ⎕CR): 5 ⎕CR (4⍴256)⊤  ⊤∨ $0CF0

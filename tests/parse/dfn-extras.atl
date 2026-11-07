@@ -24,7 +24,7 @@ R a
 ⎕IO←0 ⋄ 1 2,[¯0.5]a
 ⍝ expect: ←(⎕IO, 0) ⋄ ,[¯0.5](1 2, a)
 ,[1.5E1]a
-⍝ expect: %syntax-error col:2 an axis is a natural or a fraction between two axes (D-82, D-92)
+⍝ expect: %axis-error col:2 an axis is a natural or a fraction between two axes (D-82, D-92)
 2 R a
 ⍝ expect: (2 R)(a)
 +D 2 a

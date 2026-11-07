@@ -1,0 +1,145 @@
+⍝ from GNU APL Drop.tc (GPLv3, tests/gnu/README.md)
+🍎> 3↓12 31 45 10 57
+⍝ expect: 10 57
+🍎> ¯3↓12 31 45 10 57
+⍝ expect: 12 31
+🍎> A←3 5⍴'STRIPERODEPLANT'
+🍎> B←'STOREFIRSTMIGHTHATER'
+🍎> B←B,'SHEETTHEREMETROERASE'
+🍎> B←3 4 5⍴B,'BREADOTHERANVILEVADE'
+🍎> A
+⍝ expect: STRIP
+⍝ expect: ERODE
+⍝ expect: PLANT
+🍎> 1 2↓A
+⍝ expect: ODE
+⍝ expect: ANT
+🍎> B
+⍝ expect: STORE
+⍝ expect: FIRST
+⍝ expect: MIGHT
+⍝ expect: HATER
+⍝ expect: 
+⍝ expect: SHEET
+⍝ expect: THERE
+⍝ expect: METRO
+⍝ expect: ERASE
+⍝ expect: 
+⍝ expect: BREAD
+⍝ expect: OTHER
+⍝ expect: ANVIL
+⍝ expect: EVADE
+🍎> C←¯1 2 ¯2
+🍎> C↓B
+⍝ expect: MIG
+⍝ expect: HAT
+⍝ expect: 
+⍝ expect: MET
+⍝ expect: ERA
+🍎> K←3 2 4⍴'ABCDEFGH',(⍳8),'abcdefgh'
+🍎> K
+⍝ expect: A B C D
+⍝ expect: E F G H
+⍝ expect: 
+⍝ expect: 1 2 3 4
+⍝ expect: 5 6 7 8
+⍝ expect: 
+⍝ expect: a b c d
+⍝ expect: e f g h
+🍎> Z←2 1 3↓K
+🍎> Z
+⍝ expect: h
+🍎> ⍴Z
+⍝ expect: 1 1 1
+🍎> 0↓'INTACT'
+⍝ expect: INTACT
+🍎> 0 2↓3 5⍴⍳15
+⍝ expect:  3  4  5
+⍝ expect:  8  9 10
+⍝ expect: 13 14 15
+🍎> W←5↓23 41 73 26
+🍎> ⍴W
+⍝ expect: 0
+🍎> H←2 3⍴'ABCDEF'
+🍎> Y←3 1↓H
+🍎> ⍴Y
+⍝ expect: 0 2
+🍎> M←2 3↓H
+🍎> ⍴M
+⍝ expect: 0 0
+🍎> J←0↓4
+🍎> J
+⍝ expect: 4
+🍎> ⍴J
+⍝ expect: 1
+🍎> K←0 0 0↓4
+🍎> K
+⍝ expect: 4
+🍎> ⍴K
+⍝ expect: 1 1 1
+🍎> D←'A' 'AN'('ANT' 'ANTE')
+🍎> D
+⍝ expect:  A AN   ANT ANTE  
+🍎> ⍴D
+⍝ expect: 3
+🍎> ≡D
+⍝ expect: 3
+🍎> S←¯1↓D
+🍎> S
+⍝ expect:  A AN 
+🍎> ≡S
+⍝ expect: 2
+🍎> T←¯2↓D
+🍎> T
+⍝ expect: A
+🍎> ⍴T
+⍝ expect: 1
+🍎> ≡T
+⍝ expect: 1
+🍎> U←'ABCDE'
+🍎> (2↓U)←⍳3
+🍎> U
+⍝ expect: AB 1 2 3
+🍎> V←3 4⍴'ABCDEFGHIJKL'
+🍎> V
+⍝ expect: ABCD
+⍝ expect: EFGH
+⍝ expect: IJKL
+🍎> (1 ¯1↓V)←2 3⍴⍳6
+🍎> V
+⍝ expect: A B C D
+⍝ expect: 1 2 3 H
+⍝ expect: 4 5 6 L
+🍎> )ERASE U V
+🍎> V←5
+🍎> (1↓V)←9
+🍎> V
+⍝ expect: 5
+🍎> V←5
+🍎> (1↓V)←9 9
+🍎> V
+⍝ expect: 5
+🍎> V←5
+⍝ skipped (glyph ⍬): (1↓V)←⍬
+🍎> V
+⍝ expect: 5
+🍎> V←5
+🍎> (2↓V)←9
+🍎> V
+⍝ expect: 5
+🍎> V←5
+🍎> (¯1↓V)←9
+🍎> V
+⍝ expect: 5
+🍎> V←5
+🍎> (5↓V)←9
+🍎> V
+⍝ expect: 5
+🍎> )ERASE V
+🍎> M←2 3⍴⍳6
+⍝ skipped (glyph ⍬): 2↓[⍬]M
+⍝ skipped (glyph ⍬): 'abc'↓[⍬]M
+⍝ skipped (glyph ⍬): 2↑[⍬]M
+⍝ skipped (system command): )SIC
+⍝ skipped (glyph ⍬): ⍬↓[⍬]M
+🍎> )ERASE M

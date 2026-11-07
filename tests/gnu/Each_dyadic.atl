@@ -1,0 +1,72 @@
+⍝ from GNU APL Each_dyadic.tc (GPLv3, tests/gnu/README.md)
+🍎> Z←4 6⍴¨'ME' 'YOU'
+🍎> Z
+⍝ expect:  MEME YOUYOU 
+🍎> ⍴Z
+⍝ expect: 2
+🍎> ⍴¨Z
+⍝ expect:  4  6 
+🍎> ≡Z
+⍝ expect: 2
+🍎> 'SET',¨'HES'
+⍝ expect:  SH EE TS 
+🍎> 2⍴¨3 4 5
+⍝ expect:  3 3  4 4  5 5 
+🍎> (⊂2 3)⍴¨4 6
+⍝ expect:  4 4 4   6 6 6 
+⍝ expect:  4 4 4   6 6 6 
+🍎> Z←5↑¨0⍴⊂0 0 0
+🍎> ⍴Z
+⍝ expect: 0
+🍎> ⍴↑Z
+⍝ expect: 5
+🍎> Q←⊂'hello'
+🍎> Q≡¨Q
+⍝ expect: 1
+⍝ skipped (system name ⎕CR): 4 ⎕CR Q≡¨Q
+🍎> Q≡¨,Q
+⍝ expect: 1
+⍝ skipped (system name ⎕CR): 4 ⎕CR Q≡¨,Q
+🍎> ∇z ← x eqiv y
+	z ← x ≡ y
+	∇
+🍎> (⊂0 0)≡¨(0 0) (0 1)
+⍝ expect: 1 0
+🍎> (⊂0 0)eqiv¨(0 0) (0 1)
+⍝ expect: 1 0
+🍎> (,3)↑¨'abcd'
+⍝ expect:  a   b   c   d   
+⍝ skipped (glyph ⍬): Z←⍬+¨0⍴⊂⍳3
+🍎> ⍴Z
+⍝ expect: 0
+🍎> Z←1+¨0⍴⊂⍳3
+🍎> ⍴Z
+⍝ expect: 0
+🍎> Z←(0⍴⊂2 3⍴⍳6)⌊¨(0⍴⊂⍳3)
+🍎> ⍴Z
+⍝ expect: 0
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+🍎> 1 2 {⎕IO←0 ⋄ ⍺+⍳⍵}¨ 2 3
+⍝ expect:  1 2  2 3 4 
+⍝ skipped (user command): ]FILE_CTL NO_SKIP
+🍎> ⎕IO←1
+⍝ skipped (glyph ⍬): V←⍬
+🍎> (1⌽¨1↑V)←1
+⍝ refuse: %index-error
+⍝ skipped (system command): )SIC
+🍎> V←,5
+🍎> (1⌽¨1↑V)←1
+🍎> V
+⍝ expect: 1
+🍎> V2←,5
+🍎> (1 2+¨1↑V2)←1 2
+⍝ refuse: %syntax-error
+🍎> V2
+⍝ expect: 5
+⍝ skipped (system command): )SIC
+🍎> KLAM←{⍺}
+🍎> W←1 2 3
+🍎> (1 1 1 KLAM¨W)←9 9 9
+⍝ refuse: %syntax-error
+⍝ skipped (system command): )SIC
+🍎> )ERASE KLAM

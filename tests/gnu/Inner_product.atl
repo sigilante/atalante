@@ -1,0 +1,93 @@
+⍝ from GNU APL Inner_product.tc (GPLv3, tests/gnu/README.md)
+🍎> M←4 4⍴1 1 1 1 0 1 1 1 0 0 1 1 0 0 0 1
+🍎> M
+⍝ expect: 1 1 1 1
+⍝ expect: 0 1 1 1
+⍝ expect: 0 0 1 1
+⍝ expect: 0 0 0 1
+🍎> M∧.=M
+⍝ expect: 0 0 0 1
+⍝ expect: 0 0 0 0
+⍝ expect: 0 0 0 0
+⍝ expect: 0 0 0 0
+🍎> K←3 8⍴'SATURDAY7/04/99 JULY 4  '
+🍎> K
+⍝ expect: SATURDAY
+⍝ expect: 7/04/99 
+⍝ expect: JULY 4  
+🍎> K+.∊'0123456789'
+⍝ expect: 0 5 1
+🍎> (2 3⍴⍳6)⌊.⌈3 4⍴⍳12
+⍝ expect: 1 2 3 4
+⍝ expect: 4 4 4 4
+🍎> J←3 2⍴⍳6
+🍎> J
+⍝ expect: 1 2
+⍝ expect: 3 4
+⍝ expect: 5 6
+🍎> P←2 2⍴0.1×⍳4
+🍎> P
+⍝ expect: 0.1 0.2
+⍝ expect: 0.3 0.4
+🍎> J,.+P
+⍝ expect:  1.1 2.3  1.2 2.4 
+⍝ expect:  3.1 4.3  3.2 4.4 
+⍝ expect:  5.1 6.3  5.2 6.4 
+🍎> ≡J,.+P
+⍝ expect: 2
+⍝ skipped (system name ⎕CR): 4 ⎕CR J,.+P
+🍎> S←3 5⍴'SANDYBETTYGRACE'
+🍎> S
+⍝ expect: SANDY
+⍝ expect: BETTY
+⍝ expect: GRACE
+🍎> S∧.='SANDY'
+⍝ expect: 1 0 0
+🍎> U←(0 2⍴0)+.×2 0 ⍴0
+🍎> ⍴U
+⍝ expect: 0 0
+🍎> Q←(2 0⍴0)+.×0 4⍴5
+🍎> Q
+⍝ expect: 0 0 0 0
+⍝ expect: 0 0 0 0
+🍎> ⍴Q
+⍝ expect: 2 4
+🍎> 'y'∨.≠2 2⍴'x'
+⍝ expect: 1 1
+🍎> ' '∨.≠2 3⍴'A  BBB'
+⍝ expect: 1 1 1
+🍎> 1 2 3⍴4 5 6
+⍝ expect: 4 5 6
+⍝ expect: 4 5 6
+⍝ skipped (system name ⎕): L←⊂1 2 3 ⋄ R←⊂4 5 6 ⋄ ⎕←LR←L ∘.⍴ R
+⍝ skipped (system name ⎕CR): 4 ⎕CR LR
+🍎> ⍴/¨ LR
+⍝ expect:   6 6 6 6  6 6 6 6  
+🍎> 1 2 3 ⍴.⍴ 4 5 6
+⍝ expect:   6 6 6 6  6 6 6 6  
+🍎> 0 1 ∨.= ⍴⍴'Hello'
+⍝ expect: 1
+🍎> ⍴0 1 ∨.= ⍴⍴'Hello'
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+🍎> 2 3 {⍺+⍵}.{⍺×⍵} 2 3
+⍝ expect: 13
+⍝ skipped (user command): ]FILE_CTL NO_SKIP
+🍎> 2 3 5 6 -.= 4 5 5 6
+⍝ expect: 0
+🍎> 1 ∧.≡ 1 1
+⍝ expect: 0
+⍝ skipped (system name ⎕TF): Z←1 2 3,.,4 5 6 ⋄ 2 ⎕TF 'Z'
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+⍝ skipped (system name ⎕TF): Z←1 2 3{⍺,⍵}.,4 5 6 ⋄ 2 ⎕TF 'Z'
+⍝ skipped (user command): ]FILE_CTL NO_SKIP
+🍎> ≡(1 2)(3 4)+.×(5 6)(7 8)
+⍝ expect: 2
+⍝ skipped (system name ⎕TF): Z←(2 2⍴1 2 3 4),.×2 2⍴5 6 7 8 ⋄ 2 ⎕TF 'Z'
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+⍝ skipped (system name ⎕TF): Z←⍬,.,⍬ ⋄ 2 ⎕TF 'Z'
+⍝ skipped (system name ⎕TF): Z←(0 3⍴0)+.{⍺+⍵}3 2⍴5 ⋄ 2 ⎕TF 'Z'
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+🍎> ((0 3⍴0)+.{⍺+⍵}3 2⍴5)≡0 2⍴0
+⍝ expect: 1
+⍝ skipped (user command): ]FILE_CTL NO_SKIP
+⍝ skipped (system name ⎕TF): Z←(0 3⍴0),.,3 2⍴⊂'ab' ⋄ 2 ⎕TF 'Z'

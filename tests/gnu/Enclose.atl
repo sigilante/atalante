@@ -1,0 +1,75 @@
+⍝ from GNU APL Enclose.tc (GPLv3, tests/gnu/README.md)
+🍎> A←2 3 4⍴⍳24
+🍎> A
+⍝ expect:  1  2  3  4
+⍝ expect:  5  6  7  8
+⍝ expect:  9 10 11 12
+⍝ expect: 
+⍝ expect: 13 14 15 16
+⍝ expect: 17 18 19 20
+⍝ expect: 21 22 23 24
+🍎> ⍴A
+⍝ expect: 2 3 4
+🍎> ⍴⍴A
+⍝ expect: 3
+🍎> ≡A
+⍝ expect: 1
+🍎> Z←⊂A
+🍎> Z
+⍝ expect:   1  2  3  4 
+⍝ expect:   5  6  7  8 
+⍝ expect:   9 10 11 12 
+⍝ expect: 
+⍝ expect:  13 14 15 16 
+⍝ expect:  17 18 19 20 
+⍝ expect:  21 22 23 24 
+🍎> ⍴Z
+🍎> ⍴⍴Z
+⍝ expect: 0
+🍎> ≡Z
+⍝ expect: 2
+🍎> D←'ON' 'UP' 'BY'
+🍎> ⍴D
+⍝ expect: 3
+🍎> ≡D
+⍝ expect: 2
+🍎> S←15 0 29
+🍎> ⍴S
+⍝ expect: 3
+🍎> ≡S
+⍝ expect: 1
+🍎> S[2]←⊂'NONE'
+🍎> S
+⍝ expect:  15 NONE 29 
+🍎> ⍴S
+⍝ expect: 3
+🍎> ≡S
+⍝ expect: 2
+🍎> T←3 5+⊂0 1
+🍎> T
+⍝ expect:  3 4  5 6 
+🍎> ⍴T
+⍝ expect: 2
+🍎> Q←'LOUIS' 'CROIX'
+🍎> Z←(⊂'ST. '),¨Q
+🍎> Z
+⍝ expect:  ST. LOUIS ST. CROIX 
+🍎> W←,⊂15 0 29
+🍎> W
+⍝ expect:  15 0 29 
+🍎> ⍴W
+⍝ expect: 1
+🍎> Y←⊂,5
+🍎> ⍴⍴Y
+⍝ expect: 0
+🍎> ≡Y
+⍝ expect: 2
+🍎> B←5
+🍎> (⊂B)←1 2 3
+🍎> B
+⍝ expect:  1 2 3 
+🍎> V←1 2 3 4
+🍎> (⊂V[2])←10 20 30
+🍎> V
+⍝ expect:  1  10 20 30  3 4 
+🍎> )ERASE B V

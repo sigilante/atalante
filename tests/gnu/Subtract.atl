@@ -1,0 +1,31 @@
+⍝ from GNU APL Subtract.tc (GPLv3, tests/gnu/README.md)
+🍎> 5-3
+⍝ expect: 2
+⍝ skipped (complex numbers): 3J4-1J2
+⍝ skipped (complex numbers): 6-8 0.2 4J3
+⍝ skipped (complex numbers): ¯4 0.5 0-¯2 1.2 1J2
+⍝ skipped (complex numbers): 2J8 - 3.0
+🍎> ⎕PP←17
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+🍎> 9223372036854775806-¯1
+⍝ expect: 9223372036854775807
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+⍝ skipped (system name ⎕CR): 26⎕CR 9223372036854775806-¯1
+⍝ skipped (user command): ]FILE_CTL NO_SKIP
+🍎> 9223372036854775807-¯1
+⍝ expect: 9.2233720368547758E18
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+⍝ skipped (system name ⎕CR): 26⎕CR 9223372036854775807-¯1
+⍝ skipped (user command): ]FILE_CTL NO_SKIP
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+🍎> ¯9223372036854775807-1
+⍝ expect: ¯9223372036854775808
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+⍝ skipped (system name ⎕CR): 26⎕CR ¯9223372036854775807-1
+⍝ skipped (user command): ]FILE_CTL NO_SKIP
+🍎> ¯9223372036854775808-1
+⍝ expect: ¯9.2233720368547758E18
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+⍝ skipped (system name ⎕CR): 26⎕CR ¯9223372036854775808-1
+⍝ skipped (user command): ]FILE_CTL NO_SKIP
+🍎> ⎕PP←10

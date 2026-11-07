@@ -1,0 +1,112 @@
+⍝ from GNU APL Replicate_with_axis.tc (GPLv3, tests/gnu/README.md)
+🍎> R←3 2 4⍴⍳24
+🍎> R
+⍝ expect:  1  2  3  4
+⍝ expect:  5  6  7  8
+⍝ expect: 
+⍝ expect:  9 10 11 12
+⍝ expect: 13 14 15 16
+⍝ expect: 
+⍝ expect: 17 18 19 20
+⍝ expect: 21 22 23 24
+🍎> 2 ¯1 1/[2]R
+⍝ expect:  1  2  3  4
+⍝ expect:  1  2  3  4
+⍝ expect:  0  0  0  0
+⍝ expect:  5  6  7  8
+⍝ expect: 
+⍝ expect:  9 10 11 12
+⍝ expect:  9 10 11 12
+⍝ expect:  0  0  0  0
+⍝ expect: 13 14 15 16
+⍝ expect: 
+⍝ expect: 17 18 19 20
+⍝ expect: 17 18 19 20
+⍝ expect:  0  0  0  0
+⍝ expect: 21 22 23 24
+🍎> S←3 2 4⍴⍳24
+🍎> 2/[2]S
+⍝ expect:  1  2  3  4
+⍝ expect:  1  2  3  4
+⍝ expect:  5  6  7  8
+⍝ expect:  5  6  7  8
+⍝ expect: 
+⍝ expect:  9 10 11 12
+⍝ expect:  9 10 11 12
+⍝ expect: 13 14 15 16
+⍝ expect: 13 14 15 16
+⍝ expect: 
+⍝ expect: 17 18 19 20
+⍝ expect: 17 18 19 20
+⍝ expect: 21 22 23 24
+⍝ expect: 21 22 23 24
+🍎> T←3 1 4⍴'ABCDEFGHIJKL'
+🍎> T
+⍝ expect: ABCD
+⍝ expect: 
+⍝ expect: EFGH
+⍝ expect: 
+⍝ expect: IJKL
+🍎> ⍴T
+⍝ expect: 3 1 4
+🍎> ¯1 1/[2]T
+⍝ expect:     
+⍝ expect: ABCD
+⍝ expect: 
+⍝ expect:     
+⍝ expect: EFGH
+⍝ expect: 
+⍝ expect:     
+⍝ expect: IJKL
+🍎> ⍴¯1 1/[2]T
+⍝ expect: 3 2 4
+🍎> M←3 4⍴⍳12
+🍎> M
+⍝ expect: 1  2  3  4
+⍝ expect: 5  6  7  8
+⍝ expect: 9 10 11 12
+🍎> 1 0 2 ¯1⌿M
+⍝ expect: 1  2  3  4
+⍝ expect: 9 10 11 12
+⍝ expect: 9 10 11 12
+⍝ expect: 0  0  0  0
+🍎> 1 0 2 ¯1/[1]M
+⍝ expect: 1  2  3  4
+⍝ expect: 9 10 11 12
+⍝ expect: 9 10 11 12
+⍝ expect: 0  0  0  0
+🍎> D←2 2 2⍴'HE' 'ME' 'WE' 'US' 'I' 'A' 'O' 'E'
+🍎> D
+⍝ expect:  HE ME 
+⍝ expect:  WE US 
+⍝ expect: 
+⍝ expect:  I  A  
+⍝ expect:  O  E  
+🍎> ⍴D
+⍝ expect: 2 2 2
+🍎> ≡D
+⍝ expect: 2
+🍎> J←0 2/[1]D
+🍎> J
+⍝ expect: IA
+⍝ expect: OE
+⍝ expect: 
+⍝ expect: IA
+⍝ expect: OE
+🍎> ≡J
+⍝ expect: 1
+🍎> W←2 ¯1 1/[2]D
+🍎> W
+⍝ expect:  HE ME 
+⍝ expect:  HE ME 
+⍝ expect:        
+⍝ expect:  WE US 
+⍝ expect: 
+⍝ expect:  I  A  
+⍝ expect:  I  A  
+⍝ expect:        
+⍝ expect:  O  E  
+🍎> ⍴W
+⍝ expect: 2 4 2
+🍎> ≡W
+⍝ expect: 2

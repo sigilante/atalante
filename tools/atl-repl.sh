@@ -33,7 +33,7 @@ case "$1" in
     tmux bind-key -n F6 send-keys -t "$SESSION" ')GREEN' Enter
     tmux bind-key -n F7 send-keys -t "$SESSION" ')RED' Enter
     echo "atl-repl: session $SESSION started; attach with: tmux attach -t $SESSION" ;;
-  send)  shift; tmux send-keys -t "$SESSION" "$*" Enter ;;
+  send)  shift; tmux send-keys -t "$SESSION" -l -- "$*"; tmux send-keys -t "$SESSION" Enter ;;   # -l --: a line may open with `-`
   show)  tmux capture-pane -p -t "$SESSION" ;;
   stop)  tmux kill-session -t "$SESSION" ;;
   *)  sed -n '2,12p' "$0" | sed 's/^#  \{0,1\}//'; exit 2 ;;

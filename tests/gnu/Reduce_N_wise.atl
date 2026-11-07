@@ -1,0 +1,64 @@
+⍝ from GNU APL Reduce_N_wise.tc (GPLv3, tests/gnu/README.md)
+🍎> R←1 2 3 4 5 6
+🍎> 6+/R
+⍝ expect: 21
+🍎> 5+/R
+⍝ expect: 15 20
+🍎> 4+/R
+⍝ expect: 10 14 18
+🍎> 3+/R
+⍝ expect: 6 9 12 15
+🍎> 2+/R
+⍝ expect: 3 5 7 9 11
+🍎> 1+/R
+⍝ expect: 1 2 3 4 5 6
+🍎> 2+/(1 2)(3 4)(5 6)
+⍝ expect:  4 6  8 10 
+🍎> 2,/'ABCDEF'
+⍝ expect:  AB BC CD DE EF 
+🍎> M←3 4⍴⍳12
+🍎> M
+⍝ expect: 1  2  3  4
+⍝ expect: 5  6  7  8
+⍝ expect: 9 10 11 12
+🍎> 2+/M
+⍝ expect:  3  5  7
+⍝ expect: 11 13 15
+⍝ expect: 19 21 23
+🍎> B←3 3⍴'ABCDEFGHI'
+🍎> B
+⍝ expect: ABC
+⍝ expect: DEF
+⍝ expect: GHI
+🍎> 2,/B
+⍝ expect:  AB BC 
+⍝ expect:  DE EF 
+⍝ expect:  GH HI 
+🍎> ¯2-/1 4 9 16 25
+⍝ expect: 3 5 7 9
+🍎> 2-/1 4 9 16 25
+⍝ expect: ¯3 ¯5 ¯7 ¯9
+🍎> ¯2,/'ABCDEF'
+⍝ expect:  BA CB DC ED FE 
+🍎> 2,/'ABCDEF'
+⍝ expect:  AB BC CD DE EF 
+🍎> 3×/⍳6
+⍝ expect: 6 24 60 120
+🍎> ¯3×/⍳6
+⍝ expect: 6 24 60 120
+🍎> 0×/⍳5
+⍝ expect: 1 1 1 1 1 1
+🍎> 0 +/ 99
+⍝ expect: 0 0
+🍎> 0 +/ 10 20 30
+⍝ expect: 0 0 0 0
+🍎> 0 ×/ 100 200 300 400
+⍝ expect: 1 1 1 1 1
+🍎> 3550579489682168305 +/ 1 2 3 4 5
+⍝ refuse: %domain-error
+🍎> 3550579489682168305+/1 2 3 4 5
+⍝ skipped (branch): →
+🍎> ¯9223372036854775808 +/ 1 2 3 4 5
+⍝ refuse: %domain-error
+🍎> ¯9.223372036854776E18+/1 2 3 4 5
+⍝ skipped (branch): →

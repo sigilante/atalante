@@ -1,0 +1,30 @@
+⍝ from GNU APL Lambda.tc (GPLv3, tests/gnu/README.md)
+⍝ skipped (double-quoted strings): FOO←{ "⍵ =" ⍵;W } ⋄ ⎕CR 'FOO'
+⍝ skipped (system name ⎕CR): 8⎕CR FOO¨⍳3
+🍎> R ← { ⍵ }¨⍳15
+🍎> R
+⍝ expect: 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15
+🍎> foo←{⍵}
+🍎> foo 3
+⍝ expect: 3
+🍎> )ERASE foo
+🍎> ( { ⍵ }¨⍳10 ), ( { - ⍵ }¨ ⍳10)
+⍝ expect: 1 2 3 4 5 6 7 8 9 10 ¯1 ¯2 ¯3 ¯4 ¯5 ¯6 ¯7 ¯8 ¯9 ¯10
+🍎> )ERASE F G
+🍎> F←{(+⌿⍵)÷≢⍵}
+🍎> F 3 4 5
+⍝ expect: 4
+🍎> G←F
+🍎> G 3 4 5
+⍝ expect: 4
+⍝ skipped (system name ⎕CR): ⎕CR 'G'
+🍎> G 3 4 5
+⍝ expect: 4
+🍎> )ERASE F G
+🍎> )ERASE a b cmp
+🍎> a←77 7 19 54 24 32 84 40 5 95 97 76 82 92 63 26 10 98 21 50
+🍎> b←38 80 99 90 26 30 74 50 85 81 47 76 93 95 88
+🍎> cmp←{{⍵[⍋⍵]} (∨/[1]⍺∘.=⍵)/⍵}
+🍎> a cmp b
+⍝ expect: 26 50 76 95
+🍎> )ERASE a b cmp

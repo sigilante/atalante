@@ -186,7 +186,7 @@ func intsFit(xs: List<@>, half: @) -> Bool {
   match xs { (x, t) => { let ok = if array.isNeg(x) { lagoon.tabs(x) <= half } else { x < half }; if ok { intsFit(t, half) } else { false } }, _ => true, }
 };
 func realsFinite(xs: List<@>) -> Bool { match xs { (x, t) => if array.finite(x) { realsFinite(t) } else { false }, _ => true, } };
-// a literal as the session makes it:  reals at its real width, naturals and integers wrapped (D-15)
+// a literal as the session makes it:  reals at its real width, naturals and integers at theirs (D-15;  litEv has refused one that does not fit)
 func litAt(l: parse.Lit, env: Env) -> array.Arr {
   if l.kind == 3 {
     let vs = litValsAt(3, env.rb, l.vals);
@@ -261,9 +261,45 @@ func resInt(a: @, b: @) -> @ {
 };
 // ⌊x as a real of x's width
 func floorReal(x: @) -> @ { array.rsanLike(x, array.rtoi(100, x)) };
+// A|B on reals, exactly:  B−A×⌊B÷A⌋ loses B÷A's rounding (7|1E17 would be 0, not 5), so the
+// remainder comes by binary long division.  Each step subtracts A×2^k from an x in [A×2^k, A×2^(k+1)),
+// which is exact (Sterbenz), and halving A×2^k is exact, so the result is the true remainder.
 func resReal(a: @, b: @) -> @ {
-  if realZero(a) { b } else { array.rop(2, b, array.rop(3, a, floorReal(array.rop(4, b, a)))) }
+  if realZero(a) { b } else if array.realIsNeg(a) { negOr0(resPos(negR(a), negR(b))) } else { resPos(a, b) }
 };
+func negOr0(x: @) -> @ { if realZero(x) { array.zeroLike(x) } else { negR(x) } };
+// the result takes A's sign:  for B below 0, A minus the remainder of −B
+func resPos(m: @, b: @) -> @ {
+  if array.realIsNeg(b) { let r = fmodP(m, negR(b)); if realZero(r) { array.zeroLike(r) } else { array.rop(2, m, r) } }
+  else { fmodP(m, b) }
+};
+func ltR(x: @, y: @) -> Bool { array.rcmp(1, x, y) };
+func fmodP(m: @, x: @) -> @ { if ltR(x, m) or not array.finite(x) { x } else { fmodD(m, x, topD(m, x)) } };
+// the largest m×2^k not above x
+func topD(d: @, x: @) -> @ { let d2 = array.rop(1, d, d); if ltR(x, d2) or not array.finite(d2) { d } else { topD(d2, x) } };
+func fmodD(m: @, x: @, d: @) -> @ {
+  let x2 = if ltR(x, d) { x } else { array.rop(2, x, d) };
+  if ltR(m, d) { fmodD(m, x2, array.rop(4, d, array.rop(1, array.oneLike(d), array.oneLike(d)))) } else { x2 }
+};
+// a real /lib/math's +factorial can take:  whole and not negative (it loops on anything else)
+// A!B on whole reals:  0 when A exceeds B, as for naturals
+func binomW(x: @, y: @) -> @ {
+  let w = array.widthOf(y);
+  if gtK(3, x, y) { array.zeroLike(x) }
+  else if not array.rcmp(3, y, array.rsunAt(w, factCap(w))) { binomR(x, y) }
+  else {
+    // a large B:  the product over the k = min(A, B−A) terms (B−k+i)÷i, +∞ when k is past the width's range
+    let d = array.rop(2, y, x);
+    let k = if gtK(3, x, d) { d } else { x };
+    let kn = natOfWhole(k);
+    if kn > binomCap(w) { infLike(y) } else { binomProd(array.oneLike(y), array.rop(2, y, k), kn, 1, array.oneLike(y)) }
+  }
+};
+func binomCap(w: @) -> @ { if w == 4 { 20 } else if w == 5 { 140 } else if w == 7 { 16500 } else { 1100 } };
+func binomProd(acc: @, base: @, k: @, i: @, one: @) -> @ {
+  if i > k { acc } else { let ri = array.rsunAt(array.widthOf(one), i); binomProd(array.rop(4, array.rop(3, acc, array.rop(1, base, ri)), ri), base, k, i + 1, one) }
+};
+func wholeReal(x: @) -> Bool { (not array.realIsNeg(x)) and floorReal(x) == x };
 func factNat(n: @) -> @ { if n == 0 { 1 } else { n * factNat(n - 1) } };
 // the code a and the argument x share a width:  a primitive brings both to the session's
 func circle(a: @, x: @) -> @ {
@@ -273,12 +309,19 @@ func circle(a: @, x: @) -> @ {
   else if a == array.rsunAt(array.widthOf(x), 2) { array.rfun(5, x) }
   else if a == array.rsunAt(array.widthOf(x), 3) { array.rfun(6, x) }
   else if a == z { array.rfun(1, array.rop(2, one, array.rop(3, x, x))) }
-  else if a == array.rsunAt(array.widthOf(x), 4) { array.rfun(1, array.rop(1, one, array.rop(3, x, x))) }
+  else if a == array.rsunAt(array.widthOf(x), 4) { if array.finite(array.rop(3, x, x)) { array.rfun(1, array.rop(1, one, array.rop(3, x, x))) } else { hypot(1, x) } }
   else if array.rop(1, a, one) == z { array.rfun(7, x) }
   else if array.rop(1, a, array.rsunAt(array.widthOf(x), 2)) == z { array.rfun(8, x) }
   else if array.rop(1, a, array.rsunAt(array.widthOf(x), 3)) == z { array.rfun(9, x) }
-  else if array.rop(1, a, array.rsunAt(array.widthOf(x), 4)) == z { array.rfun(1, array.rop(2, array.rop(3, x, x), one)) }
+  else if array.rop(1, a, array.rsunAt(array.widthOf(x), 4)) == z { if array.finite(array.rop(3, x, x)) { array.rfun(1, array.rop(2, array.rop(3, x, x), one)) } else { hypot(2, x) } }
   else { 0 }
+};
+// √(1+x²) (op 1) or √(x²−1) (op 2) for an x whose square overflows:  |x|×√(1±(1/x)²)
+func hypot(op: @, x: @) -> @ {
+  let m = if array.realIsNeg(x) { negR(x) } else { x };
+  let r = array.rop(4, array.oneLike(m), m);
+  let q = array.rop(3, r, r);
+  array.rop(3, m, array.rfun(1, if op == 1 { array.rop(1, array.oneLike(m), q) } else { array.rop(2, array.oneLike(m), q) }))
 };
 func isBool(x: @) -> Bool { x == 0 or x == 1 };
 func isCircleCode(c: @) -> Bool {
@@ -292,23 +335,36 @@ func isCircleCode(c: @) -> Bool {
 // --- named scalar helpers:  a lambda body cannot reach an imported module
 // (Jock reads `lagoon.x` inside a lambda as a field of *, S-11), so every
 // module call a lambda would make is a named func, and lambdas call these.
-func powB(x: @, y: @) -> @ { array.rpow(x, y) };
+// x⋆y:  /lib/math's +pow multiplies a whole exponent out one step at a time, so a whole exponent past
+// 64 goes by repeated squaring instead (bounded at the exponent's bit length);  below that, +pow as before
+func powB(x: @, y: @) -> @ {
+  if wholeReal(y) and array.rcmp(3, y, array.rsunAt(array.widthOf(y), 64)) { powSq(array.oneLike(x), x, natOfWhole(y)) } else { array.rpow(x, y) }
+};
+func natOfWhole(y: @) -> @ { lagoon.tabs(array.sToInt(array.rtoi(100, y))) };
+func powSq(acc: @, b: @, n: @) -> @ { if n == 0 { acc } else { powSq(if n % 2 == 1 { array.rop(3, acc, b) } else { acc }, array.rop(3, b, b), n / 2) } };
 func logB(x: @, y: @) -> @ { array.rop(4, array.rfun(3, y), array.rfun(3, x)) };
 func divB(x: @, y: @) -> @ { if realZero(y) { array.oneLike(y) } else { array.rop(4, x, y) } };
 func binomR(x: @, y: @) -> @ { array.rop(4, array.rfun(10, y), array.rop(3, array.rfun(10, x), array.rfun(10, array.rop(2, y, x)))) };
 func negR(x: @) -> @ { array.rop(2, array.zeroLike(x), x) };
-func negI(x: @) -> @ { lagoon.tneg(x) };
-func absI(x: @) -> @ { lagoon.tabs(x) };
+func negI(x: @) -> @ { if x == array.two63() { two64() } else { lagoon.tneg(x) } };   // −¯2^63 does not fit
+func negN(x: @) -> @ { if x > array.two63() { two64() } else { lagoon.tneg(x) } };     // a natural above 2^63 has no negative
+func absI(x: @) -> @ { if x == array.two63() { two64() } else { lagoon.tabs(x) } };
 func absR(x: @) -> @ { if array.realIsNeg(x) { negR(x) } else { x } };
 func sgnI(x: @) -> @ { if array.isNeg(x) { lagoon.tneg(1) } else { b2n(x > 0) } };
 func sgnR(x: @) -> @ { if array.realIsNeg(x) { lagoon.tneg(1) } else { b2n(not realZero(x)) } };
 func recipR(x: @) -> @ { array.rop(4, array.oneLike(x), x) };
-func ceilI(x: @) -> @ { array.sToInt(array.rtoi(117, x)) };
-func floorI(x: @) -> @ { array.sToInt(array.rtoi(100, x)) };
+func ceilI(x: @) -> @ { if array.finite(x) { sToIntC(array.rtoi(117, x)) } else { two64() } };
+func floorI(x: @) -> @ { if array.finite(x) { sToIntC(array.rtoi(100, x)) } else { two64() } };
+// a Hoon signed atom (even n is n/2, odd n is −(n+1)/2) as a 64-bit integer, or 2^64 when out of range
+func sToIntC(z: @) -> @ { if hoon.mod(z, 2) == 0 { if z / 2 >= array.two63() { two64() } else { array.sToInt(z) } } else { if (z + 1) / 2 > array.two63() { two64() } else { array.sToInt(z) } } };
 func expR(x: @) -> @ { array.rfun(2, x) };
 func lnR(x: @) -> @ { array.rfun(3, x) };
 func piR(x: @) -> @ { array.rop(3, array.rpiAt(array.widthOf(x)), x) };
-func factR(x: @) -> @ { array.rfun(10, x) };
+// !x on a whole real:  /lib/math's +factorial up to the width's last finite factorial, +∞ past it
+// (it counts down one step at a time, so a huge x would loop)
+func factR(x: @) -> @ { if array.rcmp(3, x, array.rsunAt(array.widthOf(x), factCap(array.widthOf(x)))) { infLike(x) } else { array.rfun(10, x) } };
+func factCap(w: @) -> @ { if w == 4 { 8 } else if w == 5 { 34 } else if w == 7 { 1754 } else { 170 } };
+func infLike(x: @) -> @ { array.rop(4, array.oneLike(x), array.zeroLike(x)) };
 
 // --- dyadic scalar functions (D-41) ---------------------------------------------------
 func isScalarFn(cp: @) -> Bool {
@@ -380,7 +436,8 @@ func binomial(a: array.Arr, b: array.Arr, k: @, env: Env) -> Ev {
   match k {
     1 => if array.anyZip(array.vals(a), array.vals(b), lambda (x: @, y: @) -> Bool { x > y }) { okv(array.zipArr(a, b, 1, lambda (x: @, y: @) -> @ { if x > y { 0 } else { factNat(y) / (factNat(x) * factNat(y - x)) } }), env) }
          else { okv(array.zipArr(a, b, 1, lambda (x: @, y: @) -> @ { factNat(y) / (factNat(x) * factNat(y - x)) }), env) },
-    _ => okv(array.zipArr(array.toRealAt(a, env.rb), array.toRealAt(b, env.rb), 3, binomR), env),
+    _ => if array.allL(array.vals(array.toRealAt(a, env.rb)), wholeReal) and array.allL(array.vals(array.toRealAt(b, env.rb)), wholeReal) { okv(array.zipArr(array.toRealAt(a, env.rb), array.toRealAt(b, env.rb), 3, binomW), env) }
+         else { dom("! of negative or non-integral reals needs the gamma function, which is not implemented") },
   }
 };
 func cmp(a: array.Arr, b: array.Arr, k: @, p: (@, @) -> Bool, env: Env) -> Ev {
@@ -404,6 +461,7 @@ func monadPrim(cp: @, a0: array.Arr, env: Env) -> Ev {
     match cp {
       43   => okv(a, env),                                                                                   // + conjugate
       8722 => match a.kind { 3 => okv(array.mapArr(a, 3, negR), env),
+                             1 => okv(array.mapArr(a, 2, negN), env),
                              _ => okv(array.mapArr(a, 2, negI), env), },                               // − negate
       215  => match a.kind { 1 => okv(array.mapArr(a, 1, lambda (x: @) -> @ { b2n(x > 0) }), env),
                              2 => okv(array.mapArr(a, 2, sgnI), env),
@@ -419,7 +477,7 @@ func monadPrim(cp: @, a0: array.Arr, env: Env) -> Ev {
       9055 => okv(array.mapArr(array.toRealAt(a, env.rb), 3, lnR), env),         // ⍟ ln
       9675 => okv(array.mapArr(array.toRealAt(a, env.rb), 3, piR), env),   // ○ pi times
       33   => match a.kind { 1 => okv(array.mapArr(a, 1, factNat), env),
-                             3 => okv(array.mapArr(a, 3, factR), env),
+                             3 => if array.allL(array.vals(a), wholeReal) { okv(array.mapArr(a, 3, factR), env) } else { dom("! of a negative or non-integral real needs the gamma function, which is not implemented") },
                              _ => dom("! of a negative") },                                                  // ! factorial
       8764 => if a.kind == 1 and array.allL(array.vals(a), isBool) { okv(array.mapArr(a, 1, lambda (x: @) -> @ { 1 - x }), env) } else { dom("∼ takes 0 and 1") },   // ∼ not
       _    => nyi("monadic " + lexerText(cp)),
@@ -438,8 +496,20 @@ func applyMonad(f: parse.Fn, a: array.Arr, env: Env) -> Ev { atWidths(applyMonad
 func applyDyad(f: parse.Fn, a: array.Arr, b: array.Arr, env: Env) -> Ev { atWidths(applyDyad0(f, a, b, env), indexFnD(f)) };
 func indexFn(f: parse.Fn) -> Bool { match f { .prim(cp) => cp == 9076 or cp == 9075 or cp == 9035 or cp == 9042 or cp == 8802, _ => false, } };
 func indexFnD(f: parse.Fn) -> Bool { match f { .prim(cp) => cp == 9075, _ => false, } };
+// every result at the session's widths (D-15);  a value that does not fit is a DOMAIN ERROR, never a wrap
 func atWidths(r: Ev, keep: Bool) -> Ev {
-  if keep { r } else { match r { .ok(p) => match p { (v, env2) => okv(array.narrow(v, env2.nb, env2.ib, env2.rb), env2), }, .err(e) => r, } }
+  if keep { r } else { match r { .ok(p) => match p { (v, env2) =>
+    if array.overflowed(v) { overflow(v) }
+    else if not array.fitsW(v, env2.nb, env2.ib) { overflow(v) }
+    else if v.kind == 3 and not array.allL(array.vals(v), lambda (x: @) -> Bool { array.finite(x) }) { dom("a real result overflows to infinity (D-15)") }
+    else { okv(array.narrow(v, env2.nb, env2.ib, env2.rb), env2) }, }, .err(e) => r, } }
+};
+func overflow(v: array.Arr) -> Ev { dom(if v.kind == 1 { "a natural result does not fit its width (D-15)" } else { "an integer result does not fit its width (D-15)" }) };
+// an emitted result with the same check:  the emitter's gates run at the default widths
+func okn(v: array.Arr, env: Env) -> Ev {
+  if array.overflowed(v) { overflow(v) }
+  else if v.kind == 3 and not array.allL(array.vals(v), lambda (x: @) -> Bool { array.finite(x) }) { dom("a real result overflows to infinity (D-15)") }
+  else { okv(v, env) }
 };
 func applyMonad0(f: parse.Fn, a: array.Arr, env: Env) -> Ev {
   match f {
@@ -496,7 +566,7 @@ func applyDyad0(f: parse.Fn, a: array.Arr, b: array.Arr, env: Env) -> Ev {
     .dfn(d) => callDfn("", d, true, a, b, env),
     .own => callOwn(true, a, b, env),
     .dop(x) => callOp(x, true, a, b, env),
-    .axis(x) => if x.half { laminateDyad(x.f, x.k, a, b, env) } else { axisDyad(x.f, x.k, a, b, env) },
+    .axis(x) => if x.half { laminateDyad(x.f, x.k, a, b, env) } else if scalarPrim(x.f) { scalarAxis(x.f, x.ks, a, b, env) } else { axisDyad(x.f, x.k, a, b, env) },
   }
 };
 // --- pervasion and each (D-72, D-74): f on every element, the results in normal form ----
@@ -794,6 +864,37 @@ func axisMonad(f: parse.Fn, k0: @, a: array.Arr, env: Env) -> Ev {
     } },
   }
 };
+// --- axis on a scalar function (D-96) -------------------------------------------------------------
+// A f[K] B:  K names the axes of the higher-rank argument that the lower-rank one runs along, so the
+// lower is spread to the higher's shape, element i of the higher meeting the lower's element at i[K]
+func scalarPrim(f: parse.Fn) -> Bool { match f { .prim(cp) => isScalarFn(cp), _ => false, } };
+func scalarAxis(f: parse.Fn, ks: List<@>, a: array.Arr, b: array.Arr, env: Env) -> Ev {
+  let ra = array.rank(a);
+  let rb = array.rank(b);
+  let loLeft = ra < rb;
+  let lo = if loLeft { a } else { b };
+  let hi = if loLeft { b } else { a };
+  let shHi = array.shape(hi);
+  let rh = array.rank(hi);
+  match axesOf(ks, rh, env, ~) {
+    (ok, kz) => if not ok { fail("%axis-error", "an axis is outside the rank") }
+      else if array.count(kz) != array.rank(lo) or not distinct(kz) { fail("%axis-error", "one distinct axis per axis of the lower-rank argument") }
+      else if pickAxes(kz, shHi) != array.shape(lo) { fail("%length-error", "the named axes' lengths are the other argument's shape") }
+      else {
+        let pos = spreadPos(kz, shHi, array.shape(lo), 0, array.size(shHi), ~);
+        let lo2 = if array.isBox(lo) { array.regather(lo, mk(1, shHi, gatherAt(array.vals(array.ixArr(lo)), pos))) } else { mk(lo.kind, shHi, gatherAt(array.vals(lo), pos)) };
+        if loLeft { applyDyad(f, lo2, hi, env) } else { applyDyad(f, hi, lo2, env) }
+      },
+  }
+};
+func axesOf(ks: List<@>, r: @, env: Env, acc: List<@>) -> (Bool, List<@>) {
+  match ks { (k, t) => if k >= env.io and (k - env.io) < r { axesOf(t, r, env, (k - env.io, acc)) } else { (false, ~) }, _ => (true, array.revL(acc, ~)), }
+};
+func distinct(xs: List<@>) -> Bool { match xs { (h, t) => if memberN(h, t) { false } else { distinct(t) }, _ => true, } };
+// the lower argument's ravel position for each cell of the higher
+func spreadPos(kz: List<@>, shHi: List<@>, shLo: List<@>, p: @, n: @, acc: List<@>) -> List<@> {
+  if p == n { array.revL(acc, ~) } else { spreadPos(kz, shHi, shLo, p + 1, n, (array.flatIx(shLo, pickAxes(kz, array.unflatIx(shHi, p))), acc)) }
+};
 func axisDyad(f: parse.Fn, k0: @, a: array.Arr, b: array.Arr, env: Env) -> Ev {
   let r = array.maxk(array.rank(a), array.rank(b));
   match axisOf(k0, r, env) {
@@ -864,7 +965,7 @@ func monadSimple(cp: @, a: array.Arr, env: Env) -> Ev {
     9066 => okv(table(a), env),                                                                 // ⍪ table (D-84)
     9045 => formatArr(a, env),                                                                  // ⍕ (D-88)
     9038 => execute(a, env),                                                                    // ⍎ (D-89)
-    9017 => solve(identityOf(a), a, true, env),                                                 // ⌹ inverse (D-90)
+    9017 => if array.rank(a) == 0 { monadPrim(247, a, env) } else { solve(identityOf(a), a, true, env) },   // ⌹ inverse (D-90);  a scalar is a 1×1 matrix, so ⌹0 is a DOMAIN ERROR
     _    => nyi("monadic " + lexerText(cp)),
   }
 };
@@ -883,7 +984,7 @@ func reverseFirst(a: array.Arr) -> array.Arr {
 };
 func revLL(xss: List<List<@>>, acc: List<List<@>>) -> List<List<@>> { match xss { (h, t) => revLL(t, (h, acc)), _ => acc, } };
 func transposeArr(a: array.Arr) -> array.Arr {
-  if array.rank(a) <= 1 { a } else {
+  if array.rank(a) <= 1 { a } else if array.size(array.shape(a)) == 0 { mk(a.kind, array.revL(array.shape(a), ~), ~) } else {
     let shp = array.shape(a);
     let tshp = array.revL(shp, ~);
     let vs = array.vals(a);
@@ -990,6 +1091,7 @@ func gradeIdxAAcc(sorted: List<(@, array.Arr)>, io: @, acc: List<@>) -> List<@> 
 func matchArr(a: array.Arr, b: array.Arr) -> Bool {
   if array.isBox(a) != array.isBox(b) { false }
   else if array.shape(a) != array.shape(b) { false }
+  else if array.isBox(a) and array.size(array.shape(a)) == 0 { matchArr(array.proto(a), array.proto(b)) }   // empties match by prototype (D-77)
   else if array.isBox(a) { matchAll(array.itemsOf(a), array.itemsOf(b)) }
   else if array.classOf(a) != array.classOf(b) { false }
   else {
@@ -1017,9 +1119,14 @@ func disclose(a: array.Arr, env: Env) -> Ev {
     let shp2 = maxShape(xs, array.repL(0, r));
     match padEach(xs, r, shp2, env, ~) {
       .err(e) => Ev.err(e),
-      .ok(p) => match p { (padded, env2) => okv(array.normalize(array.catL(array.shape(a), shp2), itemsOfAll(padded)), env2), },
+      .ok(p) => match p { (padded, env2) => okv(discloseN(array.catL(array.shape(a), shp2), xs, itemsOfAll(padded)), env2), },
     }
   }
+};
+// an empty result keeps the kind of the first element when that is simple:  ⊃⊂'' is '' (D-77)
+func discloseN(shp: List<@>, xs: List<array.Arr>, leaves: List<array.Arr>) -> array.Arr {
+  if array.size(shp) == 0 { match xs { (h, t) => if array.isBox(h) { array.normalize(shp, leaves) } else { mk(h.kind, shp, ~) }, _ => array.normalize(shp, leaves), } }
+  else { array.normalize(shp, leaves) }
 };
 func itemsOfAll(xs: List<array.Arr>) -> List<array.Arr> { array.revA(itemsAllAcc(xs, ~), ~) };
 func itemsAllAcc(xs: List<array.Arr>, acc: List<array.Arr>) -> List<array.Arr> { match xs { (h, t) => itemsAllAcc(t, array.revA(array.itemsOf(h), acc)), _ => acc, } };
@@ -1371,7 +1478,7 @@ func expRowAcc(r: List<@>, counts: List<@>, fill: @, acc: List<@>) -> List<@> {
   }
 };
 func decode(a: array.Arr, b: array.Arr, env: Env) -> Ev {
-  if array.rank(b) > 1 { nyi("⊥ on rank 2 and above") }
+  if array.rank(b) > 1 or array.rank(a) > 1 { nyi("⊥ on rank 2 and above") }
   else if a.kind != 1 or b.kind != 1 { decodeAny(a, b, env) }
   else {
     let bs = array.vals(b);
@@ -1386,7 +1493,7 @@ func decodeL(radix: List<@>, ds: List<@>, acc: @) -> @ {
   match ds { (d, rest) => match radix { (r, rrest) => decodeL(rrest, rest, acc * r + d), _ => acc, }, _ => acc, }
 };
 func encode(a: array.Arr, b: array.Arr, env: Env) -> Ev {
-  if a.kind != 1 or b.kind != 1 or array.size(array.shape(b)) != 1 or array.rank(b) > 1 { encodeAny(a, b, env) }
+  if a.kind != 1 or b.kind != 1 or array.size(array.shape(b)) != 1 or array.rank(b) > 1 or array.rank(a) > 1 { encodeAny(a, b, env) }
   else { okv(vec(1, array.revL(encodeL(array.revL(array.vals(a), ~), array.first(b)), ~)), env) }
 };
 // radix from the last digit backwards
@@ -1666,7 +1773,10 @@ func charsRank(m: array.Arr, shp: List<@>) -> array.Arr {
   mk(4, array.catL(array.takeL(shp, array.count(shp) - 1), [w]), array.vals(m))
 };
 // ⌊x+0.5 as a natural, at x's width (D-15)
-func roundNat(x: @) -> @ { let half = array.rop(4, array.oneLike(x), array.rsunAt(array.widthOf(x), 2)); lagoon.tabs(array.sToInt(array.rtoi(100, array.rop(1, x, half)))) };
+// a non-negative real rounded to a natural of any size (⍕ prints 2⋆70 whole, so no 64-bit step)
+func roundNat(x: @) -> @ { let half = array.rop(4, array.oneLike(x), array.rsunAt(array.widthOf(x), 2)); sMag(array.rtoi(100, array.rop(1, x, half))) };
+// the magnitude of a Hoon signed atom:  even n is n/2, odd n is −(n+1)/2
+func sMag(z: @) -> @ { if hoon.mod(z, 2) == 0 { z / 2 } else { (z + 1) / 2 } };
 func fracText(frac: @, d: @) -> String { if d == 0 { "" } else { "." + array.zeros(d - array.ndigits(frac)) + array.fmtNat(frac) } };
 // a number in fixed point with d decimals
 func fmtFixed(k: @, x: @, d: @) -> String {
@@ -1721,14 +1831,14 @@ func execute(a: array.Arr, env: Env) -> Ev {
 func execAst(t: parse.Ast, env: Env) -> Ev {
   match t {
     .stmts(ss) => execStmts(ss, env),
-    .empty => dom("the executed line has no value"),
-    .elide => dom("the executed line has no value"),
-    .fnend => dom("the executed line has no value"),
-    .cmd(c) => dom("the executed line has no value"),
-    .header(h) => dom("the executed line has no value"),
-    .fassign(s) => dom("the executed line has no value"),
-    .guard(g) => dom("the executed line has no value"),
-    .eguard(g) => dom("the executed line has no value"),
+    .empty => fail("%value-error", "the executed line has no value"),
+    .elide => fail("%value-error", "the executed line has no value"),
+    .fnend => fail("%value-error", "the executed line has no value"),
+    .cmd(c) => fail("%value-error", "the executed line has no value"),
+    .header(h) => fail("%value-error", "the executed line has no value"),
+    .fassign(s) => fail("%value-error", "the executed line has no value"),
+    .guard(g) => fail("%value-error", "the executed line has no value"),
+    .eguard(g) => fail("%value-error", "the executed line has no value"),
     _ => evalAst(t, env),
   }
 };
@@ -1739,7 +1849,7 @@ func execStmts(ss: List<parse.Ast>, env: Env) -> Ev {
       (h2, t2) => match runStmt(h, env) { (out, env2) => execStmts(t, pushOut(env2, out)), },
       _ => execAst(h, env),
     },
-    _ => dom("the executed line has no value"),
+    _ => fail("%value-error", "the executed line has no value"),
   }
 };
 // --- matrix divide (D-90): Gauss-Jordan with partial pivoting over reals -----------------------------
@@ -2045,15 +2155,27 @@ func evalParts(ixs: List<parse.Ast>, x: array.Arr, env: Env, acc: List<List<@>>,
       },
       _ => match evalAst(ix, env) {
         .err(e) => Parts.err(e),
-        .ok(r) => match r { (iv, env2) => if iv.kind != 1 { Parts.err(EErr( tag: "%domain-error", hint: "indices are non-negative integers" )) }
-          else { evalParts(rest, x, env2, (shiftIo(array.vals(iv), env2.io), acc), array.catL(shp, array.shape(iv))) }, },
+        .ok(r) => match r { (iv, env2) => evalParts(rest, x, env2, (partVals(iv, env2.io), acc), array.catL(shp, array.shape(iv))), },
       },
     },
     _ => Parts.ok((revLL(acc, ~), shp, env)),
   }
 };
+// an index part as 0-based positions, checked later in GNU APL's order (rank, then domain, then
+// range):  an integer of either sign or a whole real is a position, so one outside the axis is an
+// INDEX ERROR;  a fraction, a character or a box marks the part with badIx, a DOMAIN ERROR
+func partVals(iv: array.Arr, io: @) -> List<@> {
+  if iv.kind == 1 or iv.kind == 2 { shiftIo(array.vals(iv), io) }
+  else if iv.kind == 3 { shiftIo(array.turnL(array.vals(iv), wholeIx), io) }
+  else { array.turnL(array.vals(iv), lambda (v: @) -> @ { badIx() }) }
+};
+func badIx() -> @ { two64() + 1 };
+// a whole real as a natural (exact at any size), a negative one past every axis, a fraction badIx
+func wholeIx(x: @) -> @ { if not wholeOrNeg(x) { badIx() } else if array.realIsNeg(x) { two64() } else { sMag(array.rtoi(100, x)) } };
+func wholeOrNeg(x: @) -> Bool { array.finite(x) and floorReal(x) == x };
+func anyBad(parts: List<List<@>>) -> Bool { match parts { (p, rest) => if array.anyL(p, lambda (i: @) -> Bool { i == badIx() }) { true } else { anyBad(rest) }, _ => false, } };
 func shiftIo(xs: List<@>, io: @) -> List<@> { array.revL(shiftAcc(xs, io, ~), ~) };
-func shiftAcc(xs: List<@>, io: @, acc: List<@>) -> List<@> { match xs { (h, t) => shiftAcc(t, io, ((if h < io { 4294967295 } else { h - io }), acc)), _ => acc, } };
+func shiftAcc(xs: List<@>, io: @, acc: List<@>) -> List<@> { match xs { (h, t) => shiftAcc(t, io, ((if h >= two64() { h } else if h < io { 4294967295 } else { h - io }), acc)), _ => acc, } };
 func inBounds(parts: List<List<@>>, shp: List<@>) -> Bool {
   match parts { (p, rest) => match shp { (d, ds) => array.allL(p, lambda (i: @) -> Bool { i < d }) and inBounds(rest, ds), _ => false, }, _ => true, }
 };
@@ -2088,6 +2210,7 @@ func headOr0(xs: List<@>) -> @ { match xs { (h, t) => h, _ => 0, } };
 func indexed(x: array.Arr, parts: List<List<@>>, rshp: List<@>, env: Env) -> Ev {
   let shp = array.shape(x);
   if array.countLL(parts) != array.count(shp) { fail("%rank-error", "the number of indices is the rank") }
+  else if anyBad(parts) { dom("indices are whole numbers") }
   else if not inBounds(parts, shp) { fail("%index-error", "index out of range") }
   else if array.isBox(x) { okv(array.regather(x, mk(1, rshp, gatherAt(array.vals(x), positions(parts, shp)))), env) }
   else { okv(mk(x.kind, rshp, gatherAt(array.vals(x), positions(parts, shp))), env) }
@@ -2095,6 +2218,7 @@ func indexed(x: array.Arr, parts: List<List<@>>, rshp: List<@>, env: Env) -> Ev 
 func assignAt(x0: array.Arr, parts: List<List<@>>, v0: array.Arr, env: Env) -> Ev {
   let shp = array.shape(x0);
   if array.countLL(parts) != array.count(shp) { fail("%rank-error", "the number of indices is the rank") }
+  else if anyBad(parts) { dom("indices are whole numbers") }
   else if not inBounds(parts, shp) { fail("%index-error", "index out of range") }
   else if array.isBox(x0) or array.isBox(v0) or ((x0.kind == 4) != (v0.kind == 4)) { assignItems(x0, parts, v0, env) }
   else {
@@ -2780,12 +2904,23 @@ func runtime() -> * { (gLit, gName, gNilad, gSys, gMonad, gDyad, gAssign, gSysas
 func numKind(a: array.Arr) -> Bool { a.kind == 1 or a.kind == 2 or a.kind == 3 };
 func sameMeta(a: array.Arr, b: array.Arr) -> Bool { a.kind == b.kind and array.shape(a) == array.shape(b) };
 func two64() -> @ { 18446744073709551616 };
-// the scalar operations, per kind, exactly as the generic path computes them:
-// naturals and two's-complement integers wrap at 64 bits (Lagoon's +fe and
-// +twoc), reals round to nearest (the rd door at %n)
-func addK(k: @, x: @, y: @) -> @ { if k == 3 { array.rop(1, x, y) } else { hoon.mod(x + y, two64()) } };
-func subK(k: @, x: @, y: @) -> @ { if k == 3 { array.rop(2, x, y) } else { hoon.mod(x + (two64() - y), two64()) } };
-func mulK(k: @, x: @, y: @) -> @ { if k == 3 { array.rop(3, x, y) } else { hoon.mod(x * y, two64()) } };
+// the scalar operations, per kind, exactly as the generic path computes them:  reals round to
+// nearest (the rd door at %n);  + − × on naturals (k 1) and 64-bit two's-complement integers (k 2):  the exact result, or 2^64
+// when it does not fit (D-15, RULED 2026-11-07);  2^64 in stays 2^64 out
+func addK(k: @, x: @, y: @) -> @ { if k == 3 { array.rop(1, x, y) } else if x >= two64() or y >= two64() { two64() } else if k == 1 { capN(x + y) } else { addI(x, y) } };
+func subK(k: @, x: @, y: @) -> @ { if k == 3 { array.rop(2, x, y) } else if x >= two64() or y >= two64() { two64() } else { subI(x, y) } };
+func mulK(k: @, x: @, y: @) -> @ { if k == 3 { array.rop(3, x, y) } else if x >= two64() or y >= two64() { two64() } else if k == 1 { capN(x * y) } else { mulI(x, y) } };
+func capN(v: @) -> @ { if v >= two64() { two64() } else { v } };
+func topI(x: @) -> Bool { x >= array.two63() };
+// the sum overflows when both operands have one sign and the wrapped sum the other
+func addI(x: @, y: @) -> @ { let r = hoon.mod(x + y, two64()); if topI(x) == topI(y) and topI(r) != topI(x) { two64() } else { r } };
+func subI(x: @, y: @) -> @ { let r = hoon.mod(x + (two64() - y), two64()); if topI(x) != topI(y) and topI(r) != topI(x) { two64() } else { r } };
+func magI(x: @) -> @ { if topI(x) { two64() - x } else { x } };
+func mulI(x: @, y: @) -> @ {
+  let m = magI(x) * magI(y);
+  if topI(x) != topI(y) { if m > array.two63() { two64() } else { hoon.mod(two64() - m, two64()) } }
+  else { if m >= array.two63() { two64() } else { m } }
+};
 func maxK2(k: @, x: @, y: @) -> @ { if gtK(k, x, y) { x } else { y } };
 func minK2(k: @, x: @, y: @) -> @ { if gtK(k, x, y) { y } else { x } };
 // a right fold x1 f (x2 f (... xn)), as foldRight associates
@@ -2802,16 +2937,17 @@ func zipKAcc(f: (@, @, @) -> @, k: @, xs: List<@>, ys: List<@>, acc: List<@>) ->
 // the specialised gates run only at the default widths over 64-bit operands, where they are
 // bit-identical to the generic path; otherwise each falls back through the dispatcher (D-15)
 func plainEnv(env: Env) -> Bool { env.nb == 6 and env.ib == 6 and env.rb == 6 };
-func plain1(env: Env, x: array.Arr) -> Bool { plainEnv(env) and array.bloqOf(x) == 6 };
-func plain2(env: Env, x: array.Arr, y: array.Arr) -> Bool { plainEnv(env) and array.bloqOf(x) == 6 and array.bloqOf(y) == 6 };
+// a box takes the interpreter's path, which keeps its items in normal form (D-70)
+func plain1(env: Env, x: array.Arr) -> Bool { plainEnv(env) and array.bloqOf(x) == 6 and not array.isBox(x) };
+func plain2(env: Env, x: array.Arr, y: array.Arr) -> Bool { plainEnv(env) and array.bloqOf(x) == 6 and array.bloqOf(y) == 6 and not array.isBox(x) and not array.isBox(y) };
 // f/ on a non-empty rank-1 numeric array for + × ⌈ ⌊
 func gReduce(cp: @, x: Ev) -> Ev {
   match x { .err(e) => x, .ok(p) => match p { (xv, env) =>
     if plain1(env, xv) and array.rank(xv) == 1 and numKind(xv) and array.size(array.shape(xv)) > 0 {
       let vs = array.vals(xv);
       match cp {
-        43   => okv(sc(xv.kind, foldK(addK, xv.kind, vs)), env),
-        215  => okv(sc(xv.kind, foldK(mulK, xv.kind, vs)), env),
+        43   => okn(sc(xv.kind, foldK(addK, xv.kind, vs)), env),
+        215  => okn(sc(xv.kind, foldK(mulK, xv.kind, vs)), env),
         8968 => okv(sc(xv.kind, foldK(maxK2, xv.kind, vs)), env),
         8970 => okv(sc(xv.kind, foldK(minK2, xv.kind, vs)), env),
         _    => applyMonad(parse.Fn.reduce(parse.Fn.prim(cp)), xv, env),
@@ -2824,9 +2960,9 @@ func gArith(cp: @, l: Ev, r: Ev) -> Ev {
     if plain2(env2, lv, rv) and numKind(lv) and sameMeta(lv, rv) {
       let k = lv.kind;
       match cp {
-        43  => okv(mk(k, array.shape(lv), zipK(addK, k, array.vals(lv), array.vals(rv))), env2),
-        215 => okv(mk(k, array.shape(lv), zipK(mulK, k, array.vals(lv), array.vals(rv))), env2),
-        _   => { let j = array.maxk(k, 2); okv(mk(j, array.shape(lv), zipK(subK, j, array.vals(lv), array.vals(rv))), env2) },
+        43  => okn(mk(k, array.shape(lv), zipK(addK, k, array.vals(lv), array.vals(rv))), env2),
+        215 => okn(mk(k, array.shape(lv), zipK(mulK, k, array.vals(lv), array.vals(rv))), env2),
+        _   => { let j = array.maxk(k, 2); okn(mk(j, array.shape(lv), zipK(subK, j, array.vals(array.promoteAt(lv, j, 6)), array.vals(array.promoteAt(rv, j, 6)))), env2) },
       }
     } else { applyDyad(parse.Fn.prim(cp), lv, rv, env2) }, }, }, }, }
 };
@@ -2836,11 +2972,11 @@ func gMmul(l: Ev, r: Ev) -> Ev {
     if plain2(env2, lv, rv) and lv.kind == rv.kind and (lv.kind == 1 or lv.kind == 2) {
       let k = lv.kind;
       if array.rank(lv) == 1 and array.rank(rv) == 1 and array.shape(lv) == array.shape(rv) and array.size(array.shape(lv)) > 0 {
-        okv(sc(k, dotK(k, array.vals(lv), array.vals(rv))), env2)
+        okn(sc(k, dotK(k, array.vals(lv), array.vals(rv))), env2)
       } else if array.rank(lv) == 2 and array.rank(rv) == 2 and array.lastDim(array.shape(lv)) == array.firstDim(array.shape(rv)) and array.size(array.shape(lv)) > 0 and array.size(array.shape(rv)) > 0 {
         let rows = array.chunks(array.vals(lv), array.lastDim(array.shape(lv)));
         let cols = array.colsOf(array.chunks(array.vals(rv), array.lastDim(array.shape(rv))), array.lastDim(array.shape(rv)), 0);
-        okv(mk(k, [array.firstDim(array.shape(lv)), array.lastDim(array.shape(rv))], mmulK(k, rows, cols)), env2)
+        okn(mk(k, [array.firstDim(array.shape(lv)), array.lastDim(array.shape(rv))], mmulK(k, rows, cols)), env2)
       } else { applyDyad(mmulFn(), lv, rv, env2) }
     } else { applyDyad(mmulFn(), lv, rv, env2) }, }, }, }, }
 };
@@ -2935,8 +3071,7 @@ func partsOf(parts: List<Part>, x: array.Arr, env: Env, acc: List<List<@>>, shp:
       },
       .ev(e) => match e {
         .err(x2) => Parts.err(x2),
-        .ok(r) => match r { (iv, env2) => if iv.kind != 1 { Parts.err(EErr( tag: "%domain-error", hint: "indices are non-negative integers" )) }
-          else { partsOf(rest, x, env, (shiftIo(array.vals(iv), env.io), acc), array.catL(shp, array.shape(iv))) }, },
+        .ok(r) => match r { (iv, env2) => partsOf(rest, x, env, (partVals(iv, env.io), acc), array.catL(shp, array.shape(iv))), },
       },
     },
     _ => Parts.ok((revLL(acc, ~), shp, env)),
@@ -3064,7 +3199,7 @@ func em(a: parse.Ast, e: String, n: @, env: Env) -> (Nasm, @) {
     .strand(xs) => match emParts(revAsts(xs, ~), e, n, ~, env) {
       (parts, binds, n2) => (wrap(binds, callG("g-strand", listOf(parts))), n2),
     },
-    _ => (konst(Ev.err(EErr( tag: "%unimplemented", hint: "not an emitted form" ))), n),
+    _ => (konst(Ev.err(EErr( tag: "%unimplemented", hint: "this form" ))), n),
   }
 };
 // index parts in order, each against the environment the previous one left:

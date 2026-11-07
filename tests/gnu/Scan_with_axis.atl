@@ -1,0 +1,43 @@
+⍝ from GNU APL Scan_with_axis.tc (GPLv3, tests/gnu/README.md)
+🍎> ⎕IO←1
+🍎> M←3 4⍴⍳12
+🍎> +\[1]M
+⍝ expect:  1  2  3  4
+⍝ expect:  6  8 10 12
+⍝ expect: 15 18 21 24
+🍎> ,\[1]2 3⍴⍳6
+⍝ expect:    1    2    3 
+⍝ expect:  1 4  2 5  3 6 
+🍎> N←2 3 4⍴⍳24
+🍎> +\[1]N
+⍝ expect:  1  2  3  4
+⍝ expect:  5  6  7  8
+⍝ expect:  9 10 11 12
+⍝ expect: 
+⍝ expect: 14 16 18 20
+⍝ expect: 22 24 26 28
+⍝ expect: 30 32 34 36
+🍎> +\[2]N
+⍝ expect:  1  2  3  4
+⍝ expect:  6  8 10 12
+⍝ expect: 15 18 21 24
+⍝ expect: 
+⍝ expect: 13 14 15 16
+⍝ expect: 30 32 34 36
+⍝ expect: 51 54 57 60
+🍎> +⍀N
+⍝ expect:  1  2  3  4
+⍝ expect:  5  6  7  8
+⍝ expect:  9 10 11 12
+⍝ expect: 
+⍝ expect: 14 16 18 20
+⍝ expect: 22 24 26 28
+⍝ expect: 30 32 34 36
+🍎> ×\[1]M
+⍝ expect:  1   2   3   4
+⍝ expect:  5  12  21  32
+⍝ expect: 45 120 231 384
+🍎> ×⍀M
+⍝ expect:  1   2   3   4
+⍝ expect:  5  12  21  32
+⍝ expect: 45 120 231 384

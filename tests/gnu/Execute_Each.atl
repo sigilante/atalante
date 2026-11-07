@@ -1,0 +1,25 @@
+⍝ from GNU APL Execute_Each.tc (GPLv3, tests/gnu/README.md)
+🍎> ⍎¨'00'
+⍝ expect: 0 0
+⍝ skipped (double-quoted strings): ⍎¨"00" "11"
+⍝ skipped (double-quoted strings): ⍎¨ "00" "11"
+🍎> ⍎¨ '0 '
+⍝ refuse: %value-error
+🍎> ⍎¨'0 '
+⍝ skipped (branch): →
+🍎> ⍎¨ ' 0'
+⍝ refuse: %value-error
+🍎> ⍎¨' 0'
+⍝ skipped (branch): →
+⍝ skipped (double-quoted strings): ⍎¨ "00" "⍟0"
+🍎> ⍎¨'00' '⍟0'
+⍝ skipped (branch): →
+⍝ skipped (double-quoted strings): ⍎¨ "00" "⍟0" "0"
+🍎> ⍎¨'00' '⍟0' (,'0')
+⍝ skipped (branch): →
+⍝ skipped (double-quoted strings): ⍎¨ "00" "→5"
+⍝ skipped (branch): ⍎¨'00' '→5'
+⍝ skipped (branch): →
+⍝ skipped (double-quoted strings): ⍎¨ "00" "→"
+⍝ skipped (branch): ⍎¨'00' (,'→')
+⍝ skipped (branch): →

@@ -10,6 +10,8 @@ M,[1]M
 1 2+.{⍺×⍵}3
 ⍝ expect: +.{⍺×⍵}(1 2, 3)
 +/[1 2]M
-⍝ expect: %syntax-error col:3 an axis is one numeral (D-82)
+⍝ expect: %axis-error col:3 an axis is one numeral (D-82)
 +/[M]M
 ⍝ expect: %syntax-error col:3 an axis is one numeral (D-82)
+M+[1 2]M
+⍝ expect: +[1 2](M, M)

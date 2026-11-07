@@ -1,0 +1,22 @@
+⍝ from GNU APL Roll.tc (GPLv3, tests/gnu/README.md)
+🍎> ⎕IO←1
+⍝ skipped (system name ⎕RL): ⎕RL←444444
+⍝ skipped (system name ⎕RL): ⎕RL
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+🍎> ?10
+⍝ expect: 7
+⍝ skipped (system name ⎕RL): ⎕RL
+🍎> ?10 10 10 10 10 10
+⍝ expect: 8 1 2 5 6 1
+⍝ skipped (user command): ]FILE_CTL NO_SKIP
+🍎> ⎕IO←0
+⍝ skipped (system name ⎕RL): ⎕RL←444444
+⍝ skipped (system name ⎕RL): ⎕RL
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+🍎> ?10
+⍝ expect: 6
+⍝ skipped (system name ⎕RL): ⎕RL
+🍎> ?10 10 10 10 10 10
+⍝ expect: 7 0 1 4 5 0
+⍝ skipped (user command): ]FILE_CTL NO_SKIP
+🍎> ⎕IO←1

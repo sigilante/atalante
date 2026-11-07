@@ -1,0 +1,18 @@
+⍝ from GNU APL Minimum.tc (GPLv3, tests/gnu/README.md)
+🍎> 3⌊4
+⍝ expect: 3
+🍎> 5⌊4 5 7
+⍝ expect: 4 5 5
+🍎> ¯2⌊¯3
+⍝ expect: ¯3
+🍎> 3.3 0 ¯6.7⌊3.1 ¯4 ¯5
+⍝ expect: 3.1 ¯4 ¯6.7
+⍝ skipped (complex numbers): 1 ⌊ 0J0
+🍎> ⌊⌿0.123 0.456 0.789
+⍝ expect: 0.123
+🍎> OldPP←⎕PP
+🍎> ⎕PP←17
+⍝ skipped (complex numbers): ¯1E¯11J0⌊0
+⍝ skipped (complex numbers): 1.99999999995J0⌊2
+⍝ skipped (complex numbers): (1.99999999995J0⌊2) = 2
+🍎> ⎕PP←OldPP

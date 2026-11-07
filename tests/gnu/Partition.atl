@@ -1,0 +1,97 @@
+⍝ from GNU APL Partition.tc (GPLv3, tests/gnu/README.md)
+⍝ skipped (system name ⎕CR): 4 ⎕CR 1 1 2⊂'ABC'
+⍝ skipped (system name ⎕CR): 4 ⎕CR 1 0 1⊂'ABC'
+🍎> 1 0 1⊂'ABCD'
+⍝ refuse: %length-error
+🍎> 1 0 1⊂'ABCD'
+⍝ skipped (branch): →
+⍝ skipped (system name ⎕CR): 4⎕CR 1 1 2⊂'ABC'
+⍝ skipped (system name ⎕CR): 4⎕CR 1 0 1⊂'ABC'
+🍎> 1 0 1⊂'ABCD'
+⍝ refuse: %length-error
+⍝ skipped (branch): →
+⍝ skipped (system name ⎕CR): 4⎕CR 2 1 2⊂10 20 30
+🍎> OTB←'ONE' 'TWO' 'BUCKLE MY SHOE'
+⍝ skipped (system name ⎕CR): 4⎕CR OTB
+⍝ skipped (system name ⎕CR): 4⎕CR 1 1 2⊂OTB
+🍎> X←'  A STITCH  IN TIME   '
+⍝ skipped (system name ⎕CR): 4⎕CR X
+⍝ skipped (system name ⎕CR): 4⎕CR (' '≠X)⊂X
+⍝ skipped (system name ⎕CR): 4⎕CR (1+' '≠X)⊂X
+⍝ skipped (system name ⎕CR): 4⎕CR (1+' '=X)⊂X
+🍎> M←3 12⍴'1   10 3.1422  100 6.2833 1000 9.425'
+⍝ skipped (system name ⎕CR): 4⎕CR M
+🍎> ⊢P←(∼∧⌿' '=M)
+⍝ expect: 1 0 1 1 1 1 0 1 1 1 1 1
+⍝ skipped (system name ⎕CR): 4⎕CR P ⊂ M
+🍎> L←42 ⋄ R←'abc'
+🍎> Lext←(¯1↑⍴R)⍴L
+🍎> PCnt← +/ 2 </ 0,Lext
+🍎> Z←L⊂R
+🍎> (⍴⍴Z) ≡ (⍴⍴R)
+⍝ expect: 1
+🍎> (⍴Z) ≡ ((¯1↓⍴R), PCnt)
+⍝ expect: 1
+🍎> (≡Z) ≡ (1+≡R)
+⍝ expect: 1
+🍎> ((0 ≠ L)/R) ≡ (⊃,/L⊂R)
+⍝ expect: 1
+⍝ skipped (system name ⎕CR): 8 ⎕CR Z
+🍎> ⊢L←Lext
+⍝ expect: 42 42 42
+🍎> PCnt← +/ 2 </ 0,L
+🍎> Z←L⊂R
+🍎> (⍴⍴Z) ≡ (⍴⍴R)
+⍝ expect: 1
+🍎> (⍴Z) ≡ ((¯1↓⍴R), PCnt)
+⍝ expect: 1
+🍎> (≡Z) ≡ (1+≡R)
+⍝ expect: 1
+⍝ skipped (system name ⎕CR): 8 ⎕CR Z
+🍎> L←1 0 1 0  ⋄ R←4 4⍴⍳16
+🍎> Z←L ⊂[1] R
+⍝ skipped (system name ⎕CR): 8 ⎕CR Z
+🍎> L←0 1 0 1  ⋄ R←4 4⍴⍳16
+🍎> Z←L ⊂[1] R
+⍝ skipped (system name ⎕CR): 8 ⎕CR Z
+🍎> L←1 0 1 0 ⋄ R←'abcd'
+🍎> ⊢PCnt← +/ 2 </ 0,L
+⍝ expect: 2
+🍎> Z←L⊂R
+🍎> (⍴⍴Z) ≡ (⍴⍴R)
+⍝ expect: 1
+🍎> (⍴Z) ≡ ((¯1↓⍴R), PCnt)
+⍝ expect: 1
+🍎> (≡Z) ≡ (1+≡R)
+⍝ expect: 1
+⍝ skipped (system name ⎕): (⎕← (0≠L)/R )≡(⎕← ⊃,/Z )
+🍎> L←1 1 1 0 ⋄ R←'abcd'
+🍎> ⊢PCnt← +/ 2 </ 0,L
+⍝ expect: 1
+🍎> Z←L⊂R
+🍎> (⍴⍴Z) ≡ (⍴⍴R)
+⍝ expect: 1
+🍎> (⍴Z) ≡ ((¯1↓⍴R), PCnt)
+⍝ expect: 1
+🍎> (≡Z) ≡ (1+≡R)
+⍝ expect: 1
+⍝ skipped (system name ⎕): (⎕← (0≠L)/R )≡(⎕← ⊃,/Z )
+🍎> L←0 0 1 0 ⋄ R←'abcd'
+🍎> ⊢PCnt← +/ 2 </ 0,L
+⍝ expect: 1
+🍎> Z←L⊂R
+⍝ skipped (system name ⎕): (⎕← (0≠L)/R )≡(⎕← ⊃,/Z )
+⍝ skipped (glyph ⍬): Z←⊂/⍬
+⍝ skipped (system command): )MORE
+⍝ skipped (system command): )SIC
+🍎> ⊂/3 0⍴0
+⍝ refuse: %length-error
+⍝ skipped (system command): )SIC
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+⍝ skipped (glyph ∪): ∪/⍬
+⍝ skipped (system command): )SIC
+⍝ skipped (user command): ]FILE_CTL NO_SKIP
+🍎> Z←,/0 0⍴0
+⍝ skipped (glyph ⍬): Z≡0⍴⊂⍬
+⍝ skipped (system command): )SI
+⍝ skipped (system command): )CHECK

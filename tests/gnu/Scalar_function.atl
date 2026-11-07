@@ -1,0 +1,28 @@
+⍝ from GNU APL Scalar_function.tc (GPLv3, tests/gnu/README.md)
+⍝ skipped (system name ⎕SYL): ⎕SYL[26;]
+⍝ skipped (system name ⎕FIO): OLD_MON_TH← 2 ⎕FIO[202] '+'
+⍝ skipped (system name ⎕FIO): OLD_DYA_TH← 2 ⎕FIO[203] '+'
+🍎> A←⍳6
+🍎> B←10×⍳6
+🍎> +B
+⍝ expect: 10 20 30 40 50 60
+🍎> +100 B 200
+⍝ expect:  100  10 20 30 40 50 60  200 
+🍎> +100 (200 B ( 300 A)) 400
+⍝ expect:  100   200  10 20 30 40 50 60   300  1 2 3 4 5 6    400 
+🍎> A+B
+⍝ expect: 11 22 33 44 55 66
+🍎> 5+100 B 200
+⍝ expect:  105  15 25 35 45 55 65  205 
+🍎> 7 5 8+100 B 200
+⍝ expect:  107  15 25 35 45 55 65  208 
+🍎> 7 A 8+100 B 200
+⍝ expect:  107  11 22 33 44 55 66  208 
+⍝ skipped (system name ⎕FIO): ⊣OLD_MON_TH ⎕FIO[202] '+'
+⍝ skipped (system name ⎕FIO): ⊣OLD_DYA_TH ⎕FIO[203] '+'
+⍝ skipped (system name ⎕CR): 4 ⎕CR   (⍳0)⌈⍳0
+⍝ skipped (system name ⎕CR): 4 ⎕CR   ''÷''
+⍝ skipped (system name ⎕CR): 4 ⎕CR   ÷0 2⍴⊂1 2 3
+🍎> ⍴ 2 + 0⍴⊂0 0
+⍝ expect: 0
+⍝ skipped (system name ⎕CR): 4 ⎕CR 2 + 0⍴⊂0 0

@@ -1,0 +1,25 @@
+⍝ from GNU APL Match.tc (GPLv3, tests/gnu/README.md)
+🍎> 'TO' 'ME'≡'TO ME'
+⍝ expect: 0
+🍎> 'TO' 'ME'≡'TO' 'ME'
+⍝ expect: 1
+🍎> 1 2 3 4≡1 2 3 4
+⍝ expect: 1
+🍎> 1 2 3 4=1 2 3 4
+⍝ expect: 1 1 1 1
+🍎> ''≡⍳0
+⍝ expect: 0
+🍎> (0 2⍴0)≡(0 2⍴' ')
+⍝ expect: 0
+🍎> ''≡''
+⍝ expect: 1
+🍎> (0 2⍴0)≡(0 2⍴0)
+⍝ expect: 1
+🍎> ''≢⍳0
+⍝ expect: 1
+🍎> (0 2⍴0)≢(0 2⍴' ')
+⍝ expect: 1
+🍎> ''≢''
+⍝ expect: 0
+🍎> (0 2⍴0)≢(0 2⍴0)
+⍝ expect: 0

@@ -1,0 +1,81 @@
+⍝ from GNU APL First.tc (GPLv3, tests/gnu/README.md)
+🍎> A←'DO' 'RE' 'ME'
+🍎> Z←↑A
+🍎> Z
+⍝ expect: DO
+🍎> ≡Z
+⍝ expect: 1
+🍎> ⍴Z
+⍝ expect: 2
+🍎> Y←'ABCDE'
+🍎> ≡Y
+⍝ expect: 1
+🍎> W←↑Y
+🍎> W
+⍝ expect: A
+🍎> ≡W
+⍝ expect: 0
+🍎> B←(2 3) ((4 5 6) 7)
+🍎> ≡B
+⍝ expect: 3
+🍎> J←↑B
+🍎> J
+⍝ expect: 2 3
+🍎> ≡J
+⍝ expect: 1
+🍎> C←⌽B
+🍎> C
+⍝ expect:   4 5 6  7   2 3 
+🍎> S←↑C
+🍎> S
+⍝ expect:  4 5 6  7 
+🍎> ⍴S
+⍝ expect: 2
+🍎> ≡S
+⍝ expect: 2
+🍎> ≡C[1]
+⍝ expect: 3
+🍎> ⊢R←(2 3⍴1 'A' 2 3 'B' 'C') 'WORD' (9 10 11)
+⍝ expect:  1 A 2   WORD  9 10 11 
+⍝ expect:  3 B C                 
+⍝ skipped (system name ⎕CR): 4 ⎕CR R
+⍝ skipped (system name ⎕CR): 4 ⎕CR ↑0⍴⊂R
+⍝ skipped (system name ⎕CR): 4 ⎕CR ↑0⍴⊂↑R
+🍎> T←0 2⍴⊂0 0
+⍝ skipped (system name ⎕CR): 4 ⎕CR T
+🍎> ≡T
+⍝ expect: 2
+🍎> ↑T
+⍝ expect: 0 0
+🍎> ↑⍳0
+⍝ expect: 0
+🍎> ↑''
+🍎> D←0 3⍴(2 3⍴0) 0
+🍎> ⍴D
+⍝ expect: 0 3
+🍎> T←↑D
+🍎> T
+⍝ expect: 0 0 0
+⍝ expect: 0 0 0
+🍎> H←0 2⍴(0 0) (0 0 0)
+🍎> H
+🍎> ⍴H
+⍝ expect: 0 2
+🍎> U←↑H
+🍎> U
+⍝ expect: 0 0
+🍎> K←'RED' 'WHITE' 'BLUE'
+🍎> K
+⍝ expect:  RED WHITE BLUE 
+🍎> ⍴K
+⍝ expect: 3
+🍎> (↑K)←'YELLOW'
+🍎> K
+⍝ expect:  YELLOW WHITE BLUE 
+⍝ expect:        ≡K
+⍝ expect: 2
+🍎> A←''
+🍎> (↑A)←33
+🍎> ↑A
+⍝ expect: 0
+⍝ skipped (system command): )CHECK

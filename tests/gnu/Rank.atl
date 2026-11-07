@@ -1,0 +1,91 @@
+⍝ from GNU APL Rank.tc (GPLv3, tests/gnu/README.md)
+⍝ skipped (system command): )COPY ASSERT.apl ASSERT ASSERT_EQUIV
+⍝ skipped (glyph ⍤): ⍉⍤2 N233
+⍝ skipped (glyph ⍤): ⍳⍤0 N3
+⍝ skipped (glyph ⍤): j ← 2 ⋄ ( ,⍤2 N233 )  ASSERT_EQUIV  ( ,⍤j N233 )
+⍝ skipped (glyph ⍤): j ← 2 ⋄ ( ⍉⍤2 N233)   ASSERT_EQUIV  ( ⍉⍤j N233 )
+⍝ skipped (glyph ⍤): j ← 0 ⋄ ( ⍳⍤0 N3   )  ASSERT_EQUIV  ( ⍳⍤j N3   )
+⍝ skipped (glyph ⍤): j ← 0 ⋄ ( ⍳⍤j 1 2 3)  ASSERT_EQUIV  ( ⍳⍤j N3   )
+⍝ skipped (glyph ⍤): 0 1 2 ⌽⍤0 1 'ABC'
+⍝ skipped (glyph ⍤): 2 2 2⊤⍤1 0 N5
+⍝ skipped (glyph ⍤): N34+⍤2 N234
+⍝ skipped (glyph ⍤): N3,⍤1 N34
+⍝ skipped (glyph ⍤): N2,⍤0 2 N34
+⍝ skipped (glyph ⍤): c6 ,⍤0 (⍳6)
+⍝ skipped (glyph ⍤): c6 (,⍤0) (⍳6)
+⍝ skipped (glyph ⍤): c6 ,⍤(,0) (⍳6)
+⍝ skipped (glyph ⍤): c6 ,⍤0,⊂⍳6
+⍝ skipped (glyph ⍤): c6,⍤0,⊂⍳6
+⍝ skipped (glyph ⍤): c6 ,⍤[1] 0 (⍳6)
+⍝ skipped (glyph ⍤): c6 (,⍤[1] 0) (⍳6)
+⍝ skipped (glyph ⍤): c6 ,⍤[1] (,0) (⍳6)
+⍝ skipped (glyph ⍤): c6 ,⍤[1] 0 ,⊂(⍳6)
+⍝ skipped (glyph ⍤): c6,⍤[1]0,⊂(⍳6)
+⍝ skipped (glyph ⍤): 1(↑⍤0) ⍬
+⍝ skipped (system name ⎕CR): 4 ⎕CR (⊂⍤1)4 2⍴⍳8
+⍝ skipped (system name ⎕CR): 4 ⎕CR +⍤1 ⍬
+⍝ skipped (system name ⎕CR): 24 ⎕CR  {⍴ (⊢⍤1) (⍵,6)⍴9} ¨ 0 1 2 3 4 5 6
+⍝ skipped (glyph ⍤): ASSERT ( ⍉⍤2 N233 )      ≡ ( ⍉⍤(2)     N233 )
+⍝ skipped (glyph ⍤): ASSERT ( ⍉⍤2 N233 )      ≡ ( ⍉⍤(,2)    N233 )
+⍝ skipped (glyph ⍤): ASSERT ( ⍉⍤2 N233 )      ≡ ( ⍉⍤((2))  N233  )
+⍝ skipped (glyph ⍤): ASSERT ( ⍉⍤2 N233 )      ≡ ( (⍉⍤2)    N233  )
+⍝ skipped (glyph ⍤): ASSERT ( ⍉⍤2 N233 )      ≡ ( (⍉⍤(2))  N233  )
+⍝ skipped (glyph ⍤): ASSERT ( ⍉⍤2 N233 )      ≡ ( (⍉⍤(,2)) N233  )
+⍝ skipped (glyph ⍤): ASSERT ( 2 2 2⊤⍤1 0 N5 ) ≡ ( 2 2 2⊤⍤(1 0)    N5 )
+⍝ skipped (glyph ⍤): ASSERT ( 2 2 2⊤⍤1 0 N5 ) ≡ ( 2 2 2⊤⍤(,1 0)   N5 )
+⍝ skipped (glyph ⍤): ASSERT ( 2 2 2⊤⍤1 0 N5 ) ≡ ( 2 2 2⊤⍤((1 0))  N5 )
+⍝ skipped (glyph ⍤): ASSERT ( 2 2 2⊤⍤1 0 N5 ) ≡ ( 2 2 2(⊤⍤1 0)    N5 )
+⍝ skipped (glyph ⍤): ASSERT ( 2 2 2⊤⍤1 0 N5 ) ≡ ( 2 2 2(⊤⍤(1 0))  N5 )
+⍝ skipped (glyph ⍤): ASSERT ( 2 2 2⊤⍤1 0 N5 ) ≡ ( 2 2 2(⊤⍤(,1 0)) N5 )
+⍝ skipped (glyph ⍤): ASSERT ( +/⍤1⊢2 3⍴⍳6 )   ≡ ( (+/)⍤1⊢2 3⍴⍳6 )
+⍝ skipped (glyph ⍤): ASSERT ( +/⍤1⊢2 3⍴⍳6 )   ≡ 6 15
+⍝ skipped (glyph ⍤): ASSERT ( +\⍤1⊢2 3⍴⍳6 )   ≡ ( (+\)⍤1⊢2 3⍴⍳6 )
+⍝ skipped (glyph ⍤): ASSERT ( +⌿⍤1⊢2 3⍴⍳6 )   ≡ ( (+⌿)⍤1⊢2 3⍴⍳6 )
+⍝ skipped (glyph ⍤): ASSERT ( {⍵}¨⍤1⊢2 3⍴⍳6 ) ≡ ( ({⍵}¨)⍤1⊢2 3⍴⍳6 )
+🍎> ASSERT ( +/[1]2 3⍴⍳6 )   ≡ ( (+/)[1]2 3⍴⍳6 )
+🍎> ASSERT ( +/[1]2 3⍴⍳6 )   ≡ 5 7 9
+🍎> ASSERT ( +/[2]2 3⍴⍳6 )   ≡ ( (+/)[2]2 3⍴⍳6 )
+🍎> ASSERT ( +\[1]2 3⍴⍳6 )   ≡ ( (+\)[1]2 3⍴⍳6 )
+🍎> ASSERT ( +⌿[1]2 3⍴⍳6 )   ≡ ( (+⌿)[1]2 3⍴⍳6 )
+🍎> ASSERT ( ⌽[1]2 3⍴⍳6 )    ≡ ( (⌽[1])2 3⍴⍳6 )
+🍎> ASSERT ( ⌽[1]2 3⍴⍳6 )    ≡ 2 3⍴4 5 6 1 2 3
+🍎> ASSERT ( ,[1]2 3⍴⍳6 )    ≡ ( (,[1])2 3⍴⍳6 )
+🍎> N ← 1 ⋄ ASSERT ( ⌽[N]2 3⍴⍳6 )  ≡ ( (⌽[N])2 3⍴⍳6 )
+🍎> N ← 1 ⋄ ASSERT ( +/[N]2 3⍴⍳6 ) ≡ ( (+/)[N]2 3⍴⍳6 )
+🍎> N ← 2 ⋄ ASSERT ( +/[N]2 3⍴⍳6 ) ≡ ( (+/)[N]2 3⍴⍳6 )
+⍝ skipped (glyph ⍤): ({⎕IO←0 ⋄ ⍵+100}⍤0)3 2⍴⍳6
+🍎> ⎕IO←1
+⍝ skipped (glyph ⍤): 1 2 3({⎕IO←0 ⋄ ⍺+⍵}⍤0 1)3 2⍴⍳6
+🍎> ⎕IO←1
+⍝ skipped (glyph ⍤): (⍳⍤1)2 2⍴'ab'
+⍝ skipped (system command): )SIC
+⍝ skipped (glyph ⍤): ⍴1 (,⍤1)1 3⍴0
+⍝ skipped (glyph ⍤): ⍴1 (,⍤1)0 3⍴0
+⍝ skipped (glyph ⍤): ⍴2 (↑⍤1)1 3⍴0
+⍝ skipped (glyph ⍤): ⍴2 (↑⍤1)0 3⍴0
+⍝ skipped (glyph ⍤): ⍴1 ({⍺,⍵}⍤1)1 3⍴0
+⍝ skipped (glyph ⍤): ⍴1 ({⍺,⍵}⍤1)0 3⍴0
+⍝ skipped (glyph ⍤): ⍴'' (,⍤0) ''
+⍝ skipped (system name ⎕TF): Z←1 (,⍤1)0 3⍴0 ⋄ 2⎕TF 'Z'
+⍝ skipped (system name ⎕TF): Z←'ab' (,⍤1)0 3⍴0 ⋄ 2⎕TF 'Z'
+🍎> )ERASE Z
+🍎> )ERASE G G2 G3 G4
+⍝ skipped (system name ⎕EC): ∇Z←G B
+🍎> ⍴G 0 0 0
+⍝ expect: 3
+⍝ skipped (glyph ⍤): ⍴(G⍤1)1 3⍴0
+⍝ skipped (glyph ⍤): ⍴(G⍤1)0 3⍴0
+⍝ skipped (system name ⎕EC): ∇Z←G2 B
+⍝ skipped (glyph ⍤): ⍴(G2⍤1)0 3⍴0
+⍝ skipped (system name ⎕EC): ∇Z←G3 B
+⍝ skipped (glyph ⍤): ⍴(G3⍤1)1 3⍴0
+⍝ skipped (glyph ⍤): ⍴(G3⍤1)0 3⍴0
+⍝ skipped (system name ⎕EA): ∇Z←G4 B
+⍝ skipped (glyph ⍤): ⍴(G4⍤1)1 3⍴0
+⍝ skipped (glyph ⍤): ⍴(G4⍤1)0 3⍴0
+🍎> ∇Z←HEC B
+	Z←÷0
+	∇
+⍝ skipped (system name ⎕EC): ↑⎕EC '⍴(HEC⍤1)0 3⍴0'
+🍎> )ERASE G G2 G3 G4 HEC
+⍝ skipped (system command): )CHECK BRIEF

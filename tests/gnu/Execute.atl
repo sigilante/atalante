@@ -1,0 +1,36 @@
+⍝ from GNU APL Execute.tc (GPLv3, tests/gnu/README.md)
+🍎> ⍎'42'
+⍝ expect: 42
+🍎> ⍎'1 2 3'
+⍝ expect: 1 2 3
+🍎> ⍎'⍳4'
+⍝ expect: 1 2 3 4
+🍎> 1+⍎'⍳4'
+⍝ expect: 2 3 4 5
+🍎> ⍎'195÷5×13'
+⍝ expect: 3
+🍎> ⍎'MATRIX←3 3⍴⍳9'
+🍎> MATRIX
+⍝ expect: 1 2 3
+⍝ expect: 4 5 6
+⍝ expect: 7 8 9
+🍎> ⍎'''AGNES'''
+⍝ expect: AGNES
+🍎> V←⍳0
+🍎> ⍎(0=⍴V)/'''EMPTY'''
+⍝ expect: EMPTY
+🍎> CTR←0
+🍎> ⍎(1=CTR)/'124'
+🍎> CTR←1
+🍎> ⍎(1=CTR)/'124'
+⍝ expect: 124
+⍝ skipped (double-quoted strings): ⍎ ¨ "1" "2" "+3" "4"
+🍎> ⍎¨''
+🍎> ⍎')SIC'
+⍝ skipped (system name ⎕ET): ⎕ET
+🍎> ⍎'1÷0'
+⍝ refuse: %domain-error
+🍎> 1÷0
+⍝ skipped (system command): )SIS
+⍝ skipped (system command): )SIC
+⍝ skipped (system command): )CHECK BRIEF

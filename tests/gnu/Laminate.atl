@@ -1,0 +1,108 @@
+⍝ from GNU APL Laminate.tc (GPLv3, tests/gnu/README.md)
+🍎> A←'FOR'
+🍎> B←'AXE'
+🍎> ⎕IO←1
+🍎> Z←A,[0.5]B
+🍎> Z
+⍝ expect: FOR
+⍝ expect: AXE
+🍎> ⍴Z
+⍝ expect: 2 3
+🍎> ≡Z
+⍝ expect: 1
+🍎> H←(1 2) (3 4)
+🍎> K←'AB' 'CD'
+🍎> Y←H,[0.5]K
+🍎> Y
+⍝ expect:  1 2  3 4 
+⍝ expect:  AB   CD  
+🍎> ⍴Y
+⍝ expect: 2 2
+🍎> ≡Y
+⍝ expect: 2
+🍎> W←A,[1.1]B
+🍎> W
+⍝ expect: FA
+⍝ expect: OX
+⍝ expect: RE
+🍎> ⍴W
+⍝ expect: 3 2
+🍎> ≡W
+⍝ expect: 1
+🍎> V←H,[1.1]K
+🍎> V
+⍝ expect:  1 2  AB 
+⍝ expect:  3 4  CD 
+🍎> ⍴V
+⍝ expect: 2 2
+🍎> ≡V
+⍝ expect: 2
+🍎> Q←3 3⍴'STYHIMRED'
+🍎> Q
+⍝ expect: STY
+⍝ expect: HIM
+⍝ expect: RED
+🍎> 'A',[0.1]Q
+⍝ expect: AAA
+⍝ expect: AAA
+⍝ expect: AAA
+⍝ expect: 
+⍝ expect: STY
+⍝ expect: HIM
+⍝ expect: RED
+🍎> 'A',[1.1]Q
+⍝ expect: AAA
+⍝ expect: STY
+⍝ expect: 
+⍝ expect: AAA
+⍝ expect: HIM
+⍝ expect: 
+⍝ expect: AAA
+⍝ expect: RED
+🍎> 'A',[2.1]Q
+⍝ expect: AS
+⍝ expect: AT
+⍝ expect: AY
+⍝ expect: 
+⍝ expect: AH
+⍝ expect: AI
+⍝ expect: AM
+⍝ expect: 
+⍝ expect: AR
+⍝ expect: AE
+⍝ expect: AD
+🍎> A←4 3⍴'A'
+🍎> B←4 3⍴'B'
+🍎> ⎕IO←1
+🍎> ⍴ A ,[¯0.5] B
+⍝ refuse: %axis-error
+🍎> ⍴A,[¯0.5]B
+🍎> ⍴A,[0.5]B
+⍝ expect: 2 4 3
+🍎> ⍴ A ,[1.5] B
+⍝ expect: 4 2 3
+🍎> ⍴ A ,[2.5] B
+⍝ expect: 4 3 2
+🍎> ⍴ A ,[3.5] B
+⍝ refuse: %axis-error
+🍎> ⍴A,[3.5]B
+🍎> ⎕IO←0
+🍎> ⍴ A ,[¯1.5] B
+⍝ refuse: %axis-error
+🍎> ⍴A,[¯1.5]B
+🍎> ⍴A,[¯0.5]B
+⍝ expect: 2 4 3
+🍎> ⍴ A ,[0.5] B
+⍝ expect: 4 2 3
+🍎> ⍴ A ,[1.5] B
+⍝ expect: 4 3 2
+🍎> ⍴ A ,[2.5] B
+⍝ refuse: %axis-error
+🍎> ⍴A,[2.5]B
+⍝ skipped (system command): )SIC
+🍎> ⎕IO←1
+🍎> Z←1 2 3,[0.5]2 3⍴0
+⍝ refuse: %rank-error
+⍝ skipped (system command): )MORE
+⍝ skipped (system name ⎕UCS): ⎕UCS ↑(0 3⍴'a'),[0.5]0 3⍴0
+⍝ skipped (system name ⎕UCS): ⎕UCS ↑(0 3⍴'a'),0 3⍴0

@@ -1,0 +1,10 @@
+⍝ from GNU APL Direction.tc (GPLv3, tests/gnu/README.md)
+🍎> ×¯5 0 5
+⍝ expect: ¯1 0 1
+⍝ skipped (complex numbers): ×3J4 ¯3J4
+🍎> ×¯5
+⍝ expect: ¯1
+🍎> ×¯4 0 4
+⍝ expect: ¯1 0 1
+⍝ skipped (complex numbers): ×3J4
+⍝ skipped (complex numbers): ×0J1 0J¯1
