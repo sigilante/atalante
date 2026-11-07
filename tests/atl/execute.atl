@@ -14,7 +14,7 @@
 ⍝ expect: 1
 ⍝ expect: 2
 🍎> ⍎')VARS'
-⍝ refuse: %domain-error
+⍝ refuse: %value-error
 🍎> ⍎'1 +'
 ⍝ refuse: %syntax-error
 🍎> ⍎5

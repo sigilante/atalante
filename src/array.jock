@@ -315,7 +315,12 @@ func pickAcc(a: Arr, ixs: List<@>, acc: List<Arr>) -> List<Arr> { match ixs { (i
 // a box's index ray as a natural array;  a structural function runs on it
 func ixArr(a: Arr) -> Arr { Arr( kind: 1, ray: a.ray, items: ~ ) };
 // the moved index ray back to elements, in normal form
-func regather(a: Arr, ix: Arr) -> Arr { normalize(shape(ix), pickItems(a, vals(ix))) };
+func regather(a: Arr, ix: Arr) -> Arr { if size(shape(ix)) == 0 { emptyOf(shape(ix), proto(a)) } else { normalize(shape(ix), pickItems(a, vals(ix))) } };
+// an empty array that keeps prototype p (D-77):  simple when p is a simple scalar, else a box whose
+// only stored item is p, which no index names, so +proto finds it and no element is seen
+func emptyOf(shp: List<@>, p: Arr) -> Arr {
+  if isSimpleScalar(p) { make(p.kind, shp, ~) } else { Arr( kind: 5, ray: fromL(metaOf(1, shp), ~), items: [p] ) }
+};
 func firstItem(a: Arr) -> Arr { match itemsOf(a) { (h, t) => h, _ => proto(a), } };
 // the prototype (D-77): the first element's type, 0 when empty
 func proto(a: Arr) -> Arr {

@@ -14,7 +14,7 @@ D 6
 a[1
 ⍝ expect: %syntax-error col:2 unbalanced [
 ⌽[1 2]a
-⍝ expect: %syntax-error col:2 an axis is one numeral (D-82)
+⍝ expect: %axis-error col:2 an axis is one numeral (D-82)
 ¨1
 ⍝ expect: %syntax-error col:1 ¨ needs a function to its left
 ∘×a

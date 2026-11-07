@@ -27,4 +27,4 @@
 🍎> (3 5⍴1)+[1 1]2 2⍴1
 ⍝ refuse: %axis-error
 🍎> +/[1 2]2 2⍴1
-⍝ refuse: %syntax-error
+⍝ refuse: %axis-error

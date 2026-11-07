@@ -67,6 +67,11 @@ enum Asts { err(PErr), ok(List<Ast>) };
 func pe(tag: String, col: @, hint: String) -> PErr { PErr( tag: tag, col: col, hint: hint ) };
 func se(col: @, hint: String) -> Parsed { Parsed.err(pe("%syntax-error", col, hint)) };
 func sei(col: @, hint: String) -> Items { Items.err(pe("%syntax-error", col, hint)) };
+// an axis written as numerals that name no axis:  GNU APL's AXIS ERROR, not a syntax error
+func aei(col: @, hint: String) -> Items { Items.err(pe("%axis-error", col, hint)) };
+func isAxisFn(f: Fn) -> Bool { match f { .axis(a) => true, _ => false, } };
+func numTok(t: lexer.Token) -> Bool { kindOf(t) == 1 or kindOf(t) == 2 or kindOf(t) == 3 or kindOf(t) == 4 };
+func allNum(ts: List<lexer.Token>) -> Bool { match ts { (t, r) => if numTok(t) { allNum(r) } else { false }, _ => true, } };
 func cls(sig: List<(String, @)>, nm: String) -> @ {
   match sig { ((n, c), t) => if n == nm { c } else { cls(t, nm) }, _ => 0, }
 };
@@ -505,22 +510,24 @@ func pushBrack(t: lexer.Token, rest: List<lexer.Token>, sig: List<(String, @)>, 
             }
           },
       },
-      .fun(x) => match matchTo(rest, 11, 12, 0, ~) {
+      .fun(x) => if isAxisFn(x.f) { sei(t.col, "a function takes one axis (D-82)") } else { match matchTo(rest, 11, 12, 0, ~) {
         (inner, rest2, closed) => if not closed { sei(t.col, "unbalanced [") }
           else { match inner {
             (k, krest) => match krest {
               (k2, krest2) => if scalarGlyph(x.f) and allNat(inner) { items(rest2, sig, (funItem(Fn.axis(Axis( f: x.f, k: natText(k.text), half: false, ks: natTexts(inner, ~) )), x.col), more)) }
+                else if allNum(inner) { aei(t.col, "an axis is one numeral (D-82)") }
                 else { sei(t.col, "an axis is one numeral (D-82)") },
               _ => if kindOf(k) == 1 { items(rest2, sig, (funItem(Fn.axis(Axis( f: x.f, k: natText(k.text), half: false, ks: [natText(k.text)] )), x.col), more)) }
                 else if kindOf(k) == 3 or kindOf(k) == 2 { match halfAxis(lexer.toCps(k.text.chars())) {
                   (ok, kk) => if ok { items(rest2, sig, (funItem(Fn.axis(Axis( f: x.f, k: kk, half: true, ks: [kk] )), x.col), more)) }
-                    else { sei(t.col, "an axis is a natural or a fraction between two axes (D-82, D-92)") },
+                    else { aei(t.col, "an axis is a natural or a fraction between two axes (D-82, D-92)") },
                 } }
+                else if kindOf(k) == 4 { aei(t.col, "an axis is one numeral (D-82)") }
                 else { sei(t.col, "an axis is one numeral (D-82)") },
             },
             _ => sei(t.col, "an axis is one numeral (D-82)"),
           } },
-      },
+      } },
       .asg(c) => sei(t.col, "[ needs an array to its left"),
     },
     _ => sei(t.col, "[ needs an array to its left"),

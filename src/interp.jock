@@ -965,7 +965,7 @@ func monadSimple(cp: @, a: array.Arr, env: Env) -> Ev {
     9066 => okv(table(a), env),                                                                 // ⍪ table (D-84)
     9045 => formatArr(a, env),                                                                  // ⍕ (D-88)
     9038 => execute(a, env),                                                                    // ⍎ (D-89)
-    9017 => solve(identityOf(a), a, true, env),                                                 // ⌹ inverse (D-90)
+    9017 => if array.rank(a) == 0 { monadPrim(247, a, env) } else { solve(identityOf(a), a, true, env) },   // ⌹ inverse (D-90);  a scalar is a 1×1 matrix, so ⌹0 is a DOMAIN ERROR
     _    => nyi("monadic " + lexerText(cp)),
   }
 };
@@ -1091,6 +1091,7 @@ func gradeIdxAAcc(sorted: List<(@, array.Arr)>, io: @, acc: List<@>) -> List<@> 
 func matchArr(a: array.Arr, b: array.Arr) -> Bool {
   if array.isBox(a) != array.isBox(b) { false }
   else if array.shape(a) != array.shape(b) { false }
+  else if array.isBox(a) and array.size(array.shape(a)) == 0 { matchArr(array.proto(a), array.proto(b)) }   // empties match by prototype (D-77)
   else if array.isBox(a) { matchAll(array.itemsOf(a), array.itemsOf(b)) }
   else if array.classOf(a) != array.classOf(b) { false }
   else {
@@ -1830,14 +1831,14 @@ func execute(a: array.Arr, env: Env) -> Ev {
 func execAst(t: parse.Ast, env: Env) -> Ev {
   match t {
     .stmts(ss) => execStmts(ss, env),
-    .empty => dom("the executed line has no value"),
-    .elide => dom("the executed line has no value"),
-    .fnend => dom("the executed line has no value"),
-    .cmd(c) => dom("the executed line has no value"),
-    .header(h) => dom("the executed line has no value"),
-    .fassign(s) => dom("the executed line has no value"),
-    .guard(g) => dom("the executed line has no value"),
-    .eguard(g) => dom("the executed line has no value"),
+    .empty => fail("%value-error", "the executed line has no value"),
+    .elide => fail("%value-error", "the executed line has no value"),
+    .fnend => fail("%value-error", "the executed line has no value"),
+    .cmd(c) => fail("%value-error", "the executed line has no value"),
+    .header(h) => fail("%value-error", "the executed line has no value"),
+    .fassign(s) => fail("%value-error", "the executed line has no value"),
+    .guard(g) => fail("%value-error", "the executed line has no value"),
+    .eguard(g) => fail("%value-error", "the executed line has no value"),
     _ => evalAst(t, env),
   }
 };
@@ -1848,7 +1849,7 @@ func execStmts(ss: List<parse.Ast>, env: Env) -> Ev {
       (h2, t2) => match runStmt(h, env) { (out, env2) => execStmts(t, pushOut(env2, out)), },
       _ => execAst(h, env),
     },
-    _ => dom("the executed line has no value"),
+    _ => fail("%value-error", "the executed line has no value"),
   }
 };
 // --- matrix divide (D-90): Gauss-Jordan with partial pivoting over reals -----------------------------
@@ -2154,15 +2155,27 @@ func evalParts(ixs: List<parse.Ast>, x: array.Arr, env: Env, acc: List<List<@>>,
       },
       _ => match evalAst(ix, env) {
         .err(e) => Parts.err(e),
-        .ok(r) => match r { (iv, env2) => if iv.kind != 1 { Parts.err(EErr( tag: "%domain-error", hint: "indices are non-negative integers" )) }
-          else { evalParts(rest, x, env2, (shiftIo(array.vals(iv), env2.io), acc), array.catL(shp, array.shape(iv))) }, },
+        .ok(r) => match r { (iv, env2) => evalParts(rest, x, env2, (partVals(iv, env2.io), acc), array.catL(shp, array.shape(iv))), },
       },
     },
     _ => Parts.ok((revLL(acc, ~), shp, env)),
   }
 };
+// an index part as 0-based positions, checked later in GNU APL's order (rank, then domain, then
+// range):  an integer of either sign or a whole real is a position, so one outside the axis is an
+// INDEX ERROR;  a fraction, a character or a box marks the part with badIx, a DOMAIN ERROR
+func partVals(iv: array.Arr, io: @) -> List<@> {
+  if iv.kind == 1 or iv.kind == 2 { shiftIo(array.vals(iv), io) }
+  else if iv.kind == 3 { shiftIo(array.turnL(array.vals(iv), wholeIx), io) }
+  else { array.turnL(array.vals(iv), lambda (v: @) -> @ { badIx() }) }
+};
+func badIx() -> @ { two64() + 1 };
+// a whole real as a natural (exact at any size), a negative one past every axis, a fraction badIx
+func wholeIx(x: @) -> @ { if not wholeOrNeg(x) { badIx() } else if array.realIsNeg(x) { two64() } else { sMag(array.rtoi(100, x)) } };
+func wholeOrNeg(x: @) -> Bool { array.finite(x) and floorReal(x) == x };
+func anyBad(parts: List<List<@>>) -> Bool { match parts { (p, rest) => if array.anyL(p, lambda (i: @) -> Bool { i == badIx() }) { true } else { anyBad(rest) }, _ => false, } };
 func shiftIo(xs: List<@>, io: @) -> List<@> { array.revL(shiftAcc(xs, io, ~), ~) };
-func shiftAcc(xs: List<@>, io: @, acc: List<@>) -> List<@> { match xs { (h, t) => shiftAcc(t, io, ((if h < io { 4294967295 } else { h - io }), acc)), _ => acc, } };
+func shiftAcc(xs: List<@>, io: @, acc: List<@>) -> List<@> { match xs { (h, t) => shiftAcc(t, io, ((if h >= two64() { h } else if h < io { 4294967295 } else { h - io }), acc)), _ => acc, } };
 func inBounds(parts: List<List<@>>, shp: List<@>) -> Bool {
   match parts { (p, rest) => match shp { (d, ds) => array.allL(p, lambda (i: @) -> Bool { i < d }) and inBounds(rest, ds), _ => false, }, _ => true, }
 };
@@ -2197,6 +2210,7 @@ func headOr0(xs: List<@>) -> @ { match xs { (h, t) => h, _ => 0, } };
 func indexed(x: array.Arr, parts: List<List<@>>, rshp: List<@>, env: Env) -> Ev {
   let shp = array.shape(x);
   if array.countLL(parts) != array.count(shp) { fail("%rank-error", "the number of indices is the rank") }
+  else if anyBad(parts) { dom("indices are whole numbers") }
   else if not inBounds(parts, shp) { fail("%index-error", "index out of range") }
   else if array.isBox(x) { okv(array.regather(x, mk(1, rshp, gatherAt(array.vals(x), positions(parts, shp)))), env) }
   else { okv(mk(x.kind, rshp, gatherAt(array.vals(x), positions(parts, shp))), env) }
@@ -2204,6 +2218,7 @@ func indexed(x: array.Arr, parts: List<List<@>>, rshp: List<@>, env: Env) -> Ev 
 func assignAt(x0: array.Arr, parts: List<List<@>>, v0: array.Arr, env: Env) -> Ev {
   let shp = array.shape(x0);
   if array.countLL(parts) != array.count(shp) { fail("%rank-error", "the number of indices is the rank") }
+  else if anyBad(parts) { dom("indices are whole numbers") }
   else if not inBounds(parts, shp) { fail("%index-error", "index out of range") }
   else if array.isBox(x0) or array.isBox(v0) or ((x0.kind == 4) != (v0.kind == 4)) { assignItems(x0, parts, v0, env) }
   else {
@@ -3056,8 +3071,7 @@ func partsOf(parts: List<Part>, x: array.Arr, env: Env, acc: List<List<@>>, shp:
       },
       .ev(e) => match e {
         .err(x2) => Parts.err(x2),
-        .ok(r) => match r { (iv, env2) => if iv.kind != 1 { Parts.err(EErr( tag: "%domain-error", hint: "indices are non-negative integers" )) }
-          else { partsOf(rest, x, env, (shiftIo(array.vals(iv), env.io), acc), array.catL(shp, array.shape(iv))) }, },
+        .ok(r) => match r { (iv, env2) => partsOf(rest, x, env, (partVals(iv, env.io), acc), array.catL(shp, array.shape(iv))), },
       },
     },
     _ => Parts.ok((revLL(acc, ~), shp, env)),
