@@ -1,0 +1,48 @@
+⍝ from GNU APL Encode.tc (GPLv3, tests/gnu/README.md)
+🍎> 2 2 2 2⊤15
+⍝ expect: 1 1 1 1
+🍎> 24 60 60⊤8592
+⍝ expect: 2 23 12
+🍎> 2 2 2 2⊤15
+⍝ expect: 1 1 1 1
+🍎> 10⊥2 2 2 2⊤15
+⍝ expect: 1111
+🍎> 2 2 2 2 2⊤15
+⍝ expect: 0 1 1 1 1
+🍎> 2 2 2⊤15
+⍝ expect: 1 1 1
+🍎> ((⌊1+2⍟135)⍴2)⊤135
+⍝ expect: 1 0 0 0 0 1 1 1
+🍎> 24 60 60⊤162507
+⍝ expect: 21 8 27
+🍎> 0 24 60 60⊤162507
+⍝ expect: 1 21 8 27
+🍎> 10 10 10⊤215 345 7
+⍝ expect: 2 3 0
+⍝ expect: 1 4 0
+⍝ expect: 5 5 7
+🍎> L←4 2⍴8 2
+🍎> L
+⍝ expect: 8 2
+⍝ expect: 8 2
+⍝ expect: 8 2
+⍝ expect: 8 2
+🍎> L⊤15
+⍝ expect: 0 1
+⍝ expect: 0 1
+⍝ expect: 1 1
+⍝ expect: 7 1
+🍎> 2⊤[4] 13
+⍝ expect: 1 1 0 1
+🍎> 2⊥1 1 0 1
+⍝ expect: 13
+🍎> 2⊤[5] ¯13
+⍝ expect: 1 0 0 1 1
+🍎> 32 - 2⊥1 0 0 1 1
+⍝ expect: 13
+🍎> 2⊤[0] 13
+⍝ expect: 1 1 0 1
+🍎> 2⊤[0] ¯13
+⍝ expect: 1 0 0 1 1
+🍎> 1⊤2
+⍝ expect: 0

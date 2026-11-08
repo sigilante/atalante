@@ -1,0 +1,35 @@
+⍝ from GNU APL OperPower.tc (GPLv3, tests/gnu/README.md)
+🍎> PLUS  ← { ⍺ + ⍵ }
+🍎> EQUIV ← { ⍺ ≡ ⍵ }
+🍎> EQUAL ← { ⍺ = ⍵ }
+⍝ skipped (glyph ⍣): 2 (+ ⍣ 40) 5
+⍝ skipped (glyph ⍣): 2 + ⍣ 40 5
+⍝ skipped (glyph ⍣): 2 (PLUS ⍣ 40) 5
+⍝ skipped (glyph ⍣): 2 PLUS ⍣ 40 5
+⍝ skipped (glyph ⍣): ({2+⍵÷2}⍣≡) 9
+⍝ skipped (glyph ⍣): ({2+⍵÷2}⍣=) 9
+⍝ skipped (glyph ⍣): ({2+⍵÷2}⍣EQUIV) 9
+⍝ skipped (glyph ⍣): ({2+⍵÷2}⍣EQUAL) 9
+⍝ skipped (glyph ⍣): 2 (+ ⍣ 40) 5
+⍝ skipped (glyph ⍣): 2 (+ ⍣ ¯40) 85
+⍝ skipped (glyph ⍣): 2 (- ⍣ ¯40) 5
+⍝ skipped (glyph ⍣): 2 (- ⍣ ¯40) 5
+⍝ skipped (glyph ⍣): 3(×⍣4)2
+⍝ skipped (system name ⎕RL): ⎕RL ← 1
+⍝ skipped (system name ⎕): Stupid ← {? ⍺ + ⍵ ⊣ ⎕←'⍺=',(⍕⍺),' ⍵=',⍕⍵}
+⍝ skipped (glyph ⍣): 10 (Stupid ⍣ <) 20
+⍝ skipped (system name ⎕RL): ⎕RL ← 1
+⍝ skipped (glyph ⍣): 10 Stupid ⍣ < 20
+⍝ skipped (glyph ⍣): 2 (×⍣3) 2
+⍝ skipped (glyph ⍣): 2×⍣3 ⊢2
+⍝ skipped (glyph ⍣): {1+÷⍵}⍣2 ⊢ 2
+⍝ skipped (glyph ⍣): +/⍣2⊢1 2 3
+⍝ skipped (glyph ⍣): (+/)⍣2⊢1 2 3
+🍎> M←2 3⍴⍳6 ⋄ N←2
+⍝ skipped (glyph ⍣): (⌽[1]⍣3)M
+⍝ skipped (glyph ⍣): (⌽[1]⍣N)M
+⍝ skipped (glyph ⍣): (⌽[1]⍣(N))M
+⍝ skipped (glyph ⍣): (⌽[1]⍣(2))M
+⍝ skipped (glyph ⍤): ⌽[1]⍤N ⊢M
+🍎> )ERASE M N
+⍝ skipped (system command): )CHECK BRIEF

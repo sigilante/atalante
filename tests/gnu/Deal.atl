@@ -1,0 +1,19 @@
+⍝ from GNU APL Deal.tc (GPLv3, tests/gnu/README.md)
+🍎> ⎕IO←1
+⍝ skipped (system name ⎕RL): ⎕RL←100000
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+🍎> 5?10
+⍝ expect: 7 9 1 4 6
+⍝ skipped (system name ⎕RL): ⎕RL
+🍎> 10?10
+⍝ expect: 3 4 5 1 8 6 7 2 10 9
+⍝ skipped (user command): ]FILE_CTL NO_SKIP
+🍎> ⎕IO←0
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+🍎> 5?10
+⍝ expect: 5 4 6 0 9
+⍝ skipped (system name ⎕RL): ⎕RL
+🍎> 10?10
+⍝ expect: 3 6 5 8 2 4 1 9 7 0
+⍝ skipped (user command): ]FILE_CTL NO_SKIP
+🍎> ⎕IO←1

@@ -1,0 +1,7 @@
+⍝ from GNU APL Floor.tc (GPLv3, tests/gnu/README.md)
+🍎> ⌊2.3
+⍝ expect: 2
+🍎> ⌊¯2.7 3 0.5
+⍝ expect: ¯3 3 0
+⍝ skipped (complex numbers): ⌊1.5J2.5
+⍝ skipped (complex numbers): ⌊1J2 1.2J2.5 ¯1.2J¯2.5

@@ -1,0 +1,156 @@
+⍝ from GNU APL Reshape.tc (GPLv3, tests/gnu/README.md)
+🍎> Z←2 3 4⍴⍳24
+🍎> Z
+⍝ expect:  1  2  3  4
+⍝ expect:  5  6  7  8
+⍝ expect:  9 10 11 12
+⍝ expect: 
+⍝ expect: 13 14 15 16
+⍝ expect: 17 18 19 20
+⍝ expect: 21 22 23 24
+🍎> ⍴Z
+⍝ expect: 2 3 4
+🍎> ⍴⍴Z
+⍝ expect: 3
+🍎> X←3 8⍴Z
+🍎> X
+⍝ expect:  1  2  3  4  5  6  7  8
+⍝ expect:  9 10 11 12 13 14 15 16
+⍝ expect: 17 18 19 20 21 22 23 24
+🍎> ⍴X
+⍝ expect: 3 8
+🍎> ⍴⍴X
+⍝ expect: 2
+🍎> 3 5⍴⍳24
+⍝ expect:  1  2  3  4  5
+⍝ expect:  6  7  8  9 10
+⍝ expect: 11 12 13 14 15
+🍎> B←'UP' 'ON' 'TO' 'BY'
+🍎> Y←2 3⍴B
+🍎> Y
+⍝ expect:  UP ON TO 
+⍝ expect:  BY UP ON 
+🍎> 5⍴B
+⍝ expect:  UP ON TO BY UP 
+🍎> Z←2 3 4⍴⍳24
+🍎> Z
+⍝ expect:  1  2  3  4
+⍝ expect:  5  6  7  8
+⍝ expect:  9 10 11 12
+⍝ expect: 
+⍝ expect: 13 14 15 16
+⍝ expect: 17 18 19 20
+⍝ expect: 21 22 23 24
+🍎> ⍴Z
+⍝ expect: 2 3 4
+🍎> ⍴⍴Z
+⍝ expect: 3
+🍎> X←3 8⍴Z
+🍎> X
+⍝ expect:  1  2  3  4  5  6  7  8
+⍝ expect:  9 10 11 12 13 14 15 16
+⍝ expect: 17 18 19 20 21 22 23 24
+🍎> ⍴X
+⍝ expect: 3 8
+🍎> ⍴⍴X
+⍝ expect: 2
+🍎> S←0 2⍴⍳0
+🍎> S
+🍎> ⍴S
+⍝ expect: 0 2
+🍎> V←5 6 7
+🍎> ⍴V
+⍝ expect: 3
+🍎> ⍴⍴V
+⍝ expect: 1
+🍎> H←(⍳0)⍴V
+🍎> H
+⍝ expect: 5
+🍎> ⍴H
+🍎> ⍴⍴H
+⍝ expect: 0
+🍎> H←''⍴V
+🍎> H
+⍝ expect: 5
+🍎> ⍴H
+🍎> ⍴⍴H
+⍝ expect: 0
+🍎> M←3 0⍴0
+🍎> ⍴M
+⍝ expect: 3 0
+🍎> ⍴⍴M
+⍝ expect: 2
+🍎> N←2 0 6⍴5 3 2 1
+🍎> ⍴N
+⍝ expect: 2 0 6
+🍎> ⍴⍴N
+⍝ expect: 3
+🍎> ¯1⍴1
+⍝ refuse: %domain-error
+⍝ skipped (branch): →
+🍎> T←'GROWTH'
+🍎> (2 3⍴T)←2 3⍴-⍳6
+🍎> T
+⍝ expect: ¯1 ¯2 ¯3 ¯4 ¯5 ¯6
+🍎> (4⍴T)←'ABCD'
+🍎> T
+⍝ expect: ABCD ¯5 ¯6
+🍎> (8⍴T)←⍳8
+🍎> T
+⍝ expect: 7 8 3 4 5 6
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+🍎> ⍴ 10000000 100000000000000 0⍴42
+⍝ expect: 10000000 100000000000000 0
+🍎> 0 = ≢, 10000000 100000000000000 0⍴42
+⍝ expect: 1
+⍝ skipped (user command): ]FILE_CTL NO_SKIP
+🍎> ¯1⍴0,0
+⍝ refuse: %domain-error
+⍝ skipped (system command): )SIC
+🍎> Z←'2'⍴5
+⍝ refuse: %domain-error
+⍝ skipped (system name ⎕EM): ⎕EM
+🍎> Z←'2'⍴5
+⍝ skipped (system name ⎕ET): ⎕ET
+⍝ skipped (system command): )SIC
+🍎> Z←2.5⍴5
+⍝ refuse: %domain-error
+⍝ skipped (system command): )SIC
+⍝ skipped (complex numbers): Z←2J1⍴5
+⍝ skipped (system command): )SIC
+⍝ skipped (system name ⎕FX): ⎕FX 'ZZ32F' 'Z←''2''⍴5' 'Z←1'
+⍝ skipped (system name ⎕NC): ⎕NC 'ZZ32F'
+🍎> ZZ32F 5
+⍝ refuse: %domain-error
+⍝ skipped (system command): )SIC
+🍎> M←2 2⍴⍳4
+🍎> Z←(⊂1)↑M
+⍝ refuse: %length-error
+⍝ skipped (system command): )SIC
+🍎> Z←(⊂1 2)↑M
+⍝ refuse: %domain-error
+⍝ skipped (system command): )SIC
+🍎> ≡⊂1
+⍝ expect: 0
+🍎> ⍴0 ¯2⍴0
+⍝ refuse: %domain-error
+⍝ skipped (system command): )SIC
+🍎> ⍴0 ¯2 3⍴0
+⍝ refuse: %domain-error
+⍝ skipped (system command): )SIC
+🍎> A←0 ¯2 ⋄ ⍴A⍴0
+⍝ refuse: %domain-error
+🍎> ⍴A⍴0
+⍝ skipped (system command): )SIC
+⍝ skipped (glyph ⍤): (⌈/⍤1)0 ¯2⍴0
+⍝ skipped (system command): )SIC
+🍎> Z←1 0/0 ¯2⍴0
+⍝ refuse: %domain-error
+⍝ skipped (system command): )SIC
+🍎> Z←1/0 ¯2⍴0
+⍝ refuse: %domain-error
+⍝ skipped (system command): )SIC
+🍎> 'session still alive'
+⍝ expect: session still alive
+🍎> )ERASE A
+🍎> )ERASE M Z

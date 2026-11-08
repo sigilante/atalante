@@ -1,0 +1,11 @@
+⍝ from GNU APL Exponential.tc (GPLv3, tests/gnu/README.md)
+🍎> ⋆1
+⍝ expect: 2.718281828
+🍎> *0
+⍝ expect: 1
+⍝ skipped (complex numbers): *0J1
+⍝ skipped (complex numbers): *○0J1
+⍝ skipped (complex numbers): 1⋆1J1
+⍝ skipped (complex numbers): 2⋆1J1
+⍝ skipped (complex numbers): 1J1⋆1
+⍝ skipped (complex numbers): 2J2⋆2

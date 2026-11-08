@@ -1,0 +1,273 @@
+⍝ from GNU APL Bracket_Index.tc (GPLv3, tests/gnu/README.md)
+🍎> LANG←'APPLE PIE'
+🍎> LANG[1 7 4]
+⍝ expect: APL
+🍎> M1←2 2⍴⍳4
+🍎> M1[;2]
+⍝ expect: 2 4
+🍎> ⎕IO←1
+🍎> 'CURTAIL'[1 2 4]
+⍝ expect: CUT
+🍎> ⎕IO←0
+🍎> 'CURTAIL'[0 1 3]
+⍝ expect: CUT
+🍎> ⎕IO←1
+🍎> A←23 9 6.3 8 ¯3 7
+🍎> Z←A[3]
+🍎> Z
+⍝ expect: 6.3
+🍎> ⍴Z
+🍎> Z←A[2 5 1]
+🍎> Z
+⍝ expect: 9 ¯3 23
+🍎> ⍴Z
+⍝ expect: 3
+🍎> B←2 3⍴1 4 3 2 6 5
+🍎> B
+⍝ expect: 1 4 3
+⍝ expect: 2 6 5
+🍎> ⍴B
+⍝ expect: 2 3
+🍎> Q←A[B]
+🍎> Q
+⍝ expect: 23 8  6.3
+⍝ expect:  9 7 ¯3
+🍎> ⍴Q
+⍝ expect: 2 3
+⍝ skipped (system name ⎕): ⎕←C←3 6⍴'ABCDEFGHIJKLMNOPQR'
+🍎> J←C[2;3]
+🍎> J
+⍝ expect: I
+🍎> ⍴J
+🍎> P←C[1;3 1 4]
+🍎> P
+⍝ expect: CAD
+🍎> ⍴P
+⍝ expect: 3
+🍎> M←C[1 2;1 3]
+🍎> M
+⍝ expect: AC
+⍝ expect: GI
+🍎> ⍴M
+⍝ expect: 2 2
+🍎> N←C[1 3;2 3⍴6 1 3 4 5 2]
+🍎> N
+⍝ expect: FAC
+⍝ expect: DEB
+⍝ expect: 
+⍝ expect: RMO
+⍝ expect: PQN
+🍎> ⍴N
+⍝ expect: 2 2 3
+🍎> D←3 4⍴C[1 2;]
+🍎> D
+⍝ expect: ABCD
+⍝ expect: EFGH
+⍝ expect: IJKL
+🍎> D[;1]
+⍝ expect: AEI
+🍎> D[3;]
+⍝ expect: IJKL
+🍎> 1 2 3[]
+⍝ refuse: %rank-error
+🍎> H←2 4⍴3 4 1 2 2 3 4 1
+🍎> H
+⍝ expect: 3 4 1 2
+⍝ expect: 2 3 4 1
+🍎> 'EMIT'[H]
+⍝ expect: ITEM
+⍝ expect: MITE
+🍎> 'NAB'[3 2 1 2 1 2]
+⍝ expect: BANANA
+🍎> U←2 3 4⍴(,C),'STUVWX'
+🍎> U
+⍝ expect: ABCD
+⍝ expect: EFGH
+⍝ expect: IJKL
+⍝ expect: 
+⍝ expect: MNOP
+⍝ expect: QRST
+⍝ expect: UVWX
+🍎> U[1;2;4]
+⍝ expect: H
+🍎> U[2;1;1 3 4]
+⍝ expect: MOP
+🍎> U[;2;4]
+⍝ expect: HT
+🍎> U[1;1 3;2 4]
+⍝ expect: BD
+⍝ expect: JL
+🍎> U[1;;3]
+⍝ expect: CGK
+🍎> U[2;1;]
+⍝ expect: MNOP
+🍎> U[;3;]
+⍝ expect: IJKL
+⍝ expect: UVWX
+🍎> V←'H' 'HI' ('HIM' 'HIS')
+🍎> Z←V[1]
+🍎> Z
+⍝ expect: H
+🍎> ≡Z
+⍝ expect: 0
+🍎> ⍴⍴Z
+⍝ expect: 0
+🍎> E←V[2]
+🍎> E
+⍝ expect:  HI 
+🍎> ≡E
+⍝ expect: 2
+🍎> S←V[3]
+🍎> S
+⍝ expect:   HIM HIS  
+🍎> ≡S
+⍝ expect: 3
+🍎> ⍴⍴S
+⍝ expect: 0
+🍎> ⍴V
+⍝ expect: 3
+🍎> ≡V
+⍝ expect: 3
+🍎> V[3]←'H'
+🍎> V
+⍝ expect:  H HI H 
+🍎> ≡V
+⍝ expect: 2
+🍎> W←2 3⍴'ABCDEF'
+🍎> W[1;1 3]←8 9
+🍎> W
+⍝ expect: 8 B 9
+⍝ expect: D E F
+🍎> B←3 4 5
+🍎> B[]←9
+🍎> B
+⍝ expect: 9 9 9
+🍎> V←⍳5
+🍎> (V[])←1 2 3
+⍝ refuse: %length-error
+⍝ skipped (system command): )SIC
+🍎> ⍴V
+⍝ expect: 5
+🍎> V←⍳5
+🍎> (V[])←1 2 3 4 5
+🍎> V
+⍝ expect: 1 2 3 4 5
+🍎> V←⍳5
+⍝ skipped (glyph ⍬): (V[⍬])←1 2 3
+🍎> ⍴V
+⍝ expect: 5
+🍎> A←5 ⋄ (A[])←,9 ⋄ A ⋄ ≡A
+⍝ expect: 9
+⍝ expect: 0
+🍎> M←2 2⍴⍳4 ⋄ (M[1;1])←,9 ⋄ M[1;1] ⋄ ≡M[1;1]
+⍝ expect: 9
+⍝ expect: 0
+🍎> V←1 2 3 ⋄ (V[1])←,9 ⋄ V ⋄ ≡V
+⍝ expect: 9 2 3
+⍝ expect: 1
+🍎> V←1 2 3 ⋄ (V[1])←9 ⋄ V
+⍝ expect: 9 2 3
+🍎> V←1 2 3 ⋄ (1↑V)←,9 ⋄ V
+⍝ expect: 9 2 3
+🍎> V←1 2 3 ⋄ (V[1 2])←,9 ⋄ V
+⍝ expect: 9 9 3
+🍎> V←1 2 3 ⋄ (0⌽V)←9 ⋄ V
+⍝ expect: 9 9 9
+🍎> V←1 2 3 ⋄ (0⌽V)←9 9
+⍝ refuse: %length-error
+🍎> (0⌽V)←9 9
+⍝ skipped (system command): )SIC
+🍎> V←5 ⋄ (⌽V)←9 9
+⍝ refuse: %length-error
+🍎> (⌽V)←9 9
+⍝ skipped (system command): )SIC
+🍎> M←2 3⍴⍳6 ⋄ (1 2⍉M)←9 ⋄ M
+⍝ expect: 9 9 9
+⍝ expect: 9 9 9
+🍎> V←1 2 3 ⋄ (V[])←9 ⋄ V
+⍝ expect: 9 9 9
+🍎> V←1 2 3 ⋄ (0↓V)←9 ⋄ V
+⍝ expect: 9 9 9
+🍎> M←2 3⍴⍳6 ⋄ (1 2⍉M)←2 3⍴9 ⋄ M
+⍝ expect: 9 9 9
+⍝ expect: 9 9 9
+⍝ skipped (system command): )CHECK
+🍎> (1 1⍴0)[0;]
+⍝ refuse: %index-error
+⍝ skipped (branch): →
+🍎> A ← 'ZIPPITY' 'DOO' 'DAH'
+🍎> (∊A[2]) ← 0
+🍎> A
+⍝ expect:  ZIPPITY  0 0 0  DAH 
+🍎> ⊢ A ← 3 4⍴'ZIPPITY' 'DOO' 'DAH'
+⍝ expect:  ZIPPITY DOO     DAH     ZIPPITY 
+⍝ expect:  DOO     DAH     ZIPPITY DOO     
+⍝ expect:  DAH     ZIPPITY DOO     DAH     
+🍎> ⊢ A[1 2;2 3]
+⍝ expect:  DOO DAH     
+⍝ expect:  DAH ZIPPITY 
+🍎> (∊A[1 2;2 3])←1
+🍎> A
+⍝ expect:  ZIPPITY  1 1 1    1 1 1          ZIPPITY 
+⍝ expect:  DOO      1 1 1    1 1 1 1 1 1 1  DOO     
+⍝ expect:  DAH      ZIPPITY  DOO            DAH     
+🍎> (∊A[1 2;2 3])←⍳16
+🍎> A
+⍝ expect:  ZIPPITY  1 2 3    4 5 6                 ZIPPITY 
+⍝ expect:  DOO      7 8 9    10 11 12 13 14 15 16  DOO     
+⍝ expect:  DAH      ZIPPITY  DOO                   DAH     
+⍝ skipped (system command): )CHECK
+⍝ skipped (operator header): ∇Z←(LO oper RO) B
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+⍝ skipped (operator header): ∇Z←(LO opex RO) [X] B
+⍝ skipped (user command): ]FILE_CTL NO_SKIP
+🍎> 1 oper 'xyz' [2] 3
+⍝ expect: y 3
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+🍎> 1 opex 'xyz' [2] 3
+⍝ expect: y 0 3
+⍝ skipped (user command): ]FILE_CTL NO_SKIP
+🍎> T←4 4⍴⍳16
+🍎> ∇ Z←BUGS6_5_FOO
+	Z←UNDEFVAR_BUGS6_5[1;2]
+	∇
+🍎> BUGS6_5_FOO
+⍝ refuse: %value-error
+⍝ skipped (system command): )SIC
+🍎> BUGS6_5_FOO
+⍝ refuse: %value-error
+⍝ skipped (system command): )SIC
+🍎> BUGS6_5_FOO
+⍝ refuse: %value-error
+⍝ skipped (system command): )SIC
+🍎> ∇ Z←BUGS6_5_BAR
+	Z←T[1;2]
+	∇
+🍎> BUGS6_5_BAR
+⍝ expect: 2
+🍎> BUGS6_5_BAR
+⍝ expect: 2
+⍝ skipped (system command): )CHECK
+⍝ skipped (system name ⎕EX): ⎕EX 'BUGS6_5_FOO'
+⍝ skipped (system name ⎕EX): ⎕EX 'BUGS6_5_BAR'
+🍎> ⌽[2.0](2 2⍴⍳4)
+⍝ expect: 2 1
+⍝ expect: 4 3
+🍎> (1 2 3)[2.0]
+⍝ expect: 2
+⍝ skipped (complex numbers): (1 2 3)[1J0]
+⍝ skipped (complex numbers): 1↑[1J0](2 2⍴⍳4)
+🍎> ⌽[1E10](2 2⍴⍳4)
+⍝ refuse: %axis-error
+🍎> ⌽[10000000000](2 2⍴⍳4)
+⍝ skipped (system command): )SIC
+🍎> (1 2 3)[1E30]
+⍝ refuse: %index-error
+⍝ skipped (system command): )MORE
+⍝ skipped (system command): )SIC
+⍝ skipped (system name ⎕FX): ⎕FX 'Z←FOO' 'Z←(1 2 3)[1E30]'
+🍎> FOO
+⍝ refuse: %index-error
+⍝ skipped (system command): )MORE
+⍝ skipped (system command): )SIC
+⍝ skipped (system name ⎕EX): ⎕EX 'FOO'

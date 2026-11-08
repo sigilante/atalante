@@ -1,0 +1,44 @@
+⍝ from GNU APL Member.tc (GPLv3, tests/gnu/README.md)
+🍎> 1∊1 2 3
+⍝ expect: 1
+🍎> 1∈1 2 3
+⍝ expect: 1
+🍎> 1∊1 2 3
+⍝ expect: 1
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+⍝ skipped (system name ⎕UCS): ⎕UCS '∊∈∊'
+⍝ skipped (user command): ]FILE_CTL NO_SKIP
+🍎> 'BANANA'∊'AN'
+⍝ expect: 0 1 1 1 1 1
+🍎> 5 1 2∊6 5 4 1 9
+⍝ expect: 1 1 0
+🍎> A←2 3⍴8 3 5 8 4 8
+🍎> A
+⍝ expect: 8 3 5
+⍝ expect: 8 4 8
+🍎> A∊1 8 9 3
+⍝ expect: 1 1 0
+⍝ expect: 1 0 1
+🍎> B←'AH' 'HA' 'AH' 'NO'
+🍎> B
+⍝ expect:  AH HA AH NO 
+🍎> ⍴B
+⍝ expect: 4
+🍎> ≡B
+⍝ expect: 2
+🍎> B∊'AH'
+⍝ expect: 0 0 0 0
+🍎> B∊⊂'AH'
+⍝ expect: 1 0 1 0
+🍎> C←(1 2) (⍳0) (3 4)
+🍎> C
+⍝ expect:  1 2     3 4 
+🍎> ⍴C
+⍝ expect: 3
+🍎> ≡C
+⍝ expect: 2
+🍎> C∊(1 2) (3 5) (⍳0)
+⍝ expect: 1 1 0
+🍎> 8 9 7 3∊⍳0
+⍝ expect: 0 0 0 0
+⍝ skipped (glyph ⍬): ⍬ ∊ 1 2 3

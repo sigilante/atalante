@@ -1,0 +1,213 @@
+⍝ from GNU APL Residue.tc (GPLv3, tests/gnu/README.md)
+🍎> 10∣17
+⍝ expect: 7
+⍝ skipped (complex numbers): 10∣8 10 ¯4 4J3
+⍝ skipped (complex numbers): 4J6∣7J10
+⍝ skipped (complex numbers): ¯10 7J10 0.3∣17 5 10
+🍎> A←¯4 ¯3 ¯2 ¯1 0 1 2 3 4
+🍎> B←A ∘.+ 0 1E¯11 ¯1E¯11
+⍝ skipped (system name ⎕CT): ⎕CT←1E¯9
+🍎> (A ∘.∣ B)
+⍝ expect:  0  0E0    0E0
+⍝ expect: ¯3 ¯3E0   ¯3E0
+⍝ expect: ¯2 ¯2E0   ¯2E0
+⍝ expect: ¯1 ¯1E0   ¯1E0
+⍝ expect:  0 ¯4E0   ¯1E¯11
+⍝ expect: ¯3 ¯3E0   ¯3E0
+⍝ expect: ¯2 ¯2E0   ¯2E0
+⍝ expect: ¯1 ¯1E0   ¯1E0
+⍝ expect:  0  0E0    0E0
+⍝ expect: 
+⍝ expect: ¯1 ¯1E0   ¯1E0
+⍝ expect:  0  0E0    0E0
+⍝ expect: ¯2 ¯2E0   ¯2E0
+⍝ expect: ¯1 ¯1E0   ¯1E0
+⍝ expect:  0 ¯3E0   ¯1E¯11
+⍝ expect: ¯2 ¯2E0   ¯2E0
+⍝ expect: ¯1 ¯1E0   ¯1E0
+⍝ expect:  0  0E0    0E0
+⍝ expect: ¯2 ¯2E0   ¯2E0
+⍝ expect: 
+⍝ expect:  0  0E0    0E0
+⍝ expect: ¯1 ¯1E0   ¯1E0
+⍝ expect:  0  0E0    0E0
+⍝ expect: ¯1 ¯1E0   ¯1E0
+⍝ expect:  0 ¯2E0   ¯1E¯11
+⍝ expect: ¯1 ¯1E0   ¯1E0
+⍝ expect:  0  0E0    0E0
+⍝ expect: ¯1 ¯1E0   ¯1E0
+⍝ expect:  0  0E0    0E0
+⍝ expect: 
+⍝ expect:  0  0E0    0E0
+⍝ expect:  0  0E0    0E0
+⍝ expect:  0  0E0    0E0
+⍝ expect:  0  0E0    0E0
+⍝ expect:  0 ¯1E0   ¯1E¯11
+⍝ expect:  0  0E0    0E0
+⍝ expect:  0  0E0    0E0
+⍝ expect:  0  0E0    0E0
+⍝ expect:  0  0E0    0E0
+⍝ expect: 
+⍝ expect: ¯4 ¯4E0   ¯4E0
+⍝ expect: ¯3 ¯3E0   ¯3E0
+⍝ expect: ¯2 ¯2E0   ¯2E0
+⍝ expect: ¯1 ¯1E0   ¯1E0
+⍝ expect:  0  1E¯11 ¯1E¯11
+⍝ expect:  1  1E0    1E0
+⍝ expect:  2  2E0    2E0
+⍝ expect:  3  3E0    3E0
+⍝ expect:  4  4E0    4E0
+⍝ expect: 
+⍝ expect:  0  0E0    0E0
+⍝ expect:  0  0E0    0E0
+⍝ expect:  0  0E0    0E0
+⍝ expect:  0  0E0    0E0
+⍝ expect:  0  1E¯11  1E0
+⍝ expect:  0  0E0    0E0
+⍝ expect:  0  0E0    0E0
+⍝ expect:  0  0E0    0E0
+⍝ expect:  0  0E0    0E0
+⍝ expect: 
+⍝ expect:  0  0E0    0E0
+⍝ expect:  1  1E0    1E0
+⍝ expect:  0  0E0    0E0
+⍝ expect:  1  1E0    1E0
+⍝ expect:  0  1E¯11  2E0
+⍝ expect:  1  1E0    1E0
+⍝ expect:  0  0E0    0E0
+⍝ expect:  1  1E0    1E0
+⍝ expect:  0  0E0    0E0
+⍝ expect: 
+⍝ expect:  2  2E0    2E0
+⍝ expect:  0  0E0    0E0
+⍝ expect:  1  1E0    1E0
+⍝ expect:  2  2E0    2E0
+⍝ expect:  0  1E¯11  3E0
+⍝ expect:  1  1E0    1E0
+⍝ expect:  2  2E0    2E0
+⍝ expect:  0  0E0    0E0
+⍝ expect:  1  1E0    1E0
+⍝ expect: 
+⍝ expect:  0  0E0    0E0
+⍝ expect:  1  1E0    1E0
+⍝ expect:  2  2E0    2E0
+⍝ expect:  3  3E0    3E0
+⍝ expect:  0  1E¯11  4E0
+⍝ expect:  1  1E0    1E0
+⍝ expect:  2  2E0    2E0
+⍝ expect:  3  3E0    3E0
+⍝ expect:  0  0E0    0E0
+⍝ skipped (system name ⎕CT): ⎕CT←1E¯13
+🍎> A ∘.∣ B
+⍝ expect:  0 ¯4.000000000E0   ¯1.000000083E¯11
+⍝ expect: ¯3 ¯3.000000000E0   ¯3.000000000E0
+⍝ expect: ¯2 ¯2.000000000E0   ¯2.000000000E0
+⍝ expect: ¯1 ¯1.000000000E0   ¯1.000000000E0
+⍝ expect:  0 ¯4.000000000E0   ¯1.000000000E¯11
+⍝ expect: ¯3 ¯3.000000000E0   ¯3.000000000E0
+⍝ expect: ¯2 ¯2.000000000E0   ¯2.000000000E0
+⍝ expect: ¯1 ¯1.000000000E0   ¯1.000000000E0
+⍝ expect:  0 ¯4.000000000E0   ¯1.000000083E¯11
+⍝ expect: 
+⍝ expect: ¯1 ¯1.000000000E0   ¯1.000000000E0
+⍝ expect:  0 ¯3.000000000E0   ¯1.000000083E¯11
+⍝ expect: ¯2 ¯2.000000000E0   ¯2.000000000E0
+⍝ expect: ¯1 ¯1.000000000E0   ¯1.000000000E0
+⍝ expect:  0 ¯3.000000000E0   ¯1.000000000E¯11
+⍝ expect: ¯2 ¯2.000000000E0   ¯2.000000000E0
+⍝ expect: ¯1 ¯1.000000000E0   ¯1.000000000E0
+⍝ expect:  0 ¯3.000000000E0   ¯1.000000083E¯11
+⍝ expect: ¯2 ¯2.000000000E0   ¯2.000000000E0
+⍝ expect: 
+⍝ expect:  0 ¯2.000000000E0   ¯1.000000083E¯11
+⍝ expect: ¯1 ¯1.000000000E0   ¯1.000000000E0
+⍝ expect:  0 ¯2.000000000E0   ¯1.000000083E¯11
+⍝ expect: ¯1 ¯1.000000000E0   ¯1.000000000E0
+⍝ expect:  0 ¯2.000000000E0   ¯1.000000000E¯11
+⍝ expect: ¯1 ¯1.000000000E0   ¯1.000000000E0
+⍝ expect:  0 ¯2.000000000E0   ¯1.000000083E¯11
+⍝ expect: ¯1 ¯1.000000000E0   ¯1.000000000E0
+⍝ expect:  0 ¯2.000000000E0   ¯1.000000083E¯11
+⍝ expect: 
+⍝ expect:  0 ¯1.000000000E0   ¯1.000000083E¯11
+⍝ expect:  0 ¯1.000000000E0   ¯1.000000083E¯11
+⍝ expect:  0 ¯1.000000000E0   ¯1.000000083E¯11
+⍝ expect:  0 ¯1.000000000E0   ¯1.000000083E¯11
+⍝ expect:  0 ¯1.000000000E0   ¯1.000000000E¯11
+⍝ expect:  0 ¯1.000000000E0   ¯1.000000083E¯11
+⍝ expect:  0 ¯1.000000000E0   ¯1.000000083E¯11
+⍝ expect:  0 ¯1.000000000E0   ¯1.000000083E¯11
+⍝ expect:  0 ¯1.000000000E0   ¯1.000000083E¯11
+⍝ expect: 
+⍝ expect: ¯4 ¯4.000000000E0   ¯4.000000000E0
+⍝ expect: ¯3 ¯3.000000000E0   ¯3.000000000E0
+⍝ expect: ¯2 ¯2.000000000E0   ¯2.000000000E0
+⍝ expect: ¯1 ¯1.000000000E0   ¯1.000000000E0
+⍝ expect:  0  1.000000000E¯11 ¯1.000000000E¯11
+⍝ expect:  1  1.000000000E0    1.000000000E0
+⍝ expect:  2  2.000000000E0    2.000000000E0
+⍝ expect:  3  3.000000000E0    3.000000000E0
+⍝ expect:  4  4.000000000E0    4.000000000E0
+⍝ expect: 
+⍝ expect:  0  1.000000083E¯11  1.000000000E0
+⍝ expect:  0  1.000000083E¯11  1.000000000E0
+⍝ expect:  0  1.000000083E¯11  1.000000000E0
+⍝ expect:  0  1.000000083E¯11  1.000000000E0
+⍝ expect:  0  1.000000000E¯11  1.000000000E0
+⍝ expect:  0  1.000000083E¯11  1.000000000E0
+⍝ expect:  0  1.000000083E¯11  1.000000000E0
+⍝ expect:  0  1.000000083E¯11  1.000000000E0
+⍝ expect:  0  1.000000083E¯11  1.000000000E0
+⍝ expect: 
+⍝ expect:  0  1.000000083E¯11  2.000000000E0
+⍝ expect:  1  1.000000000E0    1.000000000E0
+⍝ expect:  0  1.000000083E¯11  2.000000000E0
+⍝ expect:  1  1.000000000E0    1.000000000E0
+⍝ expect:  0  1.000000000E¯11  2.000000000E0
+⍝ expect:  1  1.000000000E0    1.000000000E0
+⍝ expect:  0  1.000000083E¯11  2.000000000E0
+⍝ expect:  1  1.000000000E0    1.000000000E0
+⍝ expect:  0  1.000000083E¯11  2.000000000E0
+⍝ expect: 
+⍝ expect:  2  2.000000000E0    2.000000000E0
+⍝ expect:  0  1.000000083E¯11  3.000000000E0
+⍝ expect:  1  1.000000000E0    1.000000000E0
+⍝ expect:  2  2.000000000E0    2.000000000E0
+⍝ expect:  0  1.000000000E¯11  3.000000000E0
+⍝ expect:  1  1.000000000E0    1.000000000E0
+⍝ expect:  2  2.000000000E0    2.000000000E0
+⍝ expect:  0  1.000000083E¯11  3.000000000E0
+⍝ expect:  1  1.000000000E0    1.000000000E0
+⍝ expect: 
+⍝ expect:  0  1.000000083E¯11  4.000000000E0
+⍝ expect:  1  1.000000000E0    1.000000000E0
+⍝ expect:  2  2.000000000E0    2.000000000E0
+⍝ expect:  3  3.000000000E0    3.000000000E0
+⍝ expect:  0  1.000000000E¯11  4.000000000E0
+⍝ expect:  1  1.000000000E0    1.000000000E0
+⍝ expect:  2  2.000000000E0    2.000000000E0
+⍝ expect:  3  3.000000000E0    3.000000000E0
+⍝ expect:  0  1.000000083E¯11  4.000000000E0
+🍎> A← ¯1E200 ¯1E100 ¯1 ¯1E¯100 ¯1E¯200 0 1E¯200 1E¯100 1 1E100 1E200
+🍎> A∘.|A
+⍝ expect:  0E0   ¯1E100 ¯1 ¯1E¯100 ¯1E¯200 0 0E0    0E0    0 0E0   0E0
+⍝ expect:  0E0    0E0   ¯1 ¯1E¯100 ¯1E¯200 0 0E0    0E0    0 0E0   0E0
+⍝ expect:  0E0    0E0    0 ¯1E¯100 ¯1E¯200 0 0E0    0E0    0 0E0   0E0
+⍝ expect:  0E0    0E0    0  0E0    ¯1E¯200 0 0E0    0E0    0 0E0   0E0
+⍝ expect:  0E0    0E0    0  0E0     0E0    0 0E0    0E0    0 0E0   0E0
+⍝ expect: ¯1E200 ¯1E100 ¯1 ¯1E¯100 ¯1E¯200 0 1E¯200 1E¯100 1 1E100 1E200
+⍝ expect:  0E0    0E0    0  0E0     0E0    0 0E0    0E0    0 0E0   0E0
+⍝ expect:  0E0    0E0    0  0E0     0E0    0 1E¯200 0E0    0 0E0   0E0
+⍝ expect:  0E0    0E0    0  0E0     0E0    0 1E¯200 1E¯100 0 0E0   0E0
+⍝ expect:  0E0    0E0    0  0E0     0E0    0 1E¯200 1E¯100 1 0E0   0E0
+⍝ expect:  0E0    0E0    0  0E0     0E0    0 1E¯200 1E¯100 1 1E100 0E0
+⍝ skipped (complex numbers): 0J1E¯11|1
+⍝ skipped (complex numbers): 3|2.9999999999999J3
+🍎> 7|1E17
+⍝ expect: 5
+🍎> 7|100000000000000000
+⍝ expect: 5
+🍎> (7|1E17) ≡ 7|100000000000000000
+⍝ expect: 1
+🍎> 7|1E15+0.5
+⍝ expect: 6.5

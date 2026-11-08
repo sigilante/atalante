@@ -1,0 +1,9 @@
+⍝ from GNU APL Commute.tc (GPLv3, tests/gnu/README.md)
+⍝ skipped (glyph ⍨): +⍨1 2 3
+⍝ skipped (glyph ⍨): ,⍨1 2 3
+⍝ skipped (glyph ⍨): (∘.≤)⍨1 2 3
+⍝ skipped (glyph ⍨): ∘.≤⍨1 2 3
+🍎> 5 - 4
+⍝ expect: 1
+⍝ skipped (glyph ⍨): 5 -⍨ 4
+⍝ skipped (glyph ⍨): ,⍨[0.5]'foo'

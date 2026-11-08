@@ -1,0 +1,17 @@
+⍝ from GNU APL Logarithm.tc (GPLv3, tests/gnu/README.md)
+🍎> 2⍟256
+⍝ expect: 8
+⍝ skipped (complex numbers): 2⍟0J2
+🍎> 10⍟100 500 1000
+⍝ expect: 2 2.698970004 3
+🍎> 1⍟1
+⍝ refuse: %domain-error
+⍝ skipped (system command): )SIC
+⍝ skipped (complex numbers): ¯2⍟8
+⍝ skipped (complex numbers): ¯2J0⍟8
+⍝ skipped (complex numbers): ¯2⍟8J0
+⍝ skipped (complex numbers): ¯2⍟8J1
+⍝ skipped (complex numbers): ¯1⍟0J1
+🍎> (1+1E¯11)⍟5
+⍝ expect: 1.609437779E11
+⍝ skipped (complex numbers): (1J0+1E¯11)⍟5J0

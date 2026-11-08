@@ -1,0 +1,72 @@
+⍝ from GNU APL Relational_functions.tc (GPLv3, tests/gnu/README.md)
+🍎> 'TRIAL'='TRAIL'
+⍝ expect: 1 1 0 0 1
+🍎> 8 ¯2 6 ¯4 0<0
+⍝ expect: 0 1 0 1 0
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+🍎> L←('IN' 'OUT') (9 5 6) (⊂2 2⍴⍳4)
+🍎> R←('IT' 'BUT') 6       (2 2⍴1 8 5 4)
+⍝ skipped (system name ⎕CR): 4⎕CR  L=R
+⍝ skipped (user command): ]FILE_CTL NO_SKIP
+⍝ skipped (complex numbers): 1 > 0J0
+🍎> 1000000000000000=1000000000000001
+⍝ expect: 1
+🍎> 1E15=1000000000000001
+⍝ expect: 1
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+🍎> 1000000000000000⍳1000000000000001
+⍝ expect: 1
+⍝ skipped (user command): ]FILE_CTL NO_SKIP
+🍎> 1000000000000000=1000000000000000
+⍝ expect: 1
+🍎> 2=3
+⍝ expect: 0
+⍝ skipped (system name ⎕CT): SAVE_CT←⎕CT ⋄ ⎕CT←0
+🍎> SAVE_PP←⎕PP ⋄ ⎕PP←17
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+🍎> 9007199254740993 > 9007199254740992.0
+⍝ expect: 1
+⍝ skipped (user command): ]FILE_CTL NO_SKIP
+🍎> 9007199254740993 < 9007199254740992.0
+⍝ expect: 0
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+🍎> 9007199254740993 = 9007199254740992.0
+⍝ expect: 0
+🍎> 9007199254740993 ≠ 9007199254740992.0
+⍝ expect: 1
+🍎> 9007199254740993 ≤ 9007199254740992.0
+⍝ expect: 0
+⍝ skipped (user command): ]FILE_CTL NO_SKIP
+🍎> 9007199254740993 ≥ 9007199254740992.0
+⍝ expect: 1
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+🍎> 9007199254740993 ⌈ 9007199254740992.0
+⍝ expect: 9007199254740993
+⍝ skipped (user command): ]FILE_CTL NO_SKIP
+🍎> 9007199254740993 ⌊ 9007199254740992.0
+⍝ expect: 9007199254740992
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+🍎> 9007199254740993 ⍳ 9007199254740992.0
+⍝ expect: 2
+⍝ skipped (user command): ]FILE_CTL NO_SKIP
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+🍎> 9007199254740993 ∊ 9007199254740992.0
+⍝ expect: 0
+🍎> 9007199254740992.0 = 9007199254740993
+⍝ expect: 0
+⍝ skipped (complex numbers): 9007199254740993 = 9007199254740992J0
+⍝ skipped (complex numbers): 9007199254740992J0 = 9007199254740993
+⍝ skipped (complex numbers): 9007199254740993 ∊ 9007199254740992J0
+⍝ skipped (complex numbers): ⍋ 9007199254740993 9007199254740992J0
+⍝ skipped (user command): ]FILE_CTL NO_SKIP
+⍝ skipped (complex numbers): 9007199254740993J0 - 9007199254740992J0
+🍎> 9007199254740992 = 9007199254740992.0
+⍝ expect: 1
+⍝ skipped (complex numbers): 9007199254740992 = 9007199254740992J0
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+🍎> 9007199254740993 ⌈ 9007199254740993.0
+⍝ expect: 9007199254740993
+⍝ skipped (user command): ]FILE_CTL NO_SKIP
+⍝ skipped (system name ⎕CT): ⎕CT←SAVE_CT
+🍎> ⎕PP←SAVE_PP
+🍎> )ERASE SAVE_CT SAVE_PP

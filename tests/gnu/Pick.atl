@@ -1,0 +1,189 @@
+⍝ from GNU APL Pick.tc (GPLv3, tests/gnu/README.md)
+🍎> R←'FOUR' 'TO' 'GO'
+🍎> ≡R
+⍝ expect: 2
+🍎> ⎕IO←1
+🍎> Z←2⊃R
+🍎> Z
+⍝ expect: TO
+🍎> ⍴Z
+⍝ expect: 2
+🍎> ≡Z
+⍝ expect: 1
+🍎> ⎕IO←0
+🍎> 1⊃R
+⍝ expect: TO
+🍎> ⎕IO←1
+🍎> A←'S' 'SI' ('SIR' 'SIRE')
+🍎> ≡A
+⍝ expect: 3
+🍎> W←2⊃A
+🍎> W
+⍝ expect: SI
+🍎> ⍴W
+⍝ expect: 2
+🍎> ≡W
+⍝ expect: 1
+🍎> X←3⊃A
+🍎> X
+⍝ expect:  SIR SIRE 
+🍎> ⍴X
+⍝ expect: 2
+🍎> ≡X
+⍝ expect: 2
+🍎> C←2 2⍴'ONE' 'TWO' 'BUCKLE' ('MY' 'SHOE')
+⍝ skipped (system name ⎕CR): 4⎕CR C
+🍎> ⍴C
+⍝ expect: 2 2
+🍎> ≡C
+⍝ expect: 3
+🍎> Y←(⊂2 2)⊃C
+🍎> Y
+⍝ expect:  MY SHOE 
+🍎> ⍴Y
+⍝ expect: 2
+🍎> ≡Y
+⍝ expect: 2
+🍎> D←C,[0.5]2 2⍴'THREE' 'FOUR' 'SHUT' ('THE' 'DOOR')
+⍝ skipped (system name ⎕CR): 4⎕CR D
+🍎> ⍴D
+⍝ expect: 2 2 2
+🍎> ≡D
+⍝ expect: 3
+🍎> Q←(⊂2 1 2)⊃D
+🍎> Q
+⍝ expect: FOUR
+🍎> ⍴Q
+⍝ expect: 4
+🍎> ≡Q
+⍝ expect: 1
+🍎> Q←'FLY' 'PAPER'
+🍎> 2 4⊃Q
+⍝ expect: E
+🍎> S←2 3⍴'AB' 'CD' 'EF' 'GH' 'IJ' 'KL'
+🍎> S
+⍝ expect:  AB CD EF 
+⍝ expect:  GH IJ KL 
+🍎> (1 3) 2⊃S
+⍝ expect: F
+🍎> M←'B' 'BA' ('BAT' 'BATH')
+🍎> M
+⍝ expect:  B BA   BAT BATH  
+🍎> ≡M
+⍝ expect: 3
+🍎> N←(⍳0)⊃M
+🍎> N
+⍝ expect:  B BA   BAT BATH  
+🍎> ≡N
+⍝ expect: 3
+🍎> )ERASE M
+🍎> )ERASE N
+🍎> A←(⍳0)⊃0 2⍴0
+🍎> ⍴A
+⍝ expect: 0 2
+🍎> ≡A
+⍝ expect: 1
+🍎> H←2 2⍴'BUCKS' 'TWANG' 'LYMPH' 'FROZE'
+⍝ skipped (system name ⎕CR): 4⎕CR  H
+🍎> ≡H
+⍝ expect: 2
+🍎> S←(2 1) 4⊃H
+🍎> S
+⍝ expect: P
+🍎> ≡S
+⍝ expect: 0
+🍎> G←'I' 'AM' ('FOR' 'APL2')
+⍝ skipped (system name ⎕CR): 4⎕CR  G
+🍎> ≡G
+⍝ expect: 3
+🍎> T←3 2⊃G
+🍎> T
+⍝ expect: APL2
+🍎> ⍴T
+⍝ expect: 4
+🍎> ≡T
+⍝ expect: 1
+🍎> 3 2 1⊃G
+⍝ expect: A
+🍎> E←2 3⍴'CRY' 'VOX' 'KID' 'JAB' (2 3⍴⍳6) ('LEG' 'NTH')
+⍝ skipped (system name ⎕CR): 4⎕CR  E
+🍎> (2 2) (2 3)⊃E
+⍝ expect: 6
+🍎> ⍴E
+⍝ expect: 2 3
+🍎> ≡E
+⍝ expect: 3
+🍎> U←(2 3) 2⊃E
+🍎> U
+⍝ expect: NTH
+🍎> ≡U
+⍝ expect: 1
+🍎> J←(2 3) 2 3⊃E
+🍎> J
+⍝ expect: H
+🍎> ≡J
+⍝ expect: 0
+🍎> K←'ELM' 'TAX' 'SPY' 'JOB' 'WIN'
+🍎> K←2 3⍴K,⊂(2 3⍴'QUE' 'ZiG' 'HaD' 'FoR')
+⍝ skipped (system name ⎕CR): 4⎕CR  K
+🍎> ⍴K
+⍝ expect: 2 3
+🍎> ≡K
+⍝ expect: 3
+🍎> P←(2 3)(1 2)⊃K
+🍎> P
+⍝ expect: ZiG
+🍎> ≡P
+⍝ expect: 1
+🍎> I←(2 3)(1 2) 3⊃K
+🍎> I
+⍝ expect: G
+🍎> ≡I
+⍝ expect: 0
+🍎> B←'P' 'PI' ('PIE' 'PIER')
+🍎> B
+⍝ expect:  P PI   PIE PIER  
+⍝ skipped (system name ⎕CR): 4⎕CR  B
+🍎> (2⊃B)←'MY'
+🍎> B
+⍝ expect:  P MY   PIE PIER  
+⍝ skipped (system name ⎕CR): 4⎕CR  B
+🍎> (2 1⊃B)←'TR'
+🍎> B
+⍝ expect:  P   TR Y    PIE PIER  
+⍝ skipped (system name ⎕CR): 4⎕CR  B
+🍎> (3 2 1⊃B)←'T'
+🍎> B
+⍝ expect:  P   TR Y    PIE TIER  
+⍝ skipped (system name ⎕CR): 4⎕CR B
+🍎> A←'ABCD'
+🍎> ((⍳0)⊃A)←10 20 30
+🍎> A
+⍝ expect: 10 20 30
+🍎> C←5 6 7
+🍎> ((⍳0)⊃C)←(⊂1 2 3)
+🍎> C
+⍝ expect:  1 2 3 
+🍎> (⍳0)⊃A
+⍝ expect: 10 20 30
+🍎> )ERASE A
+🍎> )ERASE C
+🍎> A30←0 0 0 ⋄ (2⊃A30)←1 2 3 ⋄ A30
+⍝ expect:  0  1 2 3  0 
+🍎> (2⊃A30)←4 5 ⋄ A30
+⍝ expect:  0  4 5  0 
+🍎> (2⊃A30)←7 ⋄ A30
+⍝ expect: 0 7 0
+🍎> B30←'AB' 'CD' 'EF' ⋄ (2⊃B30)←'XYZ' ⋄ B30
+⍝ expect:  AB XYZ EF 
+🍎> (2⊃B30)←'X' ⋄ B30
+⍝ expect:  AB X EF 
+🍎> V30←1 'bc' (3 2⍴⍳6)
+🍎> (1 0/3⊃V30)←'ABC'
+⍝ skipped (system name ⎕CR): 8 ⎕CR V30
+🍎> )ERASE A30
+🍎> )ERASE B30
+🍎> )ERASE V30
+⍝ skipped (system command): )SI
+🍎> )ERASE B
+⍝ skipped (system command): )CHECK

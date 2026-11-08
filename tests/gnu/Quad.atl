@@ -1,0 +1,21 @@
+⍝ from GNU APL Quad.tc (GPLv3, tests/gnu/README.md)
+⍝ skipped (system name ⎕): ⎕←4+6×5
+⍝ skipped (system name ⎕): ⍴⎕←⍳3
+⍝ skipped (system name ⎕): A←4+⎕←5+6
+🍎> A
+⍝ expect: 15
+⍝ skipped (system name ⎕): ⎕←B←2÷3
+🍎> B
+⍝ expect: 0.6666666667
+⍝ skipped (system name ⎕): 4+⎕×5
+🍎> 11
+⍝ expect: 59
+⍝ skipped (system name ⎕): A←4+⎕×5
+🍎> ⍳3
+🍎> A
+⍝ expect: 9 14 19
+⍝ skipped (system name ⎕): ⎕-⎕
+🍎> 8
+⍝ expect: ⎕:
+🍎> 3
+⍝ expect: ¯5

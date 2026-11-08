@@ -1,0 +1,23 @@
+⍝ from GNU APL Polynomials.tc (GPLv3, tests/gnu/README.md)
+⍝ skipped (system command): )COPY_ONCE 0 ASSERT.apl
+⍝ skipped (double-quoted strings): "A:"    (⌹.poly_print A ← 4 0 0 6 3 1)
+⍝ skipped (double-quoted strings): "B:"    (⌹.poly_print B ← 5 0 2)
+⍝ skipped (double-quoted strings): "PROD:" (⌹.poly_print PROD ← A ⌹.poly_multiply B)
+⍝ skipped (double-quoted strings): "A:"    (⌹.poly_print A ← 2 2⍴0 1 1 0)
+⍝ skipped (double-quoted strings): "B:"    (⌹.poly_print B ← 2 2⍴0 ¯1 1 0)
+⍝ skipped (double-quoted strings): "PROD:" (⌹.poly_print PROD ← A ⌹.poly_multiply B)
+🍎> ∇POLY_CHECK B
+	⍝ verify that ⌹.poly_print is the inverse of ⌹.poly_scan
+	⍝ requires that the indeterminants in B are sorted properly
+	⍝
+	ASSERT B ≡ ⌹.poly_print (⌹.poly_scan B)
+	∇
+⍝ skipped (double-quoted strings): POLY_CHECK ¨ "0" "1" "2" "¯2"
+⍝ skipped (double-quoted strings): POLY_CHECK ¨ "x" "y" "z"
+⍝ skipped (double-quoted strings): POLY_CHECK ¨ "-x" "-y" "-z"
+⍝ skipped (double-quoted strings): POLY_CHECK ¨ "x + 1" "y + 1" "z + 1"
+⍝ skipped (double-quoted strings): POLY_CHECK ¨ "x - 1" "y - 1" "z - 1"
+⍝ skipped (double-quoted strings): POLY_CHECK ¨ "x - 2" "y - 2" "z - 2"
+⍝ skipped (double-quoted strings): POLY_CHECK ¨ "xy + x + 1" "y² - 1" "xyz - xz² + 1"
+🍎> )ERASE A B PROD Q POLY_CHECK
+⍝ skipped (system command): )CHECK BRIEF

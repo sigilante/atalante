@@ -1,0 +1,44 @@
+⍝ from GNU APL Reverse_with_axis.tc (GPLv3, tests/gnu/README.md)
+🍎> A←2 3 1⍴'IN' 'OUT' 'UP' 'RIGHT' 'LEFT' 'DOWN'
+🍎> A
+⍝ expect:  IN    
+⍝ expect:  OUT   
+⍝ expect:  UP    
+⍝ expect: 
+⍝ expect:  RIGHT 
+⍝ expect:  LEFT  
+⍝ expect:  DOWN  
+🍎> ⌽[2]A
+⍝ expect:  UP    
+⍝ expect:  OUT   
+⍝ expect:  IN    
+⍝ expect: 
+⍝ expect:  DOWN  
+⍝ expect:  LEFT  
+⍝ expect:  RIGHT 
+🍎> ⌽[1]A
+⍝ expect:  RIGHT 
+⍝ expect:  LEFT  
+⍝ expect:  DOWN  
+⍝ expect: 
+⍝ expect:  IN    
+⍝ expect:  OUT   
+⍝ expect:  UP    
+🍎> ⊖A
+⍝ expect:  RIGHT 
+⍝ expect:  LEFT  
+⍝ expect:  DOWN  
+⍝ expect: 
+⍝ expect:  IN    
+⍝ expect:  OUT   
+⍝ expect:  UP    
+🍎> B←3 4⍴⍳12
+🍎> B
+⍝ expect: 1  2  3  4
+⍝ expect: 5  6  7  8
+⍝ expect: 9 10 11 12
+🍎> (⌽[1]B)←3 4⍴-⍳12
+🍎> B
+⍝ expect: ¯9 ¯10 ¯11 ¯12
+⍝ expect: ¯5  ¯6  ¯7  ¯8
+⍝ expect: ¯1  ¯2  ¯3  ¯4

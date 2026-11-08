@@ -1,0 +1,9 @@
+⍝ from GNU APL NaturalLogarithm.tc (GPLv3, tests/gnu/README.md)
+🍎> ⍟1
+⍝ expect: 0
+⍝ skipped (complex numbers): ⍟¯1
+🍎> ⍟2.7182818284
+⍝ expect: 1
+⍝ skipped (complex numbers): ⍟0J1
+⍝ skipped (complex numbers): ⍟0J1E¯11
+⍝ skipped (complex numbers): ⍟0J0

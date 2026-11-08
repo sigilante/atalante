@@ -1,0 +1,21 @@
+⍝ from GNU APL Enlist.tc (GPLv3, tests/gnu/README.md)
+🍎> C←'ALE' 'BEER' 'STOUT'
+🍎> Z←∊C
+🍎> Z
+⍝ expect: ALEBEERSTOUT
+🍎> ⍴Z
+⍝ expect: 12
+🍎> ≡Z
+⍝ expect: 1
+🍎> H←(2 2⍴⍳4)(2 2⍴(5 6(2 2⍴7 8 9 10)11))'ABCD'
+🍎> ∊H
+⍝ expect: 1 2 3 4 5 6 7 8 9 10 11 ABCD
+🍎> ⍴∊H
+⍝ expect: 15
+🍎> ≡∊H
+⍝ expect: 1
+🍎> A←(10 20 30) 'AB'
+🍎> (∊A)←⍳5
+🍎> A
+⍝ expect:  1 2 3  4 5 
+⍝ skipped (system command): )CHECK BRIEF

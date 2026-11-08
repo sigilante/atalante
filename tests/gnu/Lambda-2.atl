@@ -1,0 +1,40 @@
+⍝ from GNU APL Lambda.tc (GPLv3, tests/gnu/README.md)
+🍎> SUM ← { ⍺ + ⍵⊣C←0 ;C;⎕io}
+⍝ skipped (system name ⎕CR): ⎕CR 'SUM'
+🍎> 7 SUM 7
+⍝ expect: 14
+🍎> )ERASE SUM
+🍎> (ZZ50F1←{⍵}) 5
+⍝ expect: 5
+🍎> 1+(ZZ50F2←{⍵})
+⍝ refuse: %syntax-error
+⍝ skipped (system command): )SIC
+⍝ skipped (system name ⎕): ⎕←ZZ50F3←{⍵}
+🍎> ZZ50UT←{ (⍳⍺) ∘.> (⍳⍵)}
+⍝ skipped (system name ⎕NC): ⎕NC 'ZZ50UT'
+🍎> 2 ZZ50UT 2
+⍝ expect: 0 0
+⍝ expect: 1 0
+⍝ skipped (system name ⎕): ⎕←{⍵}
+⍝ skipped (system command): )SIC
+🍎> ⍵←{⍺}
+⍝ refuse: %syntax-error
+⍝ skipped (system command): )SIC
+🍎> ⍺←{⍵}
+⍝ refuse: %syntax-error
+⍝ skipped (system command): )SIC
+🍎> χ←{⍵}
+⍝ refuse: %syntax-error
+⍝ skipped (system command): )SIC
+🍎> )ERASE ZZ100AA
+⍝ skipped (system name ⎕FX): ⎕FX 'Z←ZZ100AA B' 'Z←B'
+⍝ skipped (system name ⎕): ⎕←ZZ100AA
+⍝ skipped (system command): )SIC
+🍎> )ERASE ZZ100AA
+🍎> 1÷0
+⍝ refuse: %domain-error
+⍝ skipped (GNU-only error DEFN ERROR): {⍺⍺}1
+⍝ skipped (system command): )MORE
+⍝ skipped (system name ⎕ET): ⎕ET
+⍝ skipped (system name ⎕EM): ⎕EM
+🍎> )ERASE ZZ50F1 ZZ50F2 ZZ50F3 ZZ50UT

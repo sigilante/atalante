@@ -1,0 +1,53 @@
+⍝ from GNU APL Multiply.tc (GPLv3, tests/gnu/README.md)
+🍎> 3×4
+⍝ expect: 12
+🍎> 3×0 ¯2 5 0.7
+⍝ expect: 0 ¯6 15 2.1
+⍝ skipped (complex numbers): 1J2×3J4
+🍎> 1 ¯3 0.8×1 0.5 ¯0.2
+⍝ expect: 1 ¯1.5 ¯0.16
+⍝ skipped (complex numbers): 2 × 0J1
+⍝ skipped (complex numbers): 0J1 × 2
+🍎> (3 5⍴1) ×[1] ⍳3
+⍝ expect: 1 1 1 1 1
+⍝ expect: 2 2 2 2 2
+⍝ expect: 3 3 3 3 3
+🍎> ⎕PP←17
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+🍎> 1000000000×9199999999
+⍝ expect: 9199999999000000000
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+⍝ skipped (system name ⎕CR): 26⎕CR 1000000000×9199999999
+⍝ skipped (user command): ]FILE_CTL NO_SKIP
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+🍎> 1000000000×9200000001
+⍝ expect: 9200000001000000000
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+⍝ skipped (system name ⎕CR): 26⎕CR 1000000000×9200000001
+⍝ skipped (user command): ]FILE_CTL NO_SKIP
+🍎> 9223372036854775807×10
+⍝ expect: 9.2233720368547758E19
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+⍝ skipped (system name ⎕CR): 26⎕CR 9223372036854775807×10
+⍝ skipped (user command): ]FILE_CTL NO_SKIP
+🍎> ¯9223372036854775807×10
+⍝ expect: ¯9.2233720368547758E19
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+⍝ skipped (system name ⎕CR): 26⎕CR ¯9223372036854775807×10
+⍝ skipped (user command): ]FILE_CTL NO_SKIP
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+🍎> 9223372036854775807×1
+⍝ expect: 9223372036854775807
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+⍝ skipped (system name ⎕CR): 26⎕CR 9223372036854775807×1
+⍝ skipped (user command): ]FILE_CTL NO_SKIP
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+🍎> 3037000499×3037000499
+⍝ expect: 9223372030926249001
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+⍝ skipped (system name ⎕CR): 26⎕CR 3037000499×3037000499
+⍝ skipped (user command): ]FILE_CTL NO_SKIP
+🍎> ⎕PP←10
+⍝ skipped (complex numbers): 1J1×1E¯20J1E¯20
+⍝ skipped (complex numbers): 1E¯20J1E¯20
+⍝ skipped (complex numbers): (1E¯20J1E¯20)×1E20

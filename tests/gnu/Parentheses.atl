@@ -1,0 +1,16 @@
+⍝ from GNU APL Parentheses.tc (GPLv3, tests/gnu/README.md)
+🍎> 1+1
+⍝ expect: 2
+🍎> ()
+⍝ refuse: %syntax-error
+🍎> ⍎'()'
+⍝ refuse: %syntax-error
+⍝ skipped (system command): )SIC
+🍎> 1()
+⍝ refuse: %syntax-error
+🍎> ( )
+⍝ refuse: %syntax-error
+🍎> ()+1
+⍝ refuse: %syntax-error
+🍎> A←()
+⍝ refuse: %syntax-error

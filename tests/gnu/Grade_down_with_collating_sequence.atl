@@ -1,0 +1,134 @@
+⍝ from GNU APL Grade_down_with_collating_sequence.tc (GPLv3, tests/gnu/README.md)
+🍎> ⎕IO←1
+🍎> 'ABCDE'⍒'BEAD'
+⍝ expect: 2 4 1 3
+🍎> ⎕IO←0
+🍎> 'ABCDE'⍒'BEAD'
+⍝ expect: 1 3 0 2
+🍎> ⎕IO←1
+🍎> A←5 4⍴'DEADBADECEDEBEADDEED'
+🍎> A
+⍝ expect: DEAD
+⍝ expect: BADE
+⍝ expect: CEDE
+⍝ expect: BEAD
+⍝ expect: DEED
+🍎> 'ABCDE'⍒A
+⍝ expect: 5 1 3 4 2
+🍎> C←'FACE$'
+🍎> B←'@$&ABCDEF'
+🍎> B⍒C
+⍝ expect: 1 4 3 2 5
+🍎> C[B⍒C]
+⍝ expect: FECA$
+⍝ skipped (system name ⎕): ⎕←K←5 4⍴'dealDealdeadDeadDEED'
+⍝ skipped (system name ⎕): ⎕←H←2 12⍴'abcdefghijklABCDEFGHIJKL'
+🍎> Z←H⍒K
+🍎> K[Z;]
+⍝ expect: DEED
+⍝ expect: Deal
+⍝ expect: deal
+⍝ expect: Dead
+⍝ expect: dead
+🍎> DCS←10 2 28⍴' '
+⍝ skipped (system name ⎕UCS): DCS[1;1;1+⍳26]←⎕UCS  64+⍳26
+⍝ skipped (system name ⎕UCS): DCS[1;2;1+⍳26]←⎕UCS 944+⍳26
+⍝ skipped (system name ⎕UCS): DCS[2;2;1+⍳26]←⎕UCS  96+⍳26
+🍎> DCS[;1;28]←'0123456789'
+🍎> DCS
+⍝ expect:  ABCDEFGHIJKLMNOPQRSTUVWXYZ0
+⍝ expect:  αβγδ∊ζηθ⍳κλμνξοπ⍴ςστυφχψωϊ 
+⍝ expect: 
+⍝ expect:                            1
+⍝ expect:  abcdefghijklmnopqrstuvwxyz 
+⍝ expect: 
+⍝ expect:                            2
+⍝ expect:                             
+⍝ expect: 
+⍝ expect:                            3
+⍝ expect:                             
+⍝ expect: 
+⍝ expect:                            4
+⍝ expect:                             
+⍝ expect: 
+⍝ expect:                            5
+⍝ expect:                             
+⍝ expect: 
+⍝ expect:                            6
+⍝ expect:                             
+⍝ expect: 
+⍝ expect:                            7
+⍝ expect:                             
+⍝ expect: 
+⍝ expect:                            8
+⍝ expect:                             
+⍝ expect: 
+⍝ expect:                            9
+🍎> DCS⍒'AVENUE'
+⍝ expect: 2 5 4 3 6 1
+🍎> H←'YZOMMXA'
+🍎> DCS⍒H
+⍝ expect: 2 1 6 3 4 5 7
+🍎> H[DCS⍒H]
+⍝ expect: ZYXOMMA
+🍎> Q←5 4⍴'SENT ZAPDOWNALSOBOA '
+🍎> Q
+⍝ expect: SENT
+⍝ expect:  ZAP
+⍝ expect: DOWN
+⍝ expect: ALSO
+⍝ expect: BOA 
+🍎> DCS⍒Q
+⍝ expect: 1 3 5 4 2
+🍎> Q[DCS⍒Q;]
+⍝ expect: SENT
+⍝ expect: DOWN
+⍝ expect: BOA 
+⍝ expect: ALSO
+⍝ expect:  ZAP
+🍎> K
+⍝ expect: deal
+⍝ expect: Deal
+⍝ expect: dead
+⍝ expect: Dead
+⍝ expect: DEED
+🍎> DCS⍒K
+⍝ expect: 5 1 2 3 4
+🍎> K[DCS⍒K;]
+⍝ expect: DEED
+⍝ expect: deal
+⍝ expect: Deal
+⍝ expect: dead
+⍝ expect: Dead
+🍎> S←⊃'X1' 'X10' 'X2' 'X21' 'X3' 'X9' 'X11' 'x3'
+🍎> S
+⍝ expect: X1 
+⍝ expect: X10
+⍝ expect: X2 
+⍝ expect: X21
+⍝ expect: X3 
+⍝ expect: X9 
+⍝ expect: X11
+⍝ expect: x3 
+🍎> DCS⍒S
+⍝ expect: 4 7 2 8 6 5 3 1
+🍎> S[DCS⍒S;]
+⍝ expect: X21
+⍝ expect: X11
+⍝ expect: X10
+⍝ expect: x3 
+⍝ expect: X9 
+⍝ expect: X3 
+⍝ expect: X2 
+⍝ expect: X1 
+🍎> 'ABCDE'⍒'DABBED'
+⍝ expect: 5 1 6 3 4 2
+🍎> 'DABBED'['ABCDE'⍒'DABBED']
+⍝ expect: EDDBBA
+🍎> Q←'BLEAT'
+🍎> W←'ABCDE'⍒Q
+🍎> W
+⍝ expect: 2 5 3 1 4
+🍎> Q[W]
+⍝ expect: LTEBA
+⍝ skipped (system command): )CHECK BRIEF

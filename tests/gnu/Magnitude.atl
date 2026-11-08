@@ -1,0 +1,7 @@
+⍝ from GNU APL Magnitude.tc (GPLv3, tests/gnu/README.md)
+🍎> ∣¯4.2
+⍝ expect: 4.2
+⍝ skipped (complex numbers): ∣2J¯3
+🍎> ∣2 ¯2 0.3 ¯0.3
+⍝ expect: 2 2 0.3 0.3
+⍝ skipped (complex numbers): ∣0J1 2J¯2 4J3

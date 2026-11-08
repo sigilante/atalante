@@ -1,0 +1,68 @@
+⍝ from GNU APL MatrixDivide.tc (GPLv3, tests/gnu/README.md)
+🍎> ⊢R←2 2⍴1 0 0 2
+⍝ expect: 1 0
+⍝ expect: 0 2
+🍎> ⊢L←2 2⍴1 2 4 8
+⍝ expect: 1 2
+⍝ expect: 4 8
+🍎> 1 4⌹R
+⍝ expect: 1 2
+🍎> L⌹R
+⍝ expect: 1 2
+⍝ expect: 2 4
+⍝ skipped (complex numbers): R←2 2⍴ 0J1 0 0 2
+⍝ skipped (complex numbers): R
+⍝ skipped (complex numbers): 1 4⌹R
+⍝ skipped (complex numbers): L⌹R
+🍎> A←6 5 14 12 13 3
+🍎> B←6 4⍴1 2 1 3 1 1 2 4 7 9 10 4 10 9 3 10 11 18 10 4 4 20 18 23
+🍎> B
+⍝ expect:  1  2  1  3
+⍝ expect:  1  1  2  4
+⍝ expect:  7  9 10  4
+⍝ expect: 10  9  3 10
+⍝ expect: 11 18 10  4
+⍝ expect:  4 20 18 23
+🍎> X←A⌹B
+🍎> X
+⍝ expect: 2.007570692 ¯1.079004921 0.9769585543 ¯0.01596092849
+🍎> A-B+.×X
+⍝ expect: 5.221363381 2.181360834 ¯0.04769238556 ¯1.135929011 0.6330691345 ¯0.6683369726
+🍎> (A-B+.×X)⋆2
+⍝ expect: 27.26263556 4.758335089 0.002274563641 1.290334717 0.400776529 0.446674309
+🍎> +/,(A-B+.×X)⋆2
+⍝ expect: 34.16103076
+🍎> ⎕PP←8
+🍎> V←1 1.2 1.4 1.6 1.8 2
+🍎> L←!V
+🍎> L
+⍝ expect: 1 1.1018025 1.2421693 1.4296246 1.6764908 2
+🍎> 1.6⊥⌽L⌹V∘.⋆0,⍳2
+⍝ expect: 1.434011
+🍎> 1.6⊥⌽L⌹V∘.⋆0,⍳3
+⍝ expect: 1.4289585
+🍎> 1.6⊥⌽L⌹V∘.⋆0,⍳4
+⍝ expect: 1.4295805
+🍎> 1.6⊥⌽L⌹V∘.⋆0,⍳5
+⍝ expect: 1.4296246
+🍎> ⎕PP←10
+🍎> 2⌹3
+⍝ expect: 0.6666666667
+🍎> A←5000⍴1000.1234321
+🍎> A⌹A
+⍝ expect: 1
+⍝ skipped (system name ⎕RL): ⎕RL←20000∣+/⎕TS
+⍝ skipped (branch): ∇RANDOM_MATRIX_DIVIDE Q;⎕IO;COLS_B;COLS_A;ROWS;A;B;X
+🍎> RANDOM_MATRIX_DIVIDE¨⍳100
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+🍎> A←?99999 3⍴256
+⍝ skipped (user command): ]FILE_CTL NO_SKIP
+⍝ skipped (user command): ]FILE_CTL SKIP_APL2
+🍎> A←?99 3⍴256
+⍝ skipped (user command): ]FILE_CTL NO_SKIP
+🍎> ⍴A⌹A
+⍝ expect: 3 3
+⍝ skipped (glyph ⍬): ⍴⍬⌹⍤1(0 3⍴0)
+⍝ skipped (glyph ⍤): ⍴1⌹⍤1(0 3⍴0)
+⍝ skipped (glyph ⍤): ⍴(0 3⍴0)⌹⍤1⊢⍬
+⍝ skipped (glyph ⍬): ⍴⍬⌹⍤1(0 0⍴0)

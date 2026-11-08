@@ -1,0 +1,97 @@
+⍝ from GNU APL Circle_Functions.tc (GPLv3, tests/gnu/README.md)
+🍎> 1○1.5708
+⍝ expect: 1
+🍎> 2○0.25
+⍝ expect: 0.9689124217
+🍎> 1○1.570796327
+⍝ expect: 1
+🍎> 2○1
+⍝ expect: 0.5403023059
+🍎> 3○2
+⍝ expect: ¯2.185039863
+🍎> ÷3○2
+⍝ expect: ¯0.4576575544
+🍎> 1○○30÷180
+⍝ expect: 0.5
+🍎> 2○○45÷180
+⍝ expect: 0.7071067812
+🍎> ¯1○1
+⍝ expect: 1.570796327
+🍎> ¯2○0.54032023059
+⍝ expect: 0.9999786982
+🍎> 5○1
+⍝ expect: 1.175201194
+🍎> 6○1
+⍝ expect: 1.543080635
+🍎> ¯5○1.175201194
+⍝ expect: 1
+🍎> ¯6○1.543080635
+⍝ expect: 1
+⍝ skipped (complex numbers): 9 10 11 12○3J4
+🍎> ¯12○ ○1
+⍝ expect: ¯1
+⍝ skipped (complex numbers): 8 ¯8○0J1
+⍝ skipped (complex numbers): 8 ¯8○2
+⍝ skipped (complex numbers): 6 1⍴¯7 ¯6 ¯5 ¯3 ¯2 ¯1○1J1
+⍝ skipped (complex numbers): 0 ¯1 ¯2 ¯6 ¯7 ∘.○ ¯2 ¯2J0
+⍝ skipped (complex numbers): ¯4 ¯3 ∘.○ 1 1J0
+⍝ skipped (complex numbers): 8 ○ 1 1J0
+⍝ skipped (complex numbers): ¯8 ○ 1 1J0
+🍎> 12 ○ 4 ¯4
+⍝ expect: 0 3.141592654
+⍝ skipped (complex numbers): 5 1⍴8○ 8 1 0 ¯1 ¯8
+⍝ skipped (complex numbers): 5 1⍴8○ 8 1 0 ¯1 ¯8 + 0J0
+⍝ skipped (complex numbers): 8○ 8J8
+⍝ skipped (complex numbers): 8○ 8J¯8
+⍝ skipped (complex numbers): 8○ 0J8
+⍝ skipped (complex numbers): 8○ 0J1
+⍝ skipped (complex numbers): 8○ 0J0
+⍝ skipped (complex numbers): 8○ 0J¯1
+⍝ skipped (complex numbers): 8○ ¯8J8
+⍝ skipped (complex numbers): 8○ ¯8J0
+⍝ skipped (complex numbers): 8○ ¯8J¯8
+⍝ skipped (complex numbers): B←B∘.+0J1×B←8 1 0 ¯1 ¯8
+⍝ skipped (complex numbers): (25 1⍴B),25 1⍴8○B
+🍎> 1 2○[1]2 3⍴⍳6
+⍝ expect:  0.8414709848 0.9092974268 0.1411200081
+⍝ expect: ¯0.6536436209 0.2836621855 0.9601702867
+🍎> ⎕PP←17
+⍝ skipped (complex numbers): ¯12○0J¯700
+⍝ skipped (complex numbers): ¯12○0J¯710
+⍝ skipped (system command): )SIC
+⍝ skipped (complex numbers): 1J1○3.5
+⍝ skipped (system command): )SIC
+⍝ skipped (complex numbers): 1J1∘.○3.5 4
+⍝ skipped (system command): )SIC
+🍎> 0.5○1
+⍝ refuse: %domain-error
+⍝ skipped (system command): )SIC
+🍎> 4○1E155
+⍝ expect: 1E155
+🍎> 4○1E154
+⍝ expect: 1E154
+⍝ skipped (complex numbers): 0○1E155
+⍝ skipped (complex numbers): 8○1E155
+⍝ skipped (complex numbers): ¯8○1E155
+🍎> ¯4○1E155
+⍝ expect: 1E155
+⍝ skipped (complex numbers): 8○0.5
+⍝ skipped (complex numbers): 8○0.5J0
+⍝ skipped (complex numbers): 8○0.5J1E¯11
+⍝ skipped (complex numbers): 8○¯0.5J¯1E¯11
+⍝ skipped (complex numbers): 8○0.5J1E¯9
+⍝ skipped (complex numbers): 8○¯0.5J¯1E¯9
+⍝ skipped (complex numbers): 0○2
+🍎> ⎕PP←10
+⍝ skipped (complex numbers): 0○2J1E¯11
+🍎> ⎕PP←17
+⍝ skipped (complex numbers): ¯4○0.1
+🍎> ⎕PP←10
+⍝ skipped (complex numbers): ¯4○0.1J¯1E¯11
+🍎> ⎕PP←17
+⍝ skipped (complex numbers): Z←(1-1E¯9)+0J1E¯11
+🍎> (¯7○Z) ≡ 0.5×((⍟1+Z)-(⍟1-Z))
+⍝ expect: 1
+🍎> )ERASE Z
+⍝ skipped (complex numbers): (¯7○0.5J1E¯11) = 0.54930614433405484J1.3333333333333333E¯11
+🍎> ⎕PP←10

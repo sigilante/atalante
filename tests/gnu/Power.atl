@@ -1,0 +1,63 @@
+⍝ from GNU APL Power.tc (GPLv3, tests/gnu/README.md)
+🍎> 4⋆3
+⍝ expect: 64
+🍎> 10⋆0
+⍝ expect: 1
+🍎> 2⋆0 1 2 3 4 5
+⍝ expect: 1 2 4 8 16 32
+🍎> 10⋆1
+⍝ expect: 10
+🍎> 5*¯2
+⍝ expect: 0.04
+⍝ skipped (complex numbers): ¯16⋆÷2
+⍝ skipped (complex numbers): ¯125⋆÷3
+🍎> 16⋆÷2
+⍝ expect: 4
+🍎> 125⋆÷3
+⍝ expect: 5
+⍝ skipped (complex numbers): 0J2⋆3
+⍝ skipped (glyph ⍣): ({⍵,+/¯2↑⍵} ⍣ 10) 1
+🍎> T←¯1⋆⌈2∣11.5 ⋄ T×⌊0.5+11.5×T
+⍝ expect: 12
+🍎> (2⋆999)⋆2
+⍝ refuse: %domain-error
+⍝ skipped (complex numbers): (2J0⋆999)⋆2
+⍝ skipped (complex numbers): (0J2⋆999)⋆2
+⍝ skipped (system command): )SIC
+🍎> ¯1*1E20
+⍝ expect: 1
+🍎> ¯1*1E300
+⍝ expect: 1
+🍎> ¯1*1E15+1
+⍝ expect: ¯1
+🍎> ⎕PP←17
+⍝ skipped (complex numbers): 2*52J0
+⍝ skipped (complex numbers): 5*5J0
+⍝ skipped (complex numbers): 10*2J0
+⍝ skipped (complex numbers): ¯1J0*1E14
+🍎> ⎕PP←10
+⍝ skipped (complex numbers): 0*0J1
+⍝ skipped (complex numbers): 0⋆0J1
+⍝ skipped (complex numbers): 0*0J¯1
+⍝ skipped (complex numbers): 0⋆0J¯1
+⍝ skipped (complex numbers): 0J0*0J1
+⍝ skipped (complex numbers): 0J0⋆0J1
+⍝ skipped (complex numbers): 0*¯1J1
+⍝ skipped (complex numbers): 0⋆¯1J1
+⍝ skipped (system command): )SIC
+⍝ skipped (complex numbers): 1E200J0*¯2
+🍎> 1E200*¯2
+⍝ expect: 0
+⍝ skipped (complex numbers): 3J4*¯2
+🍎> ⎕PP←17
+⍝ skipped (complex numbers): 0J1*1024
+⍝ skipped (complex numbers): 0J1*1025
+⍝ skipped (complex numbers): 0J1*1000000
+⍝ skipped (complex numbers): 0J1*1E15
+⍝ skipped (complex numbers): 0J1*1E15+1
+⍝ skipped (complex numbers): 0J1*¯1
+⍝ skipped (complex numbers): 0J1*¯2
+⍝ skipped (complex numbers): 0J¯1*3
+⍝ skipped (complex numbers): 0J1*3
+⍝ skipped (complex numbers): 0J1*4
+🍎> ⎕PP←10

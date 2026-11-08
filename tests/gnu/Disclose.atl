@@ -1,0 +1,63 @@
+⍝ from GNU APL Disclose.tc (GPLv3, tests/gnu/README.md)
+🍎> ⊃(1 2 3)(4 5 6)
+⍝ expect: 1 2 3
+⍝ expect: 4 5 6
+🍎> ⊃(2 3 4)(5 6)
+⍝ expect: 2 3 4
+⍝ expect: 5 6 0
+🍎> R←2 3⍴(⍳4)'ABCD' '****'(5 6 7 8)'EFGH' '∆∆∆∆'
+🍎> R
+⍝ expect:  1 2 3 4  ABCD **** 
+⍝ expect:  5 6 7 8  EFGH ∆∆∆∆ 
+🍎> ⍴R
+⍝ expect: 2 3
+🍎> ≡R
+⍝ expect: 2
+🍎> Z←⊃R
+🍎> Z
+⍝ expect: 1 2 3 4
+⍝ expect: A B C D
+⍝ expect: * * * *
+⍝ expect: 
+⍝ expect: 5 6 7 8
+⍝ expect: E F G H
+⍝ expect: ∆ ∆ ∆ ∆
+🍎> ⍴Z
+⍝ expect: 2 3 4
+🍎> ≡Z
+⍝ expect: 1
+🍎> E←(2 4⍴⍳8) 9 (3 2⍴'ABCDEF')
+🍎> E
+⍝ expect:  1 2 3 4   9  AB 
+⍝ expect:  5 6 7 8      CD 
+⍝ expect:               EF 
+🍎> N←⊃E
+🍎> N
+⍝ expect: 1 2 3 4
+⍝ expect: 5 6 7 8
+⍝ expect: 0 0 0 0
+⍝ expect: 
+⍝ expect: 9 0 0 0
+⍝ expect: 0 0 0 0
+⍝ expect: 0 0 0 0
+⍝ expect: 
+⍝ expect: A B    
+⍝ expect: C D    
+⍝ expect: E F    
+🍎> ⍴N
+⍝ expect: 3 3 4
+🍎> ≡N
+⍝ expect: 1
+🍎> D←'WHEEL' 'OF' 'FORTUNE'
+🍎> V←⊃D
+🍎> V
+⍝ expect: WHEEL  
+⍝ expect: OF     
+⍝ expect: FORTUNE
+🍎> ⍴V
+⍝ expect: 3 7
+🍎> ≡V
+⍝ expect: 1
+🍎> ''≡⊃⊂''
+⍝ expect: 1
+⍝ skipped (system name ⎕CR): 4 ⎕CR ⊃(⊂1⍴0)((1 1)⍴0)
