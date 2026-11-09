@@ -322,6 +322,12 @@ func circle(a: @, x: @) -> @ {
   else if array.rop(1, a, array.rsunAt(array.widthOf(x), 2)) == z { array.rfun(8, x) }
   else if array.rop(1, a, array.rsunAt(array.widthOf(x), 3)) == z { array.rfun(9, x) }
   else if array.rop(1, a, array.rsunAt(array.widthOf(x), 4)) == z { if array.finite(array.rop(3, x, x)) { array.rfun(1, array.rop(2, array.rop(3, x, x), one)) } else { hypot(2, x) } }
+  else if a == array.rsunAt(array.widthOf(x), 5) { sinhR(x) }
+  else if a == array.rsunAt(array.widthOf(x), 6) { coshR(x) }
+  else if a == array.rsunAt(array.widthOf(x), 7) { tanhR(x) }
+  else if array.rop(1, a, array.rsunAt(array.widthOf(x), 5)) == z { asinhR(x) }
+  else if array.rop(1, a, array.rsunAt(array.widthOf(x), 6)) == z { acoshR(x) }
+  else if array.rop(1, a, array.rsunAt(array.widthOf(x), 7)) == z { atanhR(x) }
   else { 0 }
 };
 // √(1+x²) (op 1) or √(x²−1) (op 2) for an x whose square overflows:  |x|×√(1±(1/x)²)
@@ -334,7 +340,7 @@ func hypot(op: @, x: @) -> @ {
 func isBool(x: @) -> Bool { x == 0 or x == 1 };
 func isCircleCode(c: @) -> Bool {
   let z = array.zeroLike(c);
-  let four = array.rsunAt(array.widthOf(c), 4);
+  let four = array.rsunAt(array.widthOf(c), 7);   // ¯7..7:  the hyperbolic codes since D-101
   let frac = array.rop(2, c, floorReal(c));
   (array.rcmp(4, c, z) and array.rcmp(2, c, four) and array.rcmp(4, frac, z) and (frac == z))
   or (array.rcmp(2, c, z) and array.rcmp(4, c, array.rop(2, z, four)) and (frac == z))
@@ -412,8 +418,8 @@ func dyadPrim(cp: @, a0: array.Arr, b0: array.Arr, env: Env) -> Ev {
           8805 => cmp(a, b, k, lambda (x: @, y: @) -> Bool { not gtK(k, y, x) }, env),                  // ≥
           62   => cmp(a, b, k, lambda (x: @, y: @) -> Bool { gtK(k, x, y) }, env),                      // >
           8800 => equal(a, b, k, false, env),                                                           // ≠
-          8744 => boolean(a, b, lambda (x: @, y: @) -> @ { if x == 1 or y == 1 { 1 } else { 0 } }, env),     // ∨
-          8743 => boolean(a, b, lambda (x: @, y: @) -> @ { if x == 1 and y == 1 { 1 } else { 0 } }, env),    // ∧
+          8744 => gcdLcm(a, b, k, false, env),                                                     // ∨ GCD, Boolean or on 0 and 1 (D-100)
+          8743 => gcdLcm(a, b, k, true, env),                                                      // ∧ LCM, Boolean and on 0 and 1 (D-100)
           9073 => boolean(a, b, lambda (x: @, y: @) -> @ { if x == 0 and y == 0 { 1 } else { 0 } }, env),    // ⍱
           9074 => boolean(a, b, lambda (x: @, y: @) -> @ { if x == 1 and y == 1 { 0 } else { 1 } }, env),    // ⍲
           _    => nyi("dyadic " + lexerText(cp)),
@@ -438,7 +444,7 @@ func residue(a: array.Arr, b: array.Arr, k: @, env: Env) -> Ev {
   }
 };
 func circleD(a: array.Arr, b: array.Arr, env: Env) -> Ev {
-  if array.allL(array.vals(a), isCircleCode) { okv(array.zipArr(a, b, 3, circle), env) } else { dom("○ takes a code in ¯4..4 on the left") }
+  if array.allL(array.vals(a), isCircleCode) { okv(array.zipArr(a, b, 3, circle), env) } else { dom("○ takes a code in ¯7..7 on the left; 8..12 are complex") }
 };
 func binomial(a: array.Arr, b: array.Arr, k: @, env: Env) -> Ev {
   match k {
@@ -460,6 +466,92 @@ func boolean(a: array.Arr, b: array.Arr, f: (@, @) -> @, env: Env) -> Ev {
   else { okv(array.zipArr(a, b, 1, f), env) }
 };
 
+// --- ∨ and ∧ past Booleans: the greatest common divisor and the least common multiple (D-100) ---
+// On 0 and 1 they are the Boolean functions.  Integers by Euclid;  a real by Euclid on its shortest
+// decimal, the number as it prints, so 1E30∨1E10 is 1E10 and 3∨3.6 is 0.6, where Euclid on the
+// binary value would give powers of two (1E30 is not 10^30 in binary).
+func gcdN(x: @, y: @) -> @ { if y == 0 { x } else { gcdN(y, x % y) } };
+func lcmN(x: @, y: @) -> @ { if x == 0 or y == 0 { 0 } else { capN((x / gcdN(x, y)) * y) } };
+func gcdI(x: @, y: @) -> @ { let g = gcdN(magI(x), magI(y)); if g >= array.two63() { two64() } else { g } };
+func lcmI(x: @, y: @) -> @ {
+  if x == 0 or y == 0 { 0 }
+  else {
+    let q = magI(x) / gcdN(magI(x), magI(y));
+    let xq = if array.isNeg(x) { two64() - q } else if q >= array.two63() { two64() } else { q };
+    if xq >= two64() { two64() } else { mulI(xq, y) }
+  }
+};
+// a real by its shortest decimal, the number as it prints:  a×10^e as (a, e negative, |e|)
+func decOf(x: @) -> (@, Bool, @) { match array.rdrg(x) { (sg, e, a) => (a, (e % 2) == 1, sMag(e)), } };
+// both decimals over one power of ten:  (n1, n2, m), the values n1÷10^m and n2÷10^m
+func decPair(x: @, y: @) -> (@, @, @) {
+  match decOf(x) { (a1, n1, e1) => match decOf(y) { (a2, n2, e2) => {
+    let m = array.maxk(if n1 { e1 } else { 0 }, if n2 { e2 } else { 0 });
+    (a1 * array.pow10(if n1 { m - e1 } else { m + e1 }), a2 * array.pow10(if n2 { m - e2 } else { m + e2 }), m)
+  }, }, }
+};
+func decReal(w: @, n: @, m: @) -> @ { if m == 0 { array.rsunAt(w, n) } else { array.rop(4, array.rsunAt(w, n), array.rsunAt(w, array.pow10(m))) } };
+func gcdR(x: @, y: @) -> @ { match decPair(x, y) { (p, q, m) => decReal(array.widthOf(x), gcdN(p, q), m), } };
+func lcmR(x: @, y: @) -> @ {
+  match decPair(x, y) { (p, q, m) => if p == 0 or q == 0 { array.zeroLike(x) } else {
+    let l = decReal(array.widthOf(x), (p / gcdN(p, q)) * q, m);
+    if array.realIsNeg(x) != array.realIsNeg(y) { negR(l) } else { l }
+  }, }
+};
+func gcdLcm(a: array.Arr, b: array.Arr, k: @, lcm: Bool, env: Env) -> Ev {
+  match k {
+    1 => if lcm { okv(array.zipArr(a, b, 1, lcmN), env) } else { okv(array.zipArr(a, b, 1, gcdN), env) },
+    2 => { let ia = array.promoteAt(a, 2, env.rb); let ib = array.promoteAt(b, 2, env.rb);
+           if lcm { okv(array.zipArr(ia, ib, 2, lcmI), env) } else { okv(array.zipArr(ia, ib, 2, gcdI), env) } },
+    _ => {
+      let ra = array.toRealAt(a, env.rb);
+      let rb = array.toRealAt(b, env.rb);
+      if lcm { okv(array.zipArr(ra, rb, 3, lcmR), env) } else { okv(array.zipArr(ra, rb, 3, gcdR), env) }
+    },
+  }
+};
+// --- the hyperbolic circle codes, 5 6 7 and their inverses ¯5 ¯6 ¯7 (D-101) ---------------
+// Through e^x−1 and ln(1+x) in Kahan's forms, so a small argument keeps its digits:
+// 5○1E¯10 is 1E¯10, not the 1.000000083E¯10 that (e^x−e^−x)÷2 gives.
+func expm1(x: @) -> @ {
+  let u = expR(x);
+  let one = array.oneLike(x);
+  if u == one { x }
+  else { let um = array.rop(2, u, one); if realZero(array.rop(1, um, one)) { um } else if not array.finite(u) { u } else { array.rop(4, array.rop(3, um, x), lnR(u)) } }
+};
+func log1p(x: @) -> @ {
+  let one = array.oneLike(x);
+  let w = array.rop(1, one, x);
+  if w == one { x } else { array.rop(4, array.rop(3, lnR(w), x), array.rop(2, w, one)) }
+};
+func halfR(x: @) -> @ { array.rop(4, x, array.rsunAt(array.widthOf(x), 2)) };
+func sinhR(x: @) -> @ { let e = expm1(absR(x)); let s = halfR(array.rop(1, e, array.rop(4, e, array.rop(1, e, array.oneLike(x))))); if array.realIsNeg(x) { negR(s) } else { s } };
+func coshR(x: @) -> @ { let e = expR(absR(x)); halfR(array.rop(1, e, array.rop(4, array.oneLike(x), e))) };
+func tanhR(x: @) -> @ {
+  let m = absR(x);
+  let t = if ltR(array.rsunAt(array.widthOf(x), 20), m) { array.oneLike(x) } else { let e = expm1(array.rop(1, m, m)); array.rop(4, e, array.rop(1, e, array.rsunAt(array.widthOf(x), 2))) };
+  if array.realIsNeg(x) { negR(t) } else { t }
+};
+// asinh |x| = ln(1+|x|+x²÷(1+√(1+x²))), the sign restored;  acosh x = ln(x+√(x²−1)) for x ≥ 1;
+// atanh x = ½ln(1+2x÷(1−x)) for |x| < 1.  Outside those a NaN, which the width layer refuses.
+func asinhR(x: @) -> @ {
+  let m = absR(x);
+  let one = array.oneLike(x);
+  let q = array.rop(3, m, m);
+  let r = if array.finite(q) { log1p(array.rop(1, m, array.rop(4, q, array.rop(1, one, array.rfun(1, array.rop(1, one, q)))))) } else { array.rop(1, lnR(m), lnR(array.rsunAt(array.widthOf(x), 2))) };
+  if array.realIsNeg(x) { negR(r) } else { r }
+};
+func acoshR(x: @) -> @ {
+  let one = array.oneLike(x);
+  let q = array.rop(3, x, x);
+  if array.finite(q) { lnR(array.rop(1, x, array.rfun(1, array.rop(2, q, one)))) } else { array.rop(1, lnR(x), lnR(array.rsunAt(array.widthOf(x), 2))) }
+};
+func atanhR(x: @) -> @ {
+  let one = array.oneLike(x);
+  let m = absR(x);
+  let r = halfR(log1p(array.rop(4, array.rop(1, m, m), array.rop(2, one, m))));
+  if array.realIsNeg(x) { negR(r) } else { r }
+};
 // --- monadic scalar functions (D-41) ------------------------------------------------------
 func monadPrim(cp: @, a0: array.Arr, env: Env) -> Ev {
   let a = if a0.kind == 3 { array.toRealAt(a0, env.rb) } else { a0 };      // a real argument at the session's width (D-15)
@@ -712,7 +804,7 @@ func rotateAxis(a: array.Arr, b: array.Arr, k: @, env: Env) -> Ev {
 };
 // A/[k]B and A\[k]B along any axis: the counts against the axis length
 func repAxis(a: array.Arr, b: array.Arr, k: @, expandIt: Bool, env: Env) -> Ev {
-  match natVec(a) {
+  match (if expandIt { natVec(a) } else { repVec(a) }) {
     (ok, cs0) => if not ok { dom("the left argument of / and \\ is a vector of non-negative integers") }
     else {
       let x = unbox(b);
@@ -724,8 +816,8 @@ func repAxis(a: array.Arr, b: array.Arr, k: @, expandIt: Bool, env: Env) -> Ev {
       else {
         let lines = gatherLines(array.vals(x), axisLines(shp, k));
         let fill = if array.isBox(b) { 0 } else { array.fillOf(b.kind) };
-        let len2 = if expandIt { sumL(cs) + (array.count(cs) - need) } else { sumL(cs) };
-        let lines2 = if expandIt { expRows(lines, cs, fill) } else { repRows(lines, cs) };
+        let len2 = if expandIt { sumL(cs) + (array.count(cs) - need) } else { sumMag(cs) };
+        let lines2 = if expandIt { expRows(lines, cs, fill) } else { repRowsF(lines, cs, fill) };
         okv(rebox(b, rebuildAxis(x, k, len2, lines2)), env)
       }
     },
@@ -1216,6 +1308,10 @@ func padAllAcc(xs: List<array.Arr>, k: @, l: @, w: @, acc: List<@>) -> List<@> {
 };
 // pick (D-73): an index, or a path of indices through nested boxes
 func pick(a: array.Arr, b: array.Arr, env: Env) -> Ev {
+  if array.isBox(a) { pickBox(array.itemsOf(a), b, env) }
+  else { pickNat(a, b, env) }
+};
+func pickNat(a: array.Arr, b: array.Arr, env: Env) -> Ev {
   match natVec(a) {
     (ok, path) => if not ok { dom("the left argument of ⊃ is an index or a path of indices") } else { pickPath(path, b, env) },
   }
@@ -1229,6 +1325,24 @@ func pickPath(path: List<@>, b: array.Arr, env: Env) -> Ev {
   }
 };
 
+// A⊃B with a box path (D-73, D-103):  each item of A picks at one depth, a scalar from a vector
+// or a vector of one index per axis from an array of any rank, so (⊂2 2)⊃M is M[2;2]
+func pickBox(path: List<array.Arr>, b: array.Arr, env: Env) -> Ev {
+  match path {
+    (p, rest) => if array.isBox(p) or p.kind != 1 or array.rank(p) > 1 { dom("each item of ⊃'s left argument is an index or a vector of indices") }
+      else if array.count(array.vals(p)) != array.rank(b) { fail("%rank-error", "a pick names one index per axis") }
+      else { match linIx(array.vals(p), array.shape(b), env.io, 0) {
+        (ok, i) => if not ok { fail("%index-error", "index out of range") } else { pickBox(rest, array.nthA(array.itemsOf(b), i), env) },
+      } },
+    _ => okv(b, env),
+  }
+};
+func linIx(ix: List<@>, shp: List<@>, io: @, acc: @) -> (Bool, @) {
+  match ix {
+    (i, it) => match shp { (d, dt) => if i < io or (i - io) >= d { (false, 0) } else { linIx(it, dt, io, acc * d + (i - io)) }, _ => (false, 0), },
+    _ => (true, acc),
+  }
+};
 // --- dyadic structural functions (D-42) ----------------------------------------------------
 func dyadStruct(cp: @, a: array.Arr, b: array.Arr, env: Env) -> Ev {
   if cp == 8764 { without(a, b, env) }                                                        // A∼B (D-98)
@@ -1521,8 +1635,8 @@ func sourceIx(cs: List<(Bool, @)>, shp: List<@>, ix: List<@>, take: Bool, acc: L
 };
 // A/B along the last axis:  counts in A, one per column of B, or a scalar for every column
 func compress(a: array.Arr, b: array.Arr, env: Env) -> Ev {
-  match natVec(a) {
-    (ok, counts0) => if not ok { dom("the left argument of / is a vector of non-negative integers") }
+  match repVec(a) {
+    (ok, counts0) => if not ok { dom("the left argument of / is a vector of integers") }
     else if array.rank(b) > 2 { repAxis(a, b, array.rank(b) - 1, false, env) }
     else {
       let ncols = if array.rank(b) == 0 { 1 } else { array.lastDim(array.shape(b)) };
@@ -1532,14 +1646,24 @@ func compress(a: array.Arr, b: array.Arr, env: Env) -> Ev {
       if array.count(counts) != width { fail("%length-error", "the counts and the last axis differ") }
       else {
         let rows = array.chunks(bvs, width);
-        let out = array.flatten(repRows(rows, counts));
-        let total = sumL(counts);
+        let out = array.flatten(repRowsF(rows, counts, array.fillOf(b.kind)));
+        let total = sumMag(counts);
         if array.rank(b) == 2 { okv(mk(b.kind, [array.firstDim(array.shape(b)), total], out), env) } else { okv(vec(b.kind, out), env) }
       }
     },
   }
 };
 func sumL(xs: List<@>) -> @ { match xs { (h, t) => h + sumL(t), _ => 0, } };
+// replicate's counts (D-103):  naturals, or integers, where a negative count −n skips its element
+// and puts n fills in its place, as APL2 does:  1 ¯2 1/'abc' is 'a  c'
+func repVec(a: array.Arr) -> (Bool, List<@>) { if (a.kind == 1 or a.kind == 2) and array.rank(a) <= 1 { (true, array.vals(a)) } else { (false, ~) } };
+func sumMag(xs: List<@>) -> @ { match xs { (h, t) => (if array.isNeg(h) { magI(h) } else { h }) + sumMag(t), _ => 0, } };
+func repRowsF(rows: List<List<@>>, counts: List<@>, fill: @) -> List<List<@>> { revLL(repRowsFAcc(rows, counts, fill, ~), ~) };
+func repRowsFAcc(rows: List<List<@>>, counts: List<@>, fill: @, acc: List<List<@>>) -> List<List<@>> { match rows { (r, rest) => repRowsFAcc(rest, counts, fill, (repRowF(r, counts, fill), acc)), _ => acc, } };
+func repRowF(r: List<@>, counts: List<@>, fill: @) -> List<@> { array.revL(repRowFAcc(r, counts, fill, ~), ~) };
+func repRowFAcc(r: List<@>, counts: List<@>, fill: @, acc: List<@>) -> List<@> {
+  match r { (x, xs) => match counts { (c, cs) => repRowFAcc(xs, cs, fill, if array.isNeg(c) { pushN(fill, magI(c), acc) } else { pushN(x, c, acc) }), _ => acc, }, _ => acc, }
+};
 func repRows(rows: List<List<@>>, counts: List<@>) -> List<List<@>> { revLL(repRowsAcc(rows, counts, ~), ~) };
 func repRowsAcc(rows: List<List<@>>, counts: List<@>, acc: List<List<@>>) -> List<List<@>> { match rows { (r, rest) => repRowsAcc(rest, counts, (repRow(r, counts), acc)), _ => acc, } };
 func repRow(r: List<@>, counts: List<@>) -> List<@> { array.revL(repRowAcc(r, counts, ~), ~) };
@@ -1886,7 +2010,7 @@ func fmtFixed(k: @, x: @, d: @) -> String {
     _ => {
       let neg = array.realIsNeg(x);
       let mag = if neg { negR(x) } else { x };
-      let scaled = roundNat(array.rop(3, mag, array.rsunAt(array.widthOf(mag), array.pow10(d))));
+      let scaled = scaledOf(mag, d);
       let p = array.pow10(d);
       (if neg { "¯" } else { "" }) + array.fmtNat(scaled / p) + fracText(scaled % p, d)
     },
@@ -1900,21 +2024,139 @@ func fitWidth(cells: List<String>, w: @) -> (Bool, List<String>) {
     _ => (true, ~),
   }
 };
-func formatBy(a: array.Arr, b: array.Arr, env: Env) -> Ev {
-  match natVec(a) {
-    (ok, spec) => if not ok or array.count(spec) > 2 or array.count(spec) == 0 { dom("the left argument of ⍕ is D or W D") }
-    else if b.kind == 4 or array.isBox(b) { dom("⍕ with a left argument formats numbers") }
+// --- exact decimals for ⍕ (D-102) ---------------------------------------------------------
+// A real is m×2^e exactly; its digits come from that rational with integer arithmetic, rounded
+// half to even, as C's printf rounds:  5 1⍕0.15 is 0.1, since 0.15 is 0.1499999999999999944…
+func fbitsOf(w: @) -> (@, @) { if w == 4 { (5, 10) } else if w == 5 { (8, 23) } else if w == 7 { (15, 112) } else { (11, 52) } };
+// |x| as num÷den, den a power of 2
+func exactOf(x: @) -> (@, @) {
+  let w = array.widthOf(x);
+  let raw = array.rawOf(x);
+  match fbitsOf(w) { (eb, fb) => {
+    let e = (raw / array.pow2(fb)) % array.pow2(eb);
+    let f = raw % array.pow2(fb);
+    let m = if e == 0 { f } else { f + array.pow2(fb) };
+    let e1 = if e == 0 { 1 } else { e };
+    let lift = array.pow2(eb - 1) - 1 + fb;
+    if e1 >= lift { (m * array.pow2(e1 - lift), 1) } else { (m, array.pow2(lift - e1)) }
+  }, }
+};
+func roundDiv(n: @, d: @) -> @ {
+  let q = n / d;
+  let r2 = 2 * (n % d);
+  if r2 > d { q + 1 } else if r2 == d and q % 2 == 1 { q + 1 } else { q }
+};
+// |x|×10^d rounded:  the digits of fixed point with d decimals
+func scaledOf(x: @, d: @) -> @ { match exactOf(x) { (n, den) => roundDiv(n * array.pow10(d), den), } };
+// the decimal exponent p, 10^p ≤ n÷den < 10^(p+1), as (negative, |p|)
+func decExp(n: @, den: @) -> (Bool, @) {
+  let q = n / den;
+  if q > 0 { (false, array.ndigits(q) - 1) } else { (true, decExpUp(n, den, 1)) }
+};
+func decExpUp(n: @, den: @, k: @) -> @ { if n * array.pow10(k) >= den { k } else { decExpUp(n, den, k + 1) } };
+// x in exponent form with s significant digits:  9.9996 with 4 is 1.000E1
+func fmtSci(x: @, s: @) -> String {
+  let sign = if array.realIsNeg(x) and not realZero(x) { "¯" } else { "" };
+  match exactOf(x) { (n, den) => if n == 0 { sign + sciText(0, s, false, 0) } else {
+    match decExp(n, den) { (pneg, pm) => {
+      // the digits: n÷den ÷ 10^(p−s+1), rounded
+      let lead = s - 1;
+      let dig = if pneg { roundDiv(n * array.pow10(pm + lead), den) }
+                else if pm >= lead { roundDiv(n, den * array.pow10(pm - lead)) }
+                else { roundDiv(n * array.pow10(lead - pm), den) };
+      let carry = dig == array.pow10(s);
+      let dig2 = if carry { dig / 10 } else { dig };
+      let pneg2 = if carry and pneg { pm != 1 } else { pneg };
+      let pm2 = if carry { if pneg { pm - 1 } else { pm + 1 } } else { pm };
+      sign + sciText(dig2, s, pneg2, pm2)
+    }, }
+  }, }
+};
+func sciText(dig: @, s: @, pneg: Bool, pm: @) -> String {
+  let ds = array.zeros(s - array.ndigits(dig)) + array.fmtNat(dig);
+  let body = if s > 1 { hoon.crip(array.takeB(ds.bytes(), 1)) + "." + hoon.crip(array.dropB(ds.bytes(), 1)) } else { ds };
+  body + "E" + (if pneg and pm > 0 { "¯" } else { "" }) + array.fmtNat(pm)
+};
+// ⍕'s left argument:  D, W D, or one W D pair per column (D-88, D-102).  A negative D asks for
+// exponent form with |D| significant digits.  W 0 is the column's natural width, one blank apart.
+func specVec(a: array.Arr) -> (Bool, List<(Bool, @)>) {
+  if array.rank(a) > 1 { (false, ~) }
+  else if a.kind == 1 { (true, specNat(array.vals(a), ~)) }
+  else if a.kind == 2 { (true, specInt(array.vals(a), ~)) }
+  else { (false, ~) }
+};
+func specNat(xs: List<@>, acc: List<(Bool, @)>) -> List<(Bool, @)> { match xs { (h, t) => specNat(t, ((false, h), acc)), _ => revP(acc, ~), } };
+func specInt(xs: List<@>, acc: List<(Bool, @)>) -> List<(Bool, @)> { match xs { (h, t) => specInt(t, ((array.isNeg(h), magI(h)), acc)), _ => revP(acc, ~), } };
+func revP(xs: List<(Bool, @)>, acc: List<(Bool, @)>) -> List<(Bool, @)> { match xs { (h, t) => revP(t, (h, acc)), _ => acc, } };
+func countP(xs: List<(Bool, @)>) -> @ { match xs { (h, t) => 1 + countP(t), _ => 0, } };
+// per column:  (W, D negative, |D|);  a negative W refuses
+func colSpecs(spec: List<(Bool, @)>, n: @, cols: @) -> (Bool, List<(@, Bool, @)>) {
+  match spec {
+    (s0, t0) => if n == 1 { match s0 { (dn, d) => (true, repSpec((0, dn, d), cols, ~)), } }
+      else if n == 2 { match t0 { (s1, t1) => match s0 { (wn, w) => if wn { (false, ~) } else { match s1 { (dn, d) => (true, repSpec((w, dn, d), cols, ~)), } }, }, _ => (false, ~), } }
+      else { pairSpecs(spec, ~) },
+    _ => (false, ~),
+  }
+};
+func repSpec(c: (@, Bool, @), n: @, acc: List<(@, Bool, @)>) -> List<(@, Bool, @)> { if n == 0 { acc } else { repSpec(c, n - 1, (c, acc)) } };
+func pairSpecs(spec: List<(Bool, @)>, acc: List<(@, Bool, @)>) -> (Bool, List<(@, Bool, @)>) {
+  match spec {
+    (s0, t0) => match t0 { (s1, t1) => match s0 { (wn, w) => if wn { (false, ~) } else { match s1 { (dn, d) => pairSpecs(t1, ((w, dn, d), acc)), } }, }, _ => (false, ~), },
+    _ => (true, revCS(acc, ~)),
+  }
+};
+func revCS(xs: List<(@, Bool, @)>, acc: List<(@, Bool, @)>) -> List<(@, Bool, @)> { match xs { (h, t) => revCS(t, (h, acc)), _ => acc, } };
+func anySci(cs: List<(@, Bool, @)>) -> Bool { match cs { (c, t) => match c { (w, dn, d) => if dn { true } else { anySci(t) }, }, _ => false, } };
+func fmtByCol(k: @, xs: List<@>, cs: List<(@, Bool, @)>, all: List<(@, Bool, @)>, acc: List<String>) -> List<String> {
+  match xs {
+    (x, xt) => match cs {
+      (c, ct) => match c { (w, dn, d) => fmtByCol(k, xt, ct, all, ((if dn { fmtSci(x, d) } else { fmtFixed(k, x, d) }), acc)), },
+      _ => fmtByCol(k, xs, all, all, acc),
+    },
+    _ => array.revS(acc, ~),
+  }
+};
+// each column's width:  W, or for W 0 its widest cell and a blank before it unless it is first
+func colWidths(cs: List<(@, Bool, @)>, nat: List<@>, first: Bool, acc: List<@>) -> List<@> {
+  match cs {
+    (c, ct) => match c { (w, dn, d) => {
+      let m = match nat { (h, t) => h, _ => 0, };
+      colWidths(ct, match nat { (h, t) => t, _ => ~, }, false, ((if w > 0 { w } else if first { m } else { m + 1 }), acc))
+    }, },
+    _ => array.revL(acc, ~),
+  }
+};
+func fitsAll(rows: List<List<String>>, cs: List<(@, Bool, @)>) -> Bool { match rows { (r, rest) => if fitsRow(r, cs) { fitsAll(rest, cs) } else { false }, _ => true, } };
+func fitsRow(r: List<String>, cs: List<(@, Bool, @)>) -> Bool {
+  match r { (cell, rt) => match cs { (c, ct) => match c { (w, dn, d) => if w > 0 and array.strLen(cell) > w { false } else { fitsRow(rt, ct) }, }, _ => true, }, _ => true, }
+};
+func sciPad(rows: List<List<String>>, cs: List<(@, Bool, @)>) -> List<List<String>> { let ws = array.widths(rows, ~); array.revSS(sciRows(rows, cs, ws, ~), ~) };
+func sciRows(rows: List<List<String>>, cs: List<(@, Bool, @)>, ws: List<@>, acc: List<List<String>>) -> List<List<String>> { match rows { (r, rest) => sciRows(rest, cs, ws, (sciRow(r, cs, ws, ~), acc)), _ => acc, } };
+func sciRow(r: List<String>, cs: List<(@, Bool, @)>, ws: List<@>, acc: List<String>) -> List<String> {
+  match r { (cell, rt) => match cs { (c, ct) => match ws { (w, wt) => match c { (cw, dn, d) => sciRow(rt, ct, wt, ((if dn { cell + array.spaces(w - array.strLen(cell)) } else { cell }), acc)), }, _ => array.revS(acc, ~), }, _ => array.revS(acc, ~), }, _ => array.revS(acc, ~), }
+};
+func formatBy(a: array.Arr, b0: array.Arr, env: Env) -> Ev {
+  match specVec(a) {
+    (ok, spec) => if not ok { dom("the left argument of ⍕ is D, W D, or a W D pair per column") }
+    else if b0.kind == 4 or array.isBox(b0) { dom("⍕ with a left argument formats numbers") }
     else {
-      let d = array.lastL(spec);
-      let cells = fmtFixedAll(b.kind, array.vals(b), d);
-      let cols = if array.rank(b) >= 2 { array.lastDim(array.shape(b)) } else { countS(cells) };
-      let rows = array.chunk(cells, cols);
-      if array.count(spec) == 2 {
-        match fitWidth(cells, array.firstDim(spec)) {
-          (fits, padded) => if not fits { dom("a number does not fit the width") }
-            else { okv(rankUp(charsOf(array.joinS(array.fmtRows(array.chunk(padded, cols), ~, ""), "\n")), b), env) },
-        }
-      } else { okv(rankUp(charsOf(array.joinS(array.fmtRows(rows, array.widths(rows, ~), " "), "\n")), b), env) }
+      let cols = if array.rank(b0) >= 2 { array.lastDim(array.shape(b0)) } else if array.rank(b0) == 1 { array.count(array.vals(b0)) } else { 1 };
+      let n = countP(spec);
+      if n == 0 or (n > 2 and n != 2 * cols) { fail("%length-error", "⍕ takes D, W D, or a W D pair per column") }
+      else { match colSpecs(spec, n, cols) {
+        (ok2, cs) => if not ok2 { dom("a width is a non-negative integer") }
+        else {
+          let b = if anySci(cs) { array.toRealAt(b0, env.rb) } else { b0 };
+          let cells = fmtByCol(b.kind, array.vals(b), cs, cs, ~);
+          // an exponent column pads on the right to its widest, so the mantissas line up (as GNU APL)
+          let rows = sciPad(array.chunk(cells, if cols == 0 { 1 } else { cols }), cs);
+          if not fitsAll(rows, cs) { dom("a number does not fit the width") }
+          else {
+            let ws = colWidths(cs, array.widths(rows, ~), true, ~);
+            okv(rankUp(charsOf(array.joinS(array.fmtRows(rows, ws, ""), "\n")), b0), env)
+          }
+        },
+      } }
     },
   }
 };
@@ -2918,7 +3160,7 @@ func dyadKind(cp: @, kl: @, kr: @) -> @ {
   else { match cp {
     247 => 3, 9055 => 3, 9675 => 3, 8902 => 3,
     8722 => array.maxk(array.maxk(kl, kr), 2),
-    60 => 1, 8804 => 1, 61 => 1, 8805 => 1, 62 => 1, 8800 => 1, 8744 => 1, 8743 => 1, 9073 => 1, 9074 => 1,
+    60 => 1, 8804 => 1, 61 => 1, 8805 => 1, 62 => 1, 8800 => 1, 9073 => 1, 9074 => 1,
     _ => array.maxk(kl, kr),
   } }
 };
