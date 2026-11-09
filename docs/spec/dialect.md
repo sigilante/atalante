@@ -1,6 +1,6 @@
 # ATL/APL — The Dialect
 
-**Status: v2 in progress (2026-11-03).** v1 is the approved Draft 1 of 2026-10-27 with the three rulings of 2026-10-28 (D-8 deferred to the §9 roadmap, D-15 and D-32 ruled). v2 opened on 2026-11-03 with P8: the maintainer approved seven items for dfns, written as D-63..D-69, and D-21, D-22, D-32, D-33, D-52 and D-62 carry the amendments. P9 the same day: the maintainer ruled D-6 for `%box`, scoped narrowly, written as D-70..D-77 with amendments to D-4, D-11, D-23, D-25, D-41..D-45. Then the rest of §9 and P10: D-78..D-91 close nesting's held-back items and the held-back primitives with axis specification. The GNU APL suite (2026-11-06..09, `docs/gnu-apl-suite.md`) added D-96..D-105 and amendments to D-11, D-15, D-23, D-40, D-77, D-82, D-89 and D-90. Rules carry flat `D-n` ids, append-only. Each rule names the corpus vectors that pin it; `⟨none — UNPINNED⟩` marks a rule that has no vector yet. A rule without a vector is not a rule. No rule is OPEN; DEFERRED marks a continuation on the §9 roadmap.
+**Status: v2 in progress (2026-11-03).** v1 is the approved Draft 1 of 2026-10-27 with the three rulings of 2026-10-28 (D-8 deferred to the §9 roadmap, D-15 and D-32 ruled). v2 opened on 2026-11-03 with P8: the maintainer approved seven items for dfns, written as D-63..D-69, and D-21, D-22, D-32, D-33, D-52 and D-62 carry the amendments. P9 the same day: the maintainer ruled D-6 for `%box`, scoped narrowly, written as D-70..D-77 with amendments to D-4, D-11, D-23, D-25, D-41..D-45. Then the rest of §9 and P10: D-78..D-91 close nesting's held-back items and the held-back primitives with axis specification. The GNU APL suite (2026-11-06..09, `docs/gnu-apl-suite.md`) added D-96..D-107 and amendments to D-11, D-15, D-23, D-40, D-77, D-82, D-89 and D-90. Rules carry flat `D-n` ids, append-only. Each rule names the corpus vectors that pin it; `⟨none — UNPINNED⟩` marks a rule that has no vector yet. A rule without a vector is not a rule. No rule is OPEN; DEFERRED marks a continuation on the §9 roadmap.
 
 ATL/APL is the APL that Atalante compiles. It is Budd's compiler subset (Budd 1987, *An APL Compiler*) with the additions the README examples use, and it is specified here as a *language*, independent of its host. The host is Jock; the companion [`docs/plan.md`](../plan.md) fixes the order in which this spec is implemented.
 
@@ -122,6 +122,15 @@ ATL/APL is the APL that Atalante compiles. It is Budd's compiler subset (Budd 19
 - In the dyadic case the two frames must agree, or one of them must be empty, which repeats its one cell. Frames of different rank are a RANK ERROR, and frames that disagree otherwise are a LENGTH ERROR.
 
 Under `)ASCII ON` the words are `tildediaeresis`, `stardiaeresis` and `jotdiaeresis` (D-8). A right operand that is an array is one numeral, a name or a parenthesised expression (D-95), so two ranks are written `+⍤(0 1)`. ⟨`atl/operators`, `gnu/Commute`, `gnu/OperPower`, `gnu/Rank`⟩
+
+**D-106 · Gamma, for `!` past the whole numbers (2026-11-09).** `!B` of a fraction is Γ(B+1): `!2.5` is 3.32335097. Γ is computed by Lanczos's approximation (g 7, nine terms) at REAL64, which gives about 15 digits, and reflects below ½. `A!B` takes reals too.
+- A whole `A` up to 1000 takes the product of `(B−i)÷(i+1)`, which keeps a small `B`'s digits: `2!1E¯10` is `¯5E¯11`.
+- Other reals take Γ(B+1)÷(Γ(A+1)×Γ(B−A+1)), where 1÷Γ is 0 at a pole.
+- Whole numbers keep APL2's rules for negatives: `B<0≤A` gives `(¯1)^A×A!(A−B−1)`, `A≤B<0` gives `(¯1)^(B−A)×(B−A)!(−A−1)`, and any other negative case gives 0. So `¯5!¯3` is 6 and `3!¯5` is ¯35.
+- A pole of Γ, `!¯1` for example, is a DOMAIN ERROR.
+⟨`atl/gamma`, `gnu/Factorial`, `gnu/Binomial`⟩
+
+**D-107 · Naturals past 2^63 meet integers exactly (amends D-15, 2026-11-09).** A natural of 2^63 or more has no integer. Where one meets an integer, or meets subtraction, `+ − × ⌈ ⌊` and the comparisons work on exact signed values. The result is an integer array when every element fits an integer, else a natural array when every element is non-negative and below 2^64, else a DOMAIN ERROR. So `9223372036854775808+¯1` is 9223372036854775807, `18446744073709551615−1` is 18446744073709551614, and `9223372036854775808>¯1` is 1. No result turns real. ⟨`atl/exact-ni`, `atl/types`⟩
 
 ### The rest of §9 (2026-11-04)
 
