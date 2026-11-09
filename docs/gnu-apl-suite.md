@@ -13,10 +13,12 @@ Atalante runs GNU APL's own testcases, rewritten into its corpus format. Every r
 | Steps typed at the prompt | 2,787 |
 | Function definitions typed | 29 |
 | Steps and definitions skipped as inexpressible | 1,271 |
-| Typed lines that reproduce GNU's output | 1,862 |
-| Typed lines that differ from GNU | 954 |
+| Typed lines that reproduce GNU's output | 2,024 |
+| Typed lines that differ from GNU | 792 |
 
 The skips are mostly GNU features that sit outside Atalante's language. They are 394 system commands, 233 complex-number steps, 128 user commands, the `⎕` names other than `⎕IO` and `⎕PP` (`⎕CR` alone is 105), and the glyphs `⍨ ⍤ ⍣ ⌷ ⍸`.
+
+The counts leave out the `)DISPLAY APL2` line that opens each case, which reproduces in all 116. Under it a box prints in APL2's layout (D-99), as GNU prints it; that took the reproducing lines from 1,862 to 2,024, and no case lost a line.
 
 P14 (2026-11-09) added `⍬`, the set functions `∪ ∩ ∼` and n-wise reduction (D-97, D-98), and fixed the importer's echo bug (see the harness limits below). On 2026-11-07 the suite reproduced 1,772 of 2,864 typed lines; 106 of those lines were GNU's error echoes, which no longer count. The new features' own cases now fail only on display: Union 10 of 12 lines reproduce, Without 14 of 18, Zilde 3 of 5, Intersection 6 of 8, Reduce_N_wise 22 of 27 and Reduce_N_wise_with_axis 11 of 13. Every remaining failure in them is the strand display of a nested result, except two `Without` steps that use roll.
 
@@ -38,7 +40,7 @@ P14 (2026-11-09) added `⍬`, the set functions `∪ ∩ ∼` and n-wise reducti
 
 ## Dialect differences, by design
 
-- **Nested display.** Atalante prints a nested array as the strand that builds it (D-76), for example `(1 1) (1 2)`. GNU follows APL2's spaced layout. This accounts for most of the value and display failures.
+- **Nested display is a setting.** Atalante prints a box as the strand that builds it (D-76), for example `(1 1) (1 2)`, unless `)DISPLAY APL2` asks for APL2's layout (D-99), which GNU prints. The suite runs under `)DISPLAY APL2`.
 - **Exponent format in a column.** GNU gives every number in a column the same exponent form, as in `2.300E1 5.6E¯3`. Atalante formats each number by itself.
 - **Integer overflow refuses.** GNU and APL2 promote to a real, so `9223372036854775807+1` and `!20 22` answer in floating point there. Atalante raises a DOMAIN ERROR, because a change of kind is the program's to ask for (D-15).
 - **A mixed comparison goes through the real (ruled 2026-11-07).** Atalante converts an integer to a real before comparing it with one, so `9007199254740993 ≠ 9007199254740992.0` is 0. GNU compares exactly and gives 1.
