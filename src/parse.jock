@@ -41,7 +41,7 @@ enum Ast {
   empty, elide, fnend,
   lit(Lit), name(String), nilad(String), sysvar(String), strand(List<Ast>),
   monad(Monad), dyad(Dyad), index(Index),
-  assign(Assign), iassign(IAssign), sysassign(Assign), fassign(FAssign),
+  assign(Assign), iassign(IAssign), sysassign(Assign), fassign(FAssign), sassign(SAssign), selassign(SelAssign),
   guard(Guard), eguard(Guard),
   cmd(Cmd), header(Header), stmts(List<Ast>),
 };
@@ -50,6 +50,8 @@ struct Dyad { f: Fn, l: Ast, r: Ast };
 struct Index { a: Ast, ix: List<Ast> };
 struct Assign { nm: String, v: Ast };
 struct IAssign { nm: String, ix: List<Ast>, v: Ast };
+struct SAssign { nms: List<String>, v: Ast };               // (A B C) ← V (D-108)
+struct SelAssign { nm: String, t: Ast, v: Ast };          // (f A) ← V, t the selection naming A (D-108)
 struct FAssign { nm: String, f: Fn };                     // F ← {…} (D-64)
 struct Guard { c: Ast, e: Ast };                          // cond: expr (D-66)
 struct Cmd { nm: String, args: List<String> };
@@ -463,6 +465,8 @@ func dropCps(xs: List<@>, n: @) -> List<@> { if n == 0 { xs } else { match xs { 
 func pushParen(t: lexer.Token, rest: List<lexer.Token>, sig: List<(String, @)>, acc: List<Item>) -> Items {
   match matchTo(rest, 9, 10, 0, ~) {
     (inner, rest2, closed) => if not closed { sei(t.col, "unbalanced (") }
+      // (A B C) ← … names its names, defined or not (D-108)
+      else if nameStrand(inner, 0) and arrowNext(rest2) { items(rest2, sig, (arrItem(Ast.strand(tokNames(inner, ~)), t.col, false, false), acc)) }
       else {
         match inner {
           (i0, irest) => match parseExpr(inner, sig) {
@@ -474,6 +478,10 @@ func pushParen(t: lexer.Token, rest: List<lexer.Token>, sig: List<(String, @)>, 
       },
   }
 };
+func nameStrand(ts: List<lexer.Token>, n: @) -> Bool { match ts { (h, t) => if kindOf(h) == 5 { nameStrand(t, n + 1) } else { false }, _ => n >= 2, } };
+func arrowNext(ts: List<lexer.Token>) -> Bool { match ts { (h, t) => kindOf(h) == 14, _ => false, } };
+func tokNames(ts: List<lexer.Token>, acc: List<Ast>) -> List<Ast> { match ts { (h, t) => tokNames(t, (Ast.name(h.text), acc)), _ => revAst(acc, ~), } };
+func revAst(xs: List<Ast>, acc: List<Ast>) -> List<Ast> { match xs { (h, t) => revAst(t, (h, acc)), _ => acc, } };
 // the index parts: each `;`-separated part is an expression or an elision
 func indexParts(parts: List<List<lexer.Token>>, sig: List<(String, @)>, acc: List<Ast>) -> Asts {
   match parts {
@@ -649,9 +657,10 @@ func extend(v: Ast, rest: List<Item>, sig: List<(String, @)>) -> Parsed {
             .index(ix) => match ix.a {
               .name(nm) => if y.unbound { Parsed.err(pe("%value-error", y.col, nm + " is not defined")) }
                 else { extend(Ast.iassign(IAssign( nm: nm, ix: ix.ix, v: v )), more2, sig) },
-              _ => se(c, "can only index-assign a name"),
+              _ => selTo(y.a, v, c, more2, sig),
             },
-            _ => se(c, "cannot assign to that"),
+            .strand(xs) => match namesOf(xs, ~) { (ok, nms) => if ok { extend(Ast.sassign(SAssign( nms: nms, v: v )), more2, sig) } else { se(c, "a strand assignment names only names (D-108)") }, },
+            _ => selTo(y.a, v, c, more2, sig),
           },
           _ => se(c, "nothing to assign to"),
         },
@@ -661,6 +670,18 @@ func extend(v: Ast, rest: List<Item>, sig: List<(String, @)>) -> Parsed {
     _ => Parsed.ok(v),
   }
 };
+// the name a selective assignment sets:  the one at the end of the right-argument spine
+func spineName(t: Ast) -> String {
+  match t { .name(nm) => nm, .monad(m) => spineName(m.r), .dyad(d) => spineName(d.r), .index(ix) => spineName(ix.a), _ => "", }
+};
+func selTo(t: Ast, v: Ast, c: @, more: List<Item>, sig: List<(String, @)>) -> Parsed {
+  let nm = spineName(t);
+  if nm == "" { se(c, "cannot assign to that") } else { extend(Ast.selassign(SelAssign( nm: nm, t: t, v: v )), more, sig) }
+};
+func namesOf(xs: List<Ast>, acc: List<String>) -> (Bool, List<String>) {
+  match xs { (h, t) => match h { .name(nm) => namesOf(t, (nm, acc)), _ => (false, ~), }, _ => (true, revStr(acc, ~)), }
+};
+func revStr(xs: List<String>, acc: List<String>) -> List<String> { match xs { (h, t) => revStr(t, (h, acc)), _ => acc, } };
 func parseExpr(ts: List<lexer.Token>, sig: List<(String, @)>) -> Parsed {
   match items(ts, sig, ~) { .err(e) => Parsed.err(e), .ok(its) => build(its, sig), }
 };
@@ -771,6 +792,7 @@ func bind(sig: List<(String, @)>, nm: String, c: @) -> List<(String, @)> {
   }
 };
 func headerClass(h: Header) -> @ { if h.lft == "" { if h.rgt == "" { 5 } else { 2 } } else { 3 } };
+func bindNames(sig: List<(String, @)>, nms: List<String>) -> List<(String, @)> { match nms { (h, t) => bindNames(bind(sig, h, 1), t), _ => sig, } };
 func bindsAll(xs: List<Ast>, sig: List<(String, @)>) -> List<(String, @)> {
   match xs { (h, t) => bindsAll(t, binds(h, sig)), _ => sig, }
 };
@@ -779,6 +801,8 @@ func binds(a: Ast, sig: List<(String, @)>) -> List<(String, @)> {
     .assign(s) => binds(s.v, bind(sig, s.nm, 1)),
     .fassign(s) => bind(sig, s.nm, match s.f { .dfn(d) => dfnClass(d), _ => 4, }),
     .iassign(s) => binds(s.v, bindsAll(s.ix, sig)),
+    .sassign(s) => binds(s.v, bindNames(sig, s.nms)),
+    .selassign(s) => binds(s.v, sig),
     .sysassign(s) => binds(s.v, sig),
     .guard(g) => binds(g.e, binds(g.c, sig)),
     .eguard(g) => binds(g.e, binds(g.c, sig)),
@@ -869,6 +893,8 @@ func showAst(a: Ast) -> String {
     .index(ix) => showAst(ix.a) + "[" + showAsts(ix.ix, ";") + "]",
     .assign(s) => "←(" + s.nm + ", " + showAst(s.v) + ")",
     .iassign(s) => "←(" + s.nm + "[" + showAsts(s.ix, ";") + "], " + showAst(s.v) + ")",
+    .sassign(s) => "←((" + joinS(s.nms, " ") + "), " + showAst(s.v) + ")",
+    .selassign(s) => "←(" + showAst(s.t) + ", " + showAst(s.v) + ")",
     .sysassign(s) => "←(⎕" + s.nm + ", " + showAst(s.v) + ")",
     .fassign(s) => "←(" + s.nm + ", " + showFn(s.f) + ")",
     .guard(g) => ":(" + showAst(g.c) + ", " + showAst(g.e) + ")",
