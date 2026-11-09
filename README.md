@@ -1,6 +1,6 @@
 # ATaLante:  Golden APL
 
-**STATUS ~2026.11.09:  The project is at v0.2 in progress, implementing dialect v1 plus P8 (dfns with guards), P9 (nested arrays), P10 (the held-back primitives and axis specification), P11 (float jets under jojo), the rest of the spec's §9 (laminate, dfn operators, `⍺←`, error guards), P12 (ASCII input and `⎕TYPE` widths), P13 (GNU APL's testcases) P14 (`⍬`, `∪ ∩ ∼` and n-wise reduction) and P15 (APL2's display as a setting; 2,024 of 2,816 GNU lines reproducing).**
+**STATUS ~2026.11.09:  The project is at v0.2 in progress, implementing dialect v1 plus P8 (dfns with guards), P9 (nested arrays), P10 (the held-back primitives and axis specification), P11 (float jets under jojo), the rest of the spec's §9 (laminate, dfn operators, `⍺←`, error guards), P12 (ASCII input and `⎕TYPE` widths), P13 (GNU APL's testcases) P14 (`⍬`, `∪ ∩ ∼` and n-wise reduction), P15 (APL2's display as a setting; 2,024 of 2,816 GNU lines reproducing) and P16 (roll, deal and `⎕RL`).**
 
 ![](./logo.jpg)
 
