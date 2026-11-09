@@ -4,7 +4,6 @@
 ⍝ skipped (system command): )SIC
 🍎> ⌹0.0
 ⍝ refuse: %domain-error
-🍎> ⌹0
 ⍝ skipped (system command): )SIC
 🍎> ⌹4
 ⍝ expect: 0.25

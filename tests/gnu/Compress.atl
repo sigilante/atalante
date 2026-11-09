@@ -25,5 +25,4 @@
 ⍝ expect: AB
 🍎> (1 1/M)←2 3⍴'ABCD'
 ⍝ refuse: %length-error
-🍎> (1 1/M)←2 3⍴'ABCD'
 ⍝ skipped (system command): )SIC

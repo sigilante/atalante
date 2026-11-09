@@ -558,8 +558,8 @@ func applyDyad0(f: parse.Fn, a: array.Arr, b: array.Arr, env: Env) -> Ev {
     .each(g) => zipItems(g, a, b, env),
     .inner(i) => inner(i.f, i.g, a, b, env),
     .outer(g) => outer(g, a, b, env),
-    .reduce(g) => nyi("n-wise reduction"),
-    .reduce1(g) => nyi("n-wise reduction"),
+    .reduce(g) => nwise(g, a, b, if array.rank(b) == 0 { 0 } else { array.rank(b) - 1 }, env),
+    .reduce1(g) => nwise(g, a, b, 0, env),
     .scan(g) => nyi("dyadic scan"),
     .scan1(g) => nyi("dyadic scan"),
     .user(nm) => callNamed(nm, true, a, b, env),
@@ -741,6 +741,56 @@ func reduceLines(f: parse.Fn, a: array.Arr, lines: List<List<@>>, env: Env, acc:
     _ => Evs.ok((array.revA(acc, ~), env)),
   }
 };
+// --- n-wise reduction (D-97):  A f/[k] B reduces each window of |A| along axis k ---------------
+// The windows start at every position that leaves |A| elements, so the axis becomes 1+len−|A| long;
+// a negative A reverses each window, and A of 0 gives 1+len identities.  B a scalar is a 1-vector.
+func nwise(f: parse.Fn, a: array.Arr, b0: array.Arr, k: @, env: Env) -> Ev {
+  let b = if array.rank(b0) == 0 { reshapeKeep(b0, [1]) } else { b0 };
+  if array.rank(a) > 1 { fail("%rank-error", "the left argument of n-wise reduction is a scalar") }
+  else if array.size(array.shape(a)) != 1 { fail("%length-error", "the left argument of n-wise reduction is one number") }
+  else { match windowOf(a) {
+    (ok, neg, w) => if not ok { dom("the left argument of n-wise reduction is a whole number") }
+      else if w > array.nth(array.shape(b), k) + 1 { dom("the window is longer than the axis by more than one") }
+      else {
+        let len = array.nth(array.shape(b), k);
+        let m = len + 1 - w;
+        let shp2 = setNth(array.shape(b), k, m);
+        match nwiseLines(f, b, axisLines(array.shape(b), k), w, neg, m, env, ~, 1, ~) {
+          .err(e) => Ev.err(e),
+          .ok(r) => match r { (res, env2) => match res {
+            (items, numbered) => okv(array.regather(array.boxOf([array.countA(items)], items), mk(1, shp2, fromLines(shp2, k, numbered))), env2),
+          }, },
+        }
+      },
+  } }
+};
+// (whole, negative, magnitude) of a one-number window
+func windowOf(a: array.Arr) -> (Bool, Bool, @) {
+  let x = array.first(a);
+  if a.kind == 1 { (true, false, x) }
+  else if a.kind == 2 { (true, array.isNeg(x), lagoon.tabs(x)) }
+  else if a.kind == 3 { if wholeOrNeg(x) { (true, array.realIsNeg(x), sMag(array.rtoi(100, x))) } else { (false, false, 0) } }
+  else { (false, false, 0) }
+};
+func nwiseLines(f: parse.Fn, b: array.Arr, lines: List<List<@>>, w: @, neg: Bool, m: @, env: Env, acc: List<array.Arr>, n: @, nacc: List<List<@>>) -> ScanR {
+  match lines {
+    (l, rest) => match nwiseWins(f, b, l, w, neg, 0, m, env, ~) {
+      .err(e) => ScanR.err(e),
+      .ok(r) => match r { (vs, env2) => nwiseLines(f, b, rest, w, neg, m, env2, array.catA(acc, vs), n + m, (array.iotaL(m, n), nacc)), },
+    },
+    _ => ScanR.ok(((acc, revLL(nacc, ~)), env)),
+  }
+};
+func nwiseWins(f: parse.Fn, b: array.Arr, l: List<@>, w: @, neg: Bool, i: @, m: @, env: Env, acc: List<array.Arr>) -> Evs {
+  if i == m { Evs.ok((revArrs(acc, ~), env)) }
+  else {
+    let win = array.takeL(array.dropL(l, i), w);
+    match reduceItems(f, lineItems(b, if neg { array.revL(win, ~) } else { win }), env) {
+      .err(e) => Evs.err(e),
+      .ok(r) => match r { (v, env2) => nwiseWins(f, b, l, w, neg, i + 1, m, env2, (v, acc)), },
+    }
+  }
+};
 func scanAxis(f: parse.Fn, a: array.Arr, k: @, env: Env) -> Ev {
   let shp = array.shape(a);
   let lines = axisLines(shp, k);
@@ -906,6 +956,8 @@ func axisDyad(f: parse.Fn, k0: @, a: array.Arr, b: array.Arr, env: Env) -> Ev {
         else if cp == 92 or cp == 9024 { repAxis(a, b, k, true, env) }
         else if cp == 8834 { if array.rank(b) > 1 { partitionAxis(a, b, k, env) } else { partitionVec(a, b, env) } }
         else { nyi("axis specification on dyadic " + lexerText(cp)) },
+      .reduce(g) => nwise(g, a, b, k, env),                                                   // A f/[k] B (D-97)
+      .reduce1(g) => nwise(g, a, b, k, env),
       _ => nyi("axis specification on that function"),
     } },
   }
@@ -913,7 +965,8 @@ func axisDyad(f: parse.Fn, k0: @, a: array.Arr, b: array.Arr, env: Env) -> Ev {
 
 // --- monadic structural functions (D-42) --------------------------------------------------
 func monadStruct(cp: @, a: array.Arr, env: Env) -> Ev {
-  if array.isBox(a) { monadBox(cp, a, env) } else { monadSimple(cp, a, env) }
+  if cp == 8746 { unique(a, env) }                                                            // ∪B (D-98)
+  else if array.isBox(a) { monadBox(cp, a, env) } else { monadSimple(cp, a, env) }
 };
 // on a box: the shape-only and element-moving functions run on the index ray (D-72)
 func monadBox(cp: @, a: array.Arr, env: Env) -> Ev {
@@ -1169,7 +1222,44 @@ func pickPath(path: List<@>, b: array.Arr, env: Env) -> Ev {
 
 // --- dyadic structural functions (D-42) ----------------------------------------------------
 func dyadStruct(cp: @, a: array.Arr, b: array.Arr, env: Env) -> Ev {
-  if array.isBox(a) or array.isBox(b) { dyadBox(cp, a, b, env) } else { dyadSimple(cp, a, b, env) }
+  if cp == 8764 { without(a, b, env) }                                                        // A∼B (D-98)
+  else if cp == 8745 { intersect(a, b, env) }                                                 // A∩B (D-98)
+  else if cp == 8746 { union(a, b, env) }                                                     // A∪B (D-98)
+  else if array.isBox(a) or array.isBox(b) { dyadBox(cp, a, b, env) } else { dyadSimple(cp, a, b, env) }
+};
+// --- the set functions (D-98, after GNU APL) ---------------------------------------------------
+// Each compares elements by match (D-73) through ∊ and ⍳, keeps its left argument's order, and
+// gives an empty result its left argument's prototype (D-77).  A∪B is ∪A,B, GNU APL's symmetric
+// union (Dyalog's is A,B∼A, which keeps A's duplicates).
+func vecOf(a: array.Arr) -> array.Arr { if array.rank(a) == 1 { a } else { reshapeKeep(a, [array.size(array.shape(a))]) } };
+func setRank(a: array.Arr, b: array.Arr, both: Bool) -> Bool { array.rank(a) <= 1 and (not both or array.rank(b) <= 1) };
+func notMask(m: array.Arr) -> array.Arr { mk(1, array.shape(m), array.turnL(array.vals(m), lambda (x: @) -> @ { 1 - x })) };
+func without(a: array.Arr, b: array.Arr, env: Env) -> Ev {
+  if not setRank(a, b, false) { fail("%rank-error", "the left argument of ∼ is a vector or a scalar") }
+  else { let v = vecOf(a); match dyadStruct(8714, v, b, env) { .err(e) => Ev.err(e), .ok(r) => match r { (m, env2) => dyadStruct(47, notMask(m), v, env2), }, } }
+};
+func intersect(a: array.Arr, b: array.Arr, env: Env) -> Ev {
+  if not setRank(a, b, true) { fail("%rank-error", "∩ takes vectors or scalars") }
+  else { let v = vecOf(a); match dyadStruct(8714, v, b, env) { .err(e) => Ev.err(e), .ok(r) => match r { (m, env2) => dyadStruct(47, m, v, env2), }, } }
+};
+func union(a: array.Arr, b: array.Arr, env: Env) -> Ev {
+  if not setRank(a, b, true) { fail("%rank-error", "∪ takes vectors or scalars") }
+  else { match dyadStruct(44, vecOf(a), vecOf(b), env) {
+    .err(e) => Ev.err(e),
+    .ok(r) => match r { (c, env2) => if array.size(array.shape(c)) == 0 { okv(array.emptyOf([0], array.proto(vecOf(a))), env2) } else { unique(c, env2) }, },
+  } }
+};
+// ∪B:  each element at its first occurrence, the ones whose index-of is their own position
+func unique(a: array.Arr, env: Env) -> Ev {
+  if array.rank(a) > 1 { fail("%rank-error", "∪ takes a vector or a scalar") }
+  else {
+    let v = vecOf(a);
+    let n = array.size(array.shape(v));
+    match dyadStruct(9075, v, v, env) {
+      .err(e) => Ev.err(e),
+      .ok(r) => match r { (ix, env2) => dyadStruct(47, mk(1, [n], array.zipL(array.vals(ix), array.iotaL(n, env2.io), lambda (x: @, y: @) -> @ { b2n(x == y) })), v, env2), },
+    }
+  }
 };
 // with a box on either side: comparisons by match, catenation of elements, the
 // element-moving functions on the index ray with a simple left argument (D-72)

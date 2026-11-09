@@ -58,7 +58,6 @@
 ⍝ expect: PAPER    8    42.11
 🍎> 2⍕1(2 3)
 ⍝ refuse: %domain-error
-🍎> 2⍕1 (2 3)
 ⍝ skipped (branch): →
 🍎> B←3 2⍴(1 2) (3 4 5) 6 7 (8 9) 10
 🍎> 2⍕¨B

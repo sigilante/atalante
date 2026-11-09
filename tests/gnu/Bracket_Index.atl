@@ -153,7 +153,7 @@
 🍎> V
 ⍝ expect: 1 2 3 4 5
 🍎> V←⍳5
-⍝ skipped (glyph ⍬): (V[⍬])←1 2 3
+🍎> (V[⍬])←1 2 3
 🍎> ⍴V
 ⍝ expect: 5
 🍎> A←5 ⋄ (A[])←,9 ⋄ A ⋄ ≡A
@@ -175,11 +175,9 @@
 ⍝ expect: 9 9 9
 🍎> V←1 2 3 ⋄ (0⌽V)←9 9
 ⍝ refuse: %length-error
-🍎> (0⌽V)←9 9
 ⍝ skipped (system command): )SIC
 🍎> V←5 ⋄ (⌽V)←9 9
 ⍝ refuse: %length-error
-🍎> (⌽V)←9 9
 ⍝ skipped (system command): )SIC
 🍎> M←2 3⍴⍳6 ⋄ (1 2⍉M)←9 ⋄ M
 ⍝ expect: 9 9 9
@@ -259,7 +257,6 @@
 ⍝ skipped (complex numbers): 1↑[1J0](2 2⍴⍳4)
 🍎> ⌽[1E10](2 2⍴⍳4)
 ⍝ refuse: %axis-error
-🍎> ⌽[10000000000](2 2⍴⍳4)
 ⍝ skipped (system command): )SIC
 🍎> (1 2 3)[1E30]
 ⍝ refuse: %index-error

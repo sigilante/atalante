@@ -56,9 +56,7 @@
 ⍝ expect: 1 1 1 1 1
 🍎> 3550579489682168305 +/ 1 2 3 4 5
 ⍝ refuse: %domain-error
-🍎> 3550579489682168305+/1 2 3 4 5
 ⍝ skipped (branch): →
 🍎> ¯9223372036854775808 +/ 1 2 3 4 5
 ⍝ refuse: %domain-error
-🍎> ¯9.223372036854776E18+/1 2 3 4 5
 ⍝ skipped (branch): →

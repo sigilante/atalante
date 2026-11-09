@@ -161,18 +161,16 @@
 ⍝ skipped (system command): )MORE
 ⍝ skipped (system command): )SIC
 🍎> ⎕IO←1
-⍝ skipped (glyph ⍬): ⊃[⍬](1 2)(3 4)
-⍝ skipped (glyph ⍬): ⊃[⍬](1 2) (3 4)
+🍎> ⊃[⍬](1 2)(3 4)
+⍝ refuse: %axis-error
 ⍝ skipped (system command): )MORE
 ⍝ skipped (system command): )SIC
 🍎> ⊃[1 2](1 2)(3 4)
 ⍝ refuse: %axis-error
-🍎> ⊃[1 2](1 2) (3 4)
 ⍝ skipped (system command): )MORE
 ⍝ skipped (system command): )SIC
 🍎> M←2 3⍴⍳6 ⋄ ⍴⊃[1](⊂M),⊂M
 ⍝ refuse: %axis-error
-🍎> ⍴⊃[1](⊂M),⊂M
 ⍝ skipped (system command): )MORE
 ⍝ skipped (system command): )SIC
 🍎> )ERASE M

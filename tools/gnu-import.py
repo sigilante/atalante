@@ -13,13 +13,14 @@ naming why, so every skip is visible in the output.
 """
 import os, re, sys
 
-ATL_GLYPHS = set("¨¯×÷←↑↓∇∈∊−∘∣∧∨∼≠≡≢≤≥⊂⊃⊖⊢⊣⊤⊥⋄⋆⌈⌊⌹⌽⌿⍀⍉⍋⍎⍒⍕⍝⍟⍪⍱⍲⍳⍴⍵⍷⍺⎕○")
+ATL_GLYPHS = set("¨¯×÷←↑↓∇∈∊−∘∣∧∨∼≠≡≢≤≥⊂⊃⊖⊢⊣⊤⊥⋄⋆⌈⌊⌹⌽⌿⍀⍉⍋⍎⍒⍕⍝⍟⍪⍱⍲⍳⍴⍵⍷⍺⎕○∪∩⍬")
 REWRITE = {"ρ": "⍴", "ι": "⍳", "◊": "⋄", "ϵ": "∊", "ε": "∊", "⍶": "⍺⍺", "⍹": "⍵⍵"}
 ERRORS = {"DOMAIN ERROR": "%domain-error", "LENGTH ERROR": "%length-error", "RANK ERROR": "%rank-error",
           "INDEX ERROR": "%index-error", "VALUE ERROR": "%value-error", "SYNTAX ERROR": "%syntax-error",
           "AXIS ERROR": "%axis-error", "VALENCE ERROR": "%valence-error", "NONCE ERROR": "%unimplemented",
           "LIMIT ERROR": "%limit-error", "WS FULL": "%limit-error", "Bad number": "%syntax-error"}
 SYSNAMES_OK = {"IO", "PP"}
+WRAP = re.compile(r"      [0-9¯.E ]+")
 
 
 def name_char(c):
@@ -92,11 +93,20 @@ def parse(lines):
                 return m.startswith("       ") and not caret(m)
             while j < n and is_out(lines[j]):
                 out.append(lines[j].rstrip("\n")); j += 1
+                # GNU wraps a long numeric row at ⎕PW 80 and indents the rest six spaces, like input;
+                # Atalante does not wrap, so a numeric continuation joins the row it continues
+                while j < n and out and len(out[-1]) >= 70 and WRAP.fullmatch(lines[j].rstrip("\n")):
+                    out[-1] = out[-1].rstrip() + " " + lines[j].strip(); j += 1
             while out and out[-1].strip() == "": out.pop()
             # an error is recorded as its name, then the input echoed and a caret line, both indented
             # like input: they belong to this step
             # (any error, by any name:  the echo is the input again and a caret line follows it)
             if out and j + 1 < n and lines[j].startswith("      ") and lines[j][6:].rstrip("\n").strip() == inp.strip() and caret(lines[j + 1]):
+                j += 2
+            # GNU echoes the failing line in its own normal form (`3550579489682168305 +/ 1 2 3 4 5`
+            # comes back as `3550579489682168305+/1 2 3 4 5`), so after an error a line with a caret
+            # line under it is the echo whatever its spelling
+            elif errtag(out) and j + 1 < n and lines[j].startswith("      ") and caret(lines[j + 1]):
                 j += 2
             elif errtag(out):
                 while j < n and lines[j].startswith("      ") and (lines[j][6:].rstrip("\n").strip() == inp.strip() or caret(lines[j])):

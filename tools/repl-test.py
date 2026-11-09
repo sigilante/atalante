@@ -18,8 +18,10 @@ PROMPTS = ("jojo>", "\U0001F34E>", "\U0001F34F>")
 
 def pane():
     """the pane, minus the runtime's log lines (and their wrapped tails)"""
-    raw = subprocess.run(["tmux", "capture-pane", "-p", "-S", "-500", "-t", SESSION],
-                         capture_output=True, text=True).stdout.rstrip("\n").split("\n")
+    # -J joins a line the pane wrapped (an answer wider than the pane), and keeps trailing spaces,
+    # which each line then drops as the unjoined capture did
+    raw = [l.rstrip() for l in subprocess.run(["tmux", "capture-pane", "-p", "-J", "-S", "-500", "-t", SESSION],
+                         capture_output=True, text=True).stdout.rstrip("\n").split("\n")]
     out, skipping = [], False
     for l in raw:
         if " INFO " in l or " WARN " in l or " ERROR " in l:

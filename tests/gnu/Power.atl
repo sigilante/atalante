@@ -37,13 +37,9 @@
 ⍝ skipped (complex numbers): ¯1J0*1E14
 🍎> ⎕PP←10
 ⍝ skipped (complex numbers): 0*0J1
-⍝ skipped (complex numbers): 0⋆0J1
 ⍝ skipped (complex numbers): 0*0J¯1
-⍝ skipped (complex numbers): 0⋆0J¯1
 ⍝ skipped (complex numbers): 0J0*0J1
-⍝ skipped (complex numbers): 0J0⋆0J1
 ⍝ skipped (complex numbers): 0*¯1J1
-⍝ skipped (complex numbers): 0⋆¯1J1
 ⍝ skipped (system command): )SIC
 ⍝ skipped (complex numbers): 1E200J0*¯2
 🍎> 1E200*¯2
