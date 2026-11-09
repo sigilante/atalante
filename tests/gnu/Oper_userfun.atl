@@ -1,4 +1,6 @@
 ⍝ from GNU APL Oper_userfun.tc (GPLv3, tests/gnu/README.md)
+🍎> )DISPLAY APL2
+⍝ expect: display APL2
 🍎> )ERASE PLUS
 🍎> ∇Z←A PLUS B
 	Z←A + B

@@ -1,4 +1,6 @@
 ⍝ from GNU APL Transpose_reversed_axes.tc (GPLv3, tests/gnu/README.md)
+🍎> )DISPLAY APL2
+⍝ expect: display APL2
 🍎> A←4 3⍴'RAMONEATENET'
 🍎> A
 ⍝ expect: RAM

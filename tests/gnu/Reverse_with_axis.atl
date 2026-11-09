@@ -1,4 +1,6 @@
 ⍝ from GNU APL Reverse_with_axis.tc (GPLv3, tests/gnu/README.md)
+🍎> )DISPLAY APL2
+⍝ expect: display APL2
 🍎> A←2 3 1⍴'IN' 'OUT' 'UP' 'RIGHT' 'LEFT' 'DOWN'
 🍎> A
 ⍝ expect:  IN    

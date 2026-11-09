@@ -1,4 +1,6 @@
 ⍝ from GNU APL Scan_with_axis.tc (GPLv3, tests/gnu/README.md)
+🍎> )DISPLAY APL2
+⍝ expect: display APL2
 🍎> ⎕IO←1
 🍎> M←3 4⍴⍳12
 🍎> +\[1]M

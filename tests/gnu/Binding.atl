@@ -1,4 +1,6 @@
 ⍝ from GNU APL Binding.tc (GPLv3, tests/gnu/README.md)
+🍎> )DISPLAY APL2
+⍝ expect: display APL2
 🍎> A←1 2 3
 🍎> A 4 + 10
 ⍝ expect:  11 12 13  14 

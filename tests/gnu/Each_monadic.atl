@@ -1,4 +1,6 @@
 ⍝ from GNU APL Each_monadic.tc (GPLv3, tests/gnu/README.md)
+🍎> )DISPLAY APL2
+⍝ expect: display APL2
 🍎> Z←⍴¨'TOM' 'DICK'
 🍎> Z
 ⍝ expect:  3  4 

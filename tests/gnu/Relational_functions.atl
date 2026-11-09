@@ -1,4 +1,6 @@
 ⍝ from GNU APL Relational_functions.tc (GPLv3, tests/gnu/README.md)
+🍎> )DISPLAY APL2
+⍝ expect: display APL2
 🍎> 'TRIAL'='TRAIL'
 ⍝ expect: 1 1 0 0 1
 🍎> 8 ¯2 6 ¯4 0<0

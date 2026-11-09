@@ -1,4 +1,6 @@
 ⍝ from GNU APL Oper_negative.tc (GPLv3, tests/gnu/README.md)
+🍎> )DISPLAY APL2
+⍝ expect: display APL2
 ⍝ skipped (system command): )SIC
 🍎> )ERASE A B LEFT RIGHT
 ⍝ skipped (system name ⎕): ⎕←A←10×2 3⍴⍳6

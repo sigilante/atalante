@@ -1,4 +1,6 @@
 ⍝ from GNU APL Prototype.tc (GPLv3, tests/gnu/README.md)
+🍎> )DISPLAY APL2
+⍝ expect: display APL2
 🍎> R←(2 3⍴1 'A' 2 3 'B' 'C') 'WORD' (9 10 11)
 🍎> R
 ⍝ expect:  1 A 2   WORD  9 10 11 

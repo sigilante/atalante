@@ -1,4 +1,6 @@
 ⍝ from GNU APL Subtract.tc (GPLv3, tests/gnu/README.md)
+🍎> )DISPLAY APL2
+⍝ expect: display APL2
 🍎> 5-3
 ⍝ expect: 2
 ⍝ skipped (complex numbers): 3J4-1J2

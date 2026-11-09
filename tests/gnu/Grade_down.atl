@@ -1,4 +1,6 @@
 ⍝ from GNU APL Grade_down.tc (GPLv3, tests/gnu/README.md)
+🍎> )DISPLAY APL2
+⍝ expect: display APL2
 🍎> ⎕IO←1
 🍎> ⍒23 11 13 31 12
 ⍝ expect: 4 1 3 5 2

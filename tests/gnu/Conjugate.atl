@@ -1,4 +1,6 @@
 ⍝ from GNU APL Conjugate.tc (GPLv3, tests/gnu/README.md)
+🍎> )DISPLAY APL2
+⍝ expect: display APL2
 ⍝ skipped (complex numbers): +0.4 ¯5 3J4 ¯3J¯4
 🍎> +¯4
 ⍝ expect: ¯4

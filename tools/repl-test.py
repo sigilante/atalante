@@ -104,7 +104,9 @@ def main():
         else:
             want = "\n".join(expects)
             # a blank line is the kernel's silent answer (it sends one space)
-            ok = got.strip() == want.strip()
+            # the pane keeps no trailing blanks, so each line is compared without them
+            norm = lambda t: "\n".join(l.rstrip() for l in t.split("\n")).strip()
+            ok = norm(got) == norm(want)
         bad += 0 if ok else 1
         print(f"{'ok  ' if ok else 'FAIL'}  [{dt:4.1f} s]  {inp}" + ("" if ok else f"\n      want {want!r}\n      got  {got!r}"))
     print(f"repl-test: {len(steps) - bad}/{len(steps)} lines reproduce at the prompt ({time.time() - t0:.0f} s)")

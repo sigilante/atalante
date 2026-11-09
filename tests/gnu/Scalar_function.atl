@@ -1,4 +1,6 @@
 ⍝ from GNU APL Scalar_function.tc (GPLv3, tests/gnu/README.md)
+🍎> )DISPLAY APL2
+⍝ expect: display APL2
 ⍝ skipped (system name ⎕SYL): ⎕SYL[26;]
 ⍝ skipped (system name ⎕FIO): OLD_MON_TH← 2 ⎕FIO[202] '+'
 ⍝ skipped (system name ⎕FIO): OLD_DYA_TH← 2 ⎕FIO[203] '+'

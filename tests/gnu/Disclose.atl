@@ -1,4 +1,6 @@
 ⍝ from GNU APL Disclose.tc (GPLv3, tests/gnu/README.md)
+🍎> )DISPLAY APL2
+⍝ expect: display APL2
 🍎> ⊃(1 2 3)(4 5 6)
 ⍝ expect: 1 2 3
 ⍝ expect: 4 5 6

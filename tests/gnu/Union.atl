@@ -1,4 +1,6 @@
 ⍝ from GNU APL Union.tc (GPLv3, tests/gnu/README.md)
+🍎> )DISPLAY APL2
+⍝ expect: display APL2
 🍎> ∪ 1 1 2 2 3 3 4 4 1 2 3 4
 ⍝ expect: 1 2 3 4
 🍎> 1 2 3 4 ∪ 3 4 5 6

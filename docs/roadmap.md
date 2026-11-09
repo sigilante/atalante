@@ -1,6 +1,6 @@
 # Atalante — Roadmap
 
-**Status: P8, P9 and P10 landed 2026-11-03; P11 landed 2026-11-04 on the float half of its exit; P11b is profiled with its first fixes in; the rest of §9 and P12 landed the same day; the GNU APL suite (P13) landed 2026-11-07, and its first missing features (P14) on 2026-11-09; the rest of P11b, the suite's other missing features, complex numbers and the hosts remain.** v0.1.1 implements dialect v1 in full ([release notes](release-v0.1.md)). This file carries what comes after, in the plan's shape: numbered phases from P8, each with its scope, the rules it closes, a mechanical exit test, and what it waits on. The order below is a dependency order and a recommendation; the maintainer rules it. A phase lands as the P0–P7 phases did ([plan.md §3](plan.md)): with its vectors, recorded in the plan with numbers, and the spec's rules pinned.
+**Status: P8, P9 and P10 landed 2026-11-03; P11 landed 2026-11-04 on the float half of its exit; P11b is profiled with its first fixes in; the rest of §9 and P12 landed the same day; the GNU APL suite (P13) landed 2026-11-07, its first missing features (P14) and APL2's display (P15) on 2026-11-09; the rest of P11b, the suite's other missing features, complex numbers and the hosts remain.** v0.1.1 implements dialect v1 in full ([release notes](release-v0.1.md)). This file carries what comes after, in the plan's shape: numbered phases from P8, each with its scope, the rules it closes, a mechanical exit test, and what it waits on. The order below is a dependency order and a recommendation; the maintainer rules it. A phase lands as the P0–P7 phases did ([plan.md §3](plan.md)): with its vectors, recorded in the plan with numbers, and the spec's rules pinned.
 
 Two facts fix most of the order. Nested arrays change the array model every structural function sits on, so they precede the primitives that need them (`⍷ ⍪ ≡`, dyadic `⍕`). Dfns need `⍺ ⍵` and guards in the parser before the emitter can see them, so they are a phase of their own and come first, since nothing else depends on them and they are what the v1 tradfn programmer reaches for next.
 
@@ -31,7 +31,11 @@ Two facts fix most of the order. Nested arrays change the array model every stru
 
 **P14 — The suite's first missing features (2026-11-09).** `⍬`, the set functions `∪ ∩ ∼`, and n-wise reduction with and without an axis, the first tier of the suite's triage (D-97, D-98). `A∪B` follows GNU APL's symmetric definition, `∪A,B`, rather than Dyalog's `A,B∼A`. Under `)ASCII ON` the new words are `downshoe`, `upshoe` and `zilde`.
 *Exit:* `atl/sets` and `atl/nwise` pass in every lane and at the prompt, and the suite's Union, Intersection, Without, Zilde and Reduce_N_wise cases fail only where nested display or a missing feature explains it.
-**LANDED 2026-11-09:** 1,862 of 2,816 typed lines reproduce GNU's output, up from 1,772; the corpus is 836/836 and parse 143/143. The importer no longer types GNU's respelled error echoes as steps, which removed 106 typed lines. Next tier: `∧ ∨` as LCM and GCD, the hyperbolic circle codes, negative replicate, pick through a scalar box, and multiple `⍕` pairs.
+**LANDED 2026-11-09:** 1,862 of 2,816 typed lines reproduce GNU's output, up from 1,772; the corpus is 836/836 and parse 143/143. The importer no longer types GNU's respelled error echoes as steps, which removed 106 typed lines. Next tier: APL2's display, then `∧ ∨` as LCM and GCD, the hyperbolic circle codes, negative replicate, pick through a scalar box, and multiple `⍕` pairs.
+
+**P15 — APL2's display as a setting (2026-11-09).** `)DISPLAY APL2` prints a box in IBM APL2's layout as GNU APL prints it, and `)DISPLAY STRAND` keeps the strand, the default (D-99). Columns part by APL2's spacing rule (LRM p. 138), and `⍕` follows the setting. The GNU cases run under it.
+*Exit:* `atl/display-apl2` passes in every lane and at the prompt, and no GNU case loses a line.
+**LANDED 2026-11-09:** 2,024 of 2,816 typed GNU lines reproduce, up from 1,862.
 
 ## Performance
 

@@ -1,4 +1,6 @@
 ⍝ from GNU APL Grade_down_with_collating_sequence.tc (GPLv3, tests/gnu/README.md)
+🍎> )DISPLAY APL2
+⍝ expect: display APL2
 🍎> ⎕IO←1
 🍎> 'ABCDE'⍒'BEAD'
 ⍝ expect: 2 4 1 3

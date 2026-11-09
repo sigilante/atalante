@@ -1,4 +1,6 @@
 ⍝ from GNU APL Roll.tc (GPLv3, tests/gnu/README.md)
+🍎> )DISPLAY APL2
+⍝ expect: display APL2
 🍎> ⎕IO←1
 ⍝ skipped (system name ⎕RL): ⎕RL←444444
 ⍝ skipped (system name ⎕RL): ⎕RL

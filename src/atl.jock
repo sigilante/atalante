@@ -100,6 +100,12 @@ func stepToks(ts: List<lexer.Token>, mode: @, s: Sess) -> (String, Sess) {
             else { ("%syntax-error )ASCII takes ON or OFF", s) },
           _ => (if s.ascii { "ascii ON" } else { "ascii OFF" }, s),
         } }
+        else if c.nm == "DISPLAY" { match c.args {
+          (h, rest) => if h == "APL2" { ("display APL2", mks(s, s.sig, false, interp.setDm(s.env, 1), s.green)) }
+            else if h == "STRAND" { ("display STRAND", mks(s, s.sig, false, interp.setDm(s.env, 0), s.green)) }
+            else { ("%syntax-error )DISPLAY takes STRAND or APL2", s) },
+          _ => (if s.env.dm == 1 { "display APL2" } else { "display STRAND" }, s),
+        } }
         else if c.nm == "TOGGLE" { (if s.green { "🍎" } else { "🍏" }, mks(s, s.sig, false, s.env, not s.green)) }
         else { match interp.runStmt(a, s.env) { (out, env2) => (out, mks(s, sigOf(env2), false, env2, s.green)), } },
       _ => if green { (if nock { interp.render(a, s.env).trim() } else if noun { interp.lowerText(a, s.env) } else { parse.showAst(a) }, mks(s, binds(a, s.sig), false, s.env, s.green)) }

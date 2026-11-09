@@ -1,0 +1,44 @@
+⍝ D-99: under )DISPLAY APL2 a box takes APL2's layout, as GNU APL prints it; the strand (D-76) is the default
+🍎> )DISPLAY
+⍝ expect: display STRAND
+🍎> 'TO' 'KEN'
+⍝ expect: 'TO' 'KEN'
+🍎> )DISPLAY APL2
+⍝ expect: display APL2
+🍎> 'TO' 'KEN'
+⍝ expect:  TO KEN 
+🍎> (2 6) (3 4)
+⍝ expect:  2 6  3 4 
+🍎> 'A' 'B' 'C' 1 2 3 4
+⍝ expect: ABC 1 2 3 4
+🍎> 15 'NONE' 29
+⍝ expect:  15 NONE 29 
+🍎> (4 5 6) 7
+⍝ expect:  4 5 6  7 
+🍎> ((4 5 6) 7) (2 3)
+⍝ expect:   4 5 6  7   2 3 
+🍎> 'A' 'AN' ('ANT' 'ANTE')
+⍝ expect:  A AN   ANT ANTE  
+🍎> ⊂'HI'
+⍝ expect:  HI 
+🍎> ⊂'HIM' 'HIS'
+⍝ expect:   HIM HIS  
+🍎> (2 3 4) 5 (⊂7 8 (9 10 11))
+⍝ expect:  2 3 4  5   7 8  9 10 11   
+🍎> 1 ⍬ 2
+⍝ expect:  1   2 
+🍎> (1 2) ⍬ (3 4)
+⍝ expect:  1 2     3 4 
+🍎> 1 0 (2 3) (4 5 6) 0
+⍝ expect:  1 0  2 3  4 5 6  0 
+🍎> 2 2⍴'AB' 'C' 'DEF' 4
+⍝ expect:  AB  C 
+⍝ expect:  DEF 4 
+🍎> ⍕'TO' 'KEN'
+⍝ expect:  TO KEN 
+🍎> )DISPLAY STRAND
+⍝ expect: display STRAND
+🍎> 'TO' 'KEN'
+⍝ expect: 'TO' 'KEN'
+🍎> )DISPLAY BOXED
+⍝ refuse: %syntax-error

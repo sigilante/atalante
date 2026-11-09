@@ -190,7 +190,8 @@ def main():
         for i, c in enumerate(cases):
             nm = base if len(cases) == 1 else f"{base}-{i + 1}"
             if not any(l.startswith("🍎>") for l in c): continue
-            hdr = [f"⍝ from GNU APL {f} (GPLv3, tests/gnu/README.md)"]
+            # GNU APL prints a box in APL2's layout, which Atalante gives under )DISPLAY APL2 (D-99)
+            hdr = [f"⍝ from GNU APL {f} (GPLv3, tests/gnu/README.md)", "🍎> )DISPLAY APL2", "⍝ expect: display APL2"]
             open(os.path.join(outdir, nm + ".atl"), "w", encoding="utf-8").write("\n".join(hdr + c) + "\n")
     print(f"steps {total['steps']}, runnable {total['steps'] - total['skipped']}, skipped {total['skipped']}, definitions {total['defs']}")
     for r, c in sorted(total["reasons"].items(), key=lambda x: -x[1]): print(f"  {c:5d}  {r}")

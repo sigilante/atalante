@@ -1,4 +1,6 @@
 ⍝ from GNU APL Index.tc (GPLv3, tests/gnu/README.md)
+🍎> )DISPLAY APL2
+⍝ expect: display APL2
 ⍝ skipped (glyph ⌷): (⍳0)⌷42
 🍎> ⎕IO←1
 🍎> V←2 2.3 ¯5 999 0.01

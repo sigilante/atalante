@@ -1,4 +1,6 @@
 ⍝ from GNU APL Laminate.tc (GPLv3, tests/gnu/README.md)
+🍎> )DISPLAY APL2
+⍝ expect: display APL2
 🍎> A←'FOR'
 🍎> B←'AXE'
 🍎> ⎕IO←1
