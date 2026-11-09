@@ -6,17 +6,17 @@ Atalante runs GNU APL's own testcases, rewritten into its corpus format. Every r
 
 `tools/gnu-import.py` rewrites GNU's `.tc` session files into `tests/gnu/*.atl`. A step Atalante cannot express stays in the file as a `⍝ skipped (why):` comment. To run the cases, start a kernel with `tools/atl-repl.sh start`, then pass each case to `tools/repl-test.py`. A crash ends the session, so the driver must restart the kernel after one.
 
-## Results (2026-11-09)
+## Results (2026-11-10)
 
 | Lines in `tests/gnu/` | Count |
 |---|---|
-| Steps typed at the prompt | 2,787 |
+| Steps typed at the prompt | 2,901 |
 | Function definitions typed | 29 |
-| Steps and definitions skipped as inexpressible | 1,271 |
-| Typed lines that reproduce GNU's output | 2,073 |
-| Typed lines that differ from GNU | 743 |
+| Steps and definitions skipped as inexpressible | 1,157 |
+| Typed lines that reproduce GNU's output | 2,143 |
+| Typed lines that differ from GNU | 787 |
 
-The skips are mostly GNU features that sit outside Atalante's language. They are 394 system commands, 233 complex-number steps, 128 user commands, the `⎕` names other than `⎕IO` and `⎕PP` (`⎕CR` alone is 105), and the glyphs `⌷ ⍸`. The operators `⍨ ⍤ ⍣` were skipped until P18 (2026-11-10).
+The skips are mostly GNU features that sit outside Atalante's language. They are 394 system commands, 233 complex-number steps, 128 user commands, the `⎕` names other than `⎕IO` and `⎕PP` (`⎕CR` alone is 105), and the glyphs `⌷ ⍸`. The operators `⍨ ⍤ ⍣` were skipped until P18 (2026-11-10), which typed 114 more lines; with P19's gamma and exact arithmetic the suite went from 2,073 of 2,816 lines to 2,143 of 2,930. Many of the new lines fail on names that skipped definitions would have made, such as `Rank`'s `N233`.
 
 The counts leave out the `)DISPLAY APL2` line that opens each case, which reproduces in all 116. Under it a box prints in APL2's layout (D-99), as GNU prints it; that took the reproducing lines from 1,862 to 2,024, and no case lost a line.
 
