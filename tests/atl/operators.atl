@@ -71,3 +71,9 @@
 ⍝ refuse: %rank-error
 🍎> 1⍨2
 ⍝ refuse: %syntax-error
+🍎> ⍴(⍳0)+⍤(0 1)0 3⍴0
+⍝ expect: 0 3
+🍎> {⍵-1}⍣¯0.5 5
+⍝ refuse: %unimplemented
+🍎> ⍴{⍵/⍵}⍤1⊢0 3⍴0
+⍝ expect: 0 0

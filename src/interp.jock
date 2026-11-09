@@ -304,8 +304,9 @@ func binomW(x: @, y: @) -> @ {
     // a large B:  the product over the k = min(A, B−A) terms (B−k+i)÷i, +∞ when k is past the width's range
     let d = array.rop(2, y, x);
     let k = if gtK(3, x, d) { d } else { x };
-    let kn = natOfWhole(k);
-    if kn > binomCap(w) { infLike(y) } else { binomProd(array.oneLike(y), array.rop(2, y, k), kn, 1, array.oneLike(y)) }
+    if array.rcmp(3, k, array.rsunAt(w, binomCap(w))) { infLike(y) }
+    else { let kn = natOfWhole(k);
+    if kn > binomCap(w) { infLike(y) } else { binomProd(array.oneLike(y), array.rop(2, y, k), kn, 1, array.oneLike(y)) } }
   }
 };
 func binomCap(w: @) -> @ { if w == 4 { 20 } else if w == 5 { 140 } else if w == 7 { 16500 } else { 1100 } };
@@ -561,7 +562,8 @@ func acoshR(x: @) -> @ {
   let q = array.rop(3, x, x);
   // Kahan:  with t = x−1, acosh x = ln(1+t+√(2t+t²)), which keeps x near 1's digits
   let t = array.rop(2, x, one);
-  if array.finite(q) { log1p(array.rop(1, t, array.rfun(1, array.rop(1, array.rop(1, t, t), array.rop(3, t, t))))) } else { array.rop(1, lnR(x), lnR(array.rsunAt(array.widthOf(x), 2))) }
+  if ltR(x, one) { array.rop(4, array.zeroLike(x), array.zeroLike(x)) }
+  else if array.finite(q) { log1p(array.rop(1, t, array.rfun(1, array.rop(1, array.rop(1, t, t), array.rop(3, t, t))))) } else { array.rop(1, lnR(x), lnR(array.rsunAt(array.widthOf(x), 2))) }
 };
 func atanhR(x: @) -> @ {
   let one = array.oneLike(x);
@@ -640,8 +642,14 @@ func binomG(x: @, y: @) -> @ {
   if wholeR(x) and wholeR(y) { if (not array.realIsNeg(x)) and (not array.realIsNeg(y)) { binomW(x, y) } else { binomNeg(x, y) } }
   else if wholeNN(x) and ltR(x, array.rsunAt(array.widthOf(x), 1000)) { binProd(y, natOfReal(x), 0, one) }
   else {
-    let r = array.rop(3, array.rop(3, gammaR(array.rop(1, y, one)), rgammaR(array.rop(1, x, one))), rgammaR(array.rop(1, array.rop(2, y, x), one)));
-    if array.finite(r) { r } else { binomLog(x, y) }
+    let xa = array.rop(1, x, one);
+    let xb = array.rop(1, array.rop(2, y, x), one);
+    let g0 = gammaR(array.rop(1, y, one));
+    let ra = rgammaR(xa);
+    let rb = rgammaR(xb);
+    // a Γ that overflows, or a 1÷Γ that underflows off a pole, loses the ratio:  go through ln|Γ|
+    if (not array.finite(g0)) or (realZero(ra) and not isPole(xa)) or (realZero(rb) and not isPole(xb)) { binomLog(x, y) }
+    else { array.rop(3, array.rop(3, g0, ra), rb) }
   }
 };
 // Γ(B+1) overflowed:  the ratio through ln|Γ|, 0 where a denominator sits on a pole
@@ -3869,7 +3877,9 @@ func cellsOf(b: array.Arr, e: @) -> (List<@>, List<array.Arr>) {
 // the cell f would see when there is none:  b's prototype in the cell's shape (D-77)
 func protoCell(b: array.Arr, e: @) -> array.Arr {
   let cshp = array.dropL(array.shape(b), array.rank(b) - e);
-  if array.size(cshp) == 0 { array.emptyOf(cshp, array.proto(b)) } else { array.Arr( kind: 5, ray: array.fromL(array.metaOf(1, cshp), array.repL(0, array.size(cshp))), items: [array.proto(b)] ) }
+  if array.size(cshp) == 0 { array.emptyOf(cshp, array.proto(b)) }
+  else if array.isSimpleScalar(array.proto(b)) { array.make(array.proto(b).kind, cshp, array.repL(array.first(array.proto(b)), array.size(cshp))) }
+  else { array.Arr( kind: 5, ray: array.fromL(array.metaOf(1, cshp), array.repL(0, array.size(cshp))), items: [array.proto(b)] ) }
 };
 func cellsAcc(xs: List<array.Arr>, cs: @, cshp: List<@>, acc: List<array.Arr>) -> List<array.Arr> {
   match xs { (h, t) => cellsAcc(array.dropA(xs, cs), cs, cshp, (array.normalize(cshp, array.takeA(xs, cs)), acc)), _ => array.revA(acc, ~), }
@@ -3897,16 +3907,19 @@ func rankOp(f: parse.Fn, dyadic: Bool, a: array.Arr, b: array.Arr, k: array.Arr,
   match rankSpec(k, env) { (ok, km, kl, kr) =>
     if not ok { dom("⍤ takes one to three whole numbers") }
     else if not dyadic { let e = effRank(km, array.rank(b)); rankMonad(f, cellsOf(b, e), protoCell(b, e), env) }
-    else { rankDyad(f, cellsOf(a, effRank(kl, array.rank(a))), cellsOf(b, effRank(kr, array.rank(b))), env) },
+    else { let el = effRank(kl, array.rank(a)); let er = effRank(kr, array.rank(b)); rankDyad(f, cellsOf(a, el), cellsOf(b, er), protoCell(a, el), protoCell(b, er), env) },
   }
 };
 func rankMonad(f: parse.Fn, c: (List<@>, List<array.Arr>), pc: array.Arr, env: Env) -> Ev {
   match c { (fr, bs) => match bs { (h, t) => mixed(fr, mapCells(f, false, bs, bs, env, ~)), _ => mixEmpty(f, false, pc, pc, fr, env), }, }
 };
 func mixed(fr: List<@>, r: Evs) -> Ev { match r { .err(e) => Ev.err(e), .ok(p) => match p { (ys, env2) => mixCells(fr, ys, env2), }, } };
-func rankDyad(f: parse.Fn, ca: (List<@>, List<array.Arr>), cb: (List<@>, List<array.Arr>), env: Env) -> Ev {
+func rankDyad(f: parse.Fn, ca: (List<@>, List<array.Arr>), cb: (List<@>, List<array.Arr>), pa: array.Arr, pb: array.Arr, env: Env) -> Ev {
   match ca { (fa, as2) => match cb { (fb, bs) =>
-    if fa == fb { mixed(fb, mapCells(f, true, as2, bs, env, ~)) }
+    if fa == fb and array.countA(bs) == 0 { mixEmpty(f, true, pa, pb, fb, env) }
+    else if fa == ~ and array.countA(bs) == 0 { mixEmpty(f, true, pa, pb, fb, env) }
+    else if fb == ~ and array.countA(as2) == 0 { mixEmpty(f, true, pa, pb, fa, env) }
+    else if fa == fb { mixed(fb, mapCells(f, true, as2, bs, env, ~)) }
     else if fa == ~ { mixed(fb, mapCells(f, true, repCell(headA(as2), array.countA(bs), ~), bs, env, ~)) }
     else if fb == ~ { mixed(fa, mapCells(f, true, as2, repCell(headA(bs), array.countA(as2), ~), env, ~)) }
     else if array.count(fa) != array.count(fb) { fail("%rank-error", "⍤'s frames differ in rank") }

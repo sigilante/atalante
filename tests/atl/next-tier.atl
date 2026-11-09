@@ -111,3 +111,7 @@
 🍎> 1-7○21
 ⍝ expect: 1.149904453E¯18
 🍎> ⎕TYPE←'REAL64'
+🍎> ¯6○¯2E14
+⍝ refuse: %domain-error
+🍎> ¯6○0.5
+⍝ refuse: %domain-error
