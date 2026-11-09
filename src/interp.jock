@@ -648,7 +648,9 @@ func binomG(x: @, y: @) -> @ {
     let ra = rgammaR(xa);
     let rb = rgammaR(xb);
     // a Γ that overflows, or a 1÷Γ that underflows off a pole, loses the ratio:  go through ln|Γ|
-    if (not array.finite(g0)) or (realZero(ra) and not isPole(xa)) or (realZero(rb) and not isPole(xb)) { binomLog(x, y) }
+    // also a 1÷Γ that overflows (its Γ underflowed), or a Γ(B+1) of 0 off a pole:  0.3!¯200.5 is finite
+    if (not array.finite(g0)) or (not array.finite(ra)) or (not array.finite(rb)) or (realZero(g0) and not isPole(array.rop(1, y, one)))
+       or (realZero(ra) and not isPole(xa)) or (realZero(rb) and not isPole(xb)) { binomLog(x, y) }
     else { array.rop(3, array.rop(3, g0, ra), rb) }
   }
 };
@@ -3917,8 +3919,8 @@ func mixed(fr: List<@>, r: Evs) -> Ev { match r { .err(e) => Ev.err(e), .ok(p) =
 func rankDyad(f: parse.Fn, ca: (List<@>, List<array.Arr>), cb: (List<@>, List<array.Arr>), pa: array.Arr, pb: array.Arr, env: Env) -> Ev {
   match ca { (fa, as2) => match cb { (fb, bs) =>
     if fa == fb and array.countA(bs) == 0 { mixEmpty(f, true, pa, pb, fb, env) }
-    else if fa == ~ and array.countA(bs) == 0 { mixEmpty(f, true, pa, pb, fb, env) }
-    else if fb == ~ and array.countA(as2) == 0 { mixEmpty(f, true, pa, pb, fa, env) }
+    else if fa == ~ and array.countA(bs) == 0 { mixEmpty(f, true, headA(as2), pb, fb, env) }
+    else if fb == ~ and array.countA(as2) == 0 { mixEmpty(f, true, pa, headA(bs), fa, env) }
     else if fa == fb { mixed(fb, mapCells(f, true, as2, bs, env, ~)) }
     else if fa == ~ { mixed(fb, mapCells(f, true, repCell(headA(as2), array.countA(bs), ~), bs, env, ~)) }
     else if fb == ~ { mixed(fa, mapCells(f, true, as2, repCell(headA(bs), array.countA(as2), ~), env, ~)) }
