@@ -465,14 +465,24 @@ func pushParen(t: lexer.Token, rest: List<lexer.Token>, sig: List<(String, @)>, 
     (inner, rest2, closed) => if not closed { sei(t.col, "unbalanced (") }
       else {
         match inner {
-          (i0, irest) => match parseExpr(inner, sig) {
-            .err(e) => Items.err(e),
-            .ok(a) => pushArr(a, t.col, false, false, rest2, sig, acc),
+          (i0, irest) => match items(inner, sig, ~) {
+            // a parenthesised function, (+⍣40) or (∘.≤) or (+/), is one function item (D-105)
+            .ok(its) => match its {
+              (h, more) => match more {
+                (h2, m2) => parenExpr(inner, t.col, rest2, sig, acc),
+                _ => match h { .fun(x) => items(rest2, sig, (funItem(x.f, t.col), acc)), _ => parenExpr(inner, t.col, rest2, sig, acc), },
+              },
+              _ => parenExpr(inner, t.col, rest2, sig, acc),
+            },
+            .err(e) => parenExpr(inner, t.col, rest2, sig, acc),
           },
           _ => sei(t.col, "empty parentheses"),
         }
       },
   }
+};
+func parenExpr(inner: List<lexer.Token>, col: @, rest2: List<lexer.Token>, sig: List<(String, @)>, acc: List<Item>) -> Items {
+  match parseExpr(inner, sig) { .err(e) => Items.err(e), .ok(a) => pushArr(a, col, false, false, rest2, sig, acc), }
 };
 // the index parts: each `;`-separated part is an expression or an elision
 func indexParts(parts: List<List<lexer.Token>>, sig: List<(String, @)>, acc: List<Ast>) -> Asts {

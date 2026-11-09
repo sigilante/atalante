@@ -3664,7 +3664,7 @@ func primOp(cp: @, x: parse.Dop, dyadic: Bool, a: array.Arr, b: array.Arr, env: 
 func apply1or2(f: parse.Fn, dyadic: Bool, a: array.Arr, b: array.Arr, env: Env) -> Ev { if dyadic { applyDyad(f, a, b, env) } else { applyMonad(f, b, env) } };
 func powTimes(f: parse.Fn, dyadic: Bool, a: array.Arr, b: array.Arr, n: array.Arr, env: Env) -> Ev {
   if array.size(array.shape(n)) != 1 or array.isBox(n) or n.kind == 4 { dom("f⍣n takes a single whole number n") }
-  else if n.kind == 2 and array.isNeg(array.first(n)) { nyi("f⍣n with a negative n (an inverse)") }
+  else if (n.kind == 2 and array.isNeg(array.first(n))) or (n.kind == 3 and array.realIsNeg(array.first(n)) and not realZero(array.first(n))) { nyi("f⍣n with a negative n (an inverse)") }
   else { match natVals(n, env) { (ok, ns) => if not ok { dom("f⍣n takes a single whole number n") } else { powN(f, dyadic, a, b, headOr0(ns), env) }, } }
 };
 func powN(f: parse.Fn, dyadic: Bool, a: array.Arr, b: array.Arr, n: @, env: Env) -> Ev {
@@ -3692,7 +3692,14 @@ func cellsOf(b: array.Arr, e: @) -> (List<@>, List<array.Arr>) {
   let shp = array.shape(b);
   let fr = array.takeL(shp, array.rank(b) - e);
   let cshp = array.dropL(shp, array.rank(b) - e);
-  (fr, cellsAcc(array.itemsOf(b), array.size(cshp), cshp, ~))
+  let cs = array.size(cshp);
+  if cs == 0 { (fr, repCell(array.emptyOf(cshp, array.proto(b)), array.size(fr), ~)) }
+  else { (fr, cellsAcc(array.itemsOf(b), cs, cshp, ~)) }
+};
+// the cell f would see when there is none:  b's prototype in the cell's shape (D-77)
+func protoCell(b: array.Arr, e: @) -> array.Arr {
+  let cshp = array.dropL(array.shape(b), array.rank(b) - e);
+  if array.size(cshp) == 0 { array.emptyOf(cshp, array.proto(b)) } else { array.Arr( kind: 5, ray: array.fromL(array.metaOf(1, cshp), array.repL(0, array.size(cshp))), items: [array.proto(b)] ) }
 };
 func cellsAcc(xs: List<array.Arr>, cs: @, cshp: List<@>, acc: List<array.Arr>) -> List<array.Arr> {
   match xs { (h, t) => cellsAcc(array.dropA(xs, cs), cs, cshp, (array.normalize(cshp, array.takeA(xs, cs)), acc)), _ => array.revA(acc, ~), }
@@ -3706,17 +3713,25 @@ func mapCells(f: parse.Fn, dyadic: Bool, as2: List<array.Arr>, bs: List<array.Ar
 func mixCells(fr: List<@>, ys: List<array.Arr>, env: Env) -> Ev {
   match ys { (h, t) => if allSimpleScalar(ys) { okv(array.normalize(fr, ys), env) } else { disclose(array.boxOf(fr, ys), env) }, _ => okv(array.make(1, fr, ~), env), }
 };
+// no cells at all (a frame with a 0):  f runs once on a prototype cell, for the shape and kind of
+// the empty result, as APL2 runs a function on an empty argument's prototype
+func mixEmpty(f: parse.Fn, dyadic: Bool, a: array.Arr, b: array.Arr, fr: List<@>, env: Env) -> Ev {
+  match apply1or2(f, dyadic, a, b, env) {
+    .err(e) => Ev.err(e),
+    .ok(r) => match r { (y, env2) => okv(array.emptyOf(array.catL(fr, array.shape(y)), array.proto(y)), env2), },
+  }
+};
 func allSimpleScalar(xs: List<array.Arr>) -> Bool { match xs { (h, t) => if array.isSimpleScalar(h) { allSimpleScalar(t) } else { false }, _ => true, } };
 func repCell(x: array.Arr, n: @, acc: List<array.Arr>) -> List<array.Arr> { if n == 0 { acc } else { repCell(x, n - 1, (x, acc)) } };
 func rankOp(f: parse.Fn, dyadic: Bool, a: array.Arr, b: array.Arr, k: array.Arr, env: Env) -> Ev {
   match rankSpec(k, env) { (ok, km, kl, kr) =>
     if not ok { dom("⍤ takes one to three whole numbers") }
-    else if not dyadic { rankMonad(f, cellsOf(b, effRank(km, array.rank(b))), env) }
+    else if not dyadic { let e = effRank(km, array.rank(b)); rankMonad(f, cellsOf(b, e), protoCell(b, e), env) }
     else { rankDyad(f, cellsOf(a, effRank(kl, array.rank(a))), cellsOf(b, effRank(kr, array.rank(b))), env) },
   }
 };
-func rankMonad(f: parse.Fn, c: (List<@>, List<array.Arr>), env: Env) -> Ev {
-  match c { (fr, bs) => mixed(fr, mapCells(f, false, bs, bs, env, ~)), }
+func rankMonad(f: parse.Fn, c: (List<@>, List<array.Arr>), pc: array.Arr, env: Env) -> Ev {
+  match c { (fr, bs) => match bs { (h, t) => mixed(fr, mapCells(f, false, bs, bs, env, ~)), _ => mixEmpty(f, false, pc, pc, fr, env), }, }
 };
 func mixed(fr: List<@>, r: Evs) -> Ev { match r { .err(e) => Ev.err(e), .ok(p) => match p { (ys, env2) => mixCells(fr, ys, env2), }, } };
 func rankDyad(f: parse.Fn, ca: (List<@>, List<array.Arr>), cb: (List<@>, List<array.Arr>), env: Env) -> Ev {
