@@ -198,6 +198,8 @@ func texts(ts: List<lexer.Token>) -> List<String> {
 func arrItem(a: Ast, col: @, open: Bool, unbound: Bool) -> Item { Item.arr(IArr( a: a, col: col, open: open, unbound: unbound )) };
 func funItem(f: Fn, col: @) -> Item { Item.fun(IFun( f: f, col: col )) };
 func isLit(a: Ast) -> Bool { match a { .lit(l) => true, _ => false, } };
+// ⍬, the empty numeric vector:  a natural literal with no numerals (D-97)
+func zilde() -> Ast { Ast.lit(Lit( kind: 1, vals: ~ )) };
 func isSysName(nm: String) -> Bool { nm == "IO" or nm == "PP" or nm == "TYPE" };   // D-60
 
 // --- token splitting ---------------------------------------------------------
@@ -544,7 +546,7 @@ func items(ts: List<lexer.Token>, sig: List<(String, @)>, acc: List<Item>) -> It
       6  => if isSysName(t.text) { pushArr(Ast.sysvar(t.text), t.col, false, false, rest, sig, acc) }
             else { Items.err(pe("%value-error", t.col, "unknown system variable ⎕" + t.text)) },
       7  => sei(t.col, ") commands must open a line"),
-      8  => pushGlyph(t, rest, sig, acc),
+      8  => if t.cp == 9068 { pushArr(zilde(), t.col, false, false, rest, sig, acc) } else { pushGlyph(t, rest, sig, acc) },   // ⍬ is an array (D-97)
       9  => pushParen(t, rest, sig, acc),
       10 => sei(t.col, "unbalanced )"),
       11 => pushBrack(t, rest, sig, acc),
@@ -854,7 +856,7 @@ func showAst(a: Ast) -> String {
     .empty => "",
     .elide => "",
     .fnend => "∇",
-    .lit(l) => if l.kind == 4 { "'" + joinS(l.vals, "") + "'" } else { joinS(l.vals, " ") },
+    .lit(l) => if l.kind == 4 { "'" + joinS(l.vals, "") + "'" } else if l.vals == ~ { "⍬" } else { joinS(l.vals, " ") },
     .name(nm) => nm,
     .nilad(nm) => nm + "()",
     .sysvar(nm) => "⎕" + nm,

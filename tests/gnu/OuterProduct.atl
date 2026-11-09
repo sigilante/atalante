@@ -18,13 +18,13 @@
 ⍝ expect:  ⎕⎕⎕⎕ ∆∆∆∆ 
 🍎> 3 0 2 ∘./ 5 1 7
 ⍝ refuse: %syntax-error
-🍎> 3 0 2∘./5 1 7
 ⍝ skipped (system command): )SIC
 🍎> X←0⍴⊂1 2
 ⍝ skipped (system name ⎕TF): Z←3∘.,X ⋄ 2 ⎕TF 'Z'
 ⍝ skipped (system name ⎕TF): Z←3,¨X ⋄ 2 ⎕TF 'Z'
 ⍝ skipped (system name ⎕TF): Z←⍬∘.{⍺+⍵}1 2 3 ⋄ 2 ⎕TF 'Z'
-⍝ skipped (glyph ⍬): (⍬∘.{⍺+⍵}1 2 3)≡0 3⍴0
+🍎> (⍬∘.{⍺+⍵}1 2 3)≡0 3⍴0
+⍝ expect: 1
 ⍝ skipped (system name ⎕TF): Z←⍬∘.{⍺+⍵}'ab' ⋄ 2 ⎕TF 'Z'
 ⍝ skipped (user command): ]FILE_CTL SKIP_APL2
 ⍝ skipped (system name ⎕TF): Z←⍬∘.,1 2 3 ⋄ 2 ⎕TF 'Z'

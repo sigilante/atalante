@@ -76,7 +76,6 @@
 🍎> ⎕IO←1
 🍎> ⍴ A ,[¯0.5] B
 ⍝ refuse: %axis-error
-🍎> ⍴A,[¯0.5]B
 🍎> ⍴A,[0.5]B
 ⍝ expect: 2 4 3
 🍎> ⍴ A ,[1.5] B
@@ -85,11 +84,9 @@
 ⍝ expect: 4 3 2
 🍎> ⍴ A ,[3.5] B
 ⍝ refuse: %axis-error
-🍎> ⍴A,[3.5]B
 🍎> ⎕IO←0
 🍎> ⍴ A ,[¯1.5] B
 ⍝ refuse: %axis-error
-🍎> ⍴A,[¯1.5]B
 🍎> ⍴A,[¯0.5]B
 ⍝ expect: 2 4 3
 🍎> ⍴ A ,[0.5] B
@@ -98,7 +95,6 @@
 ⍝ expect: 4 3 2
 🍎> ⍴ A ,[2.5] B
 ⍝ refuse: %axis-error
-🍎> ⍴A,[2.5]B
 ⍝ skipped (system command): )SIC
 🍎> ⎕IO←1
 🍎> Z←1 2 3,[0.5]2 3⍴0

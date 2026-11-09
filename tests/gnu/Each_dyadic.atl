@@ -36,7 +36,7 @@
 ⍝ expect: 1 0
 🍎> (,3)↑¨'abcd'
 ⍝ expect:  a   b   c   d   
-⍝ skipped (glyph ⍬): Z←⍬+¨0⍴⊂⍳3
+🍎> Z←⍬+¨0⍴⊂⍳3
 🍎> ⍴Z
 ⍝ expect: 0
 🍎> Z←1+¨0⍴⊂⍳3
@@ -50,7 +50,7 @@
 ⍝ expect:  1 2  2 3 4 
 ⍝ skipped (user command): ]FILE_CTL NO_SKIP
 🍎> ⎕IO←1
-⍝ skipped (glyph ⍬): V←⍬
+🍎> V←⍬
 🍎> (1⌽¨1↑V)←1
 ⍝ refuse: %index-error
 ⍝ skipped (system command): )SIC

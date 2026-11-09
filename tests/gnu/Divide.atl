@@ -60,12 +60,10 @@
 🍎> MM←4 5⍴M
 🍎> V ⌹ MM
 ⍝ refuse: %length-error
-🍎> V⌹MM
 ⍝ skipped (system command): )MORE
 🍎> MM←6 5⍴M
 🍎> V ⌹ MM
 ⍝ refuse: %length-error
-🍎> V⌹MM
 ⍝ skipped (system command): )MORE
 🍎> MM←M ⋄ MM[3;] ← 1.2×MM[1;] + 1.4×MM[2;]
 ⍝ expect:        V ⌹ MM

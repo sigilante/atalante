@@ -110,7 +110,6 @@
 🍎> Z←'2'⍴5
 ⍝ refuse: %domain-error
 ⍝ skipped (system name ⎕EM): ⎕EM
-🍎> Z←'2'⍴5
 ⍝ skipped (system name ⎕ET): ⎕ET
 ⍝ skipped (system command): )SIC
 🍎> Z←2.5⍴5
@@ -140,7 +139,6 @@
 ⍝ skipped (system command): )SIC
 🍎> A←0 ¯2 ⋄ ⍴A⍴0
 ⍝ refuse: %domain-error
-🍎> ⍴A⍴0
 ⍝ skipped (system command): )SIC
 ⍝ skipped (glyph ⍤): (⌈/⍤1)0 ¯2⍴0
 ⍝ skipped (system command): )SIC

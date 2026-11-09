@@ -49,3 +49,15 @@ a ⎕IO
 ⍝ expect: strand(strand(a, b), c)
 (a b) c X
 ⍝ expect: strand(strand(a, b), c, X)
+⍬
+⍝ expect: ⍬
+1 ⍬ 2
+⍝ expect: strand(1, ⍬, 2)
+a∪b∩c
+⍝ expect: ∪(a, ∩(b, c))
+a∼b
+⍝ expect: ∼(a, b)
+∪a
+⍝ expect: ∪(a)
+2+/a
+⍝ expect: +/(2, a)

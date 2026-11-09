@@ -152,5 +152,4 @@
 ⍝ expect: 2 3 4
 🍎> ,[3 4] 2 4 4⍴1
 ⍝ refuse: %axis-error
-🍎> ,[3 4]2 4 4⍴1
 ⍝ skipped (system command): )SIC

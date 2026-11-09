@@ -52,7 +52,7 @@
 ⍝ skipped (system name ⎕FX): ⎕FX 'Z←ZZ35G LO' 'Z←LO+1'
 ⍝ skipped (system name ⎕TF): Z←(ZZ35G/)¨⍬ ⋄ 2 ⎕TF 'Z'
 🍎> )ERASE ZZ35F ZZ35G
-⍝ skipped (glyph ⍬): V←⍬
+🍎> V←⍬
 🍎> (,¨1↑V)←,1
 ⍝ refuse: %index-error
 🍎> (⌽¨1↑V)←,1

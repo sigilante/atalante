@@ -160,4 +160,4 @@
 ⍝ expect: 10  2  3
 ⍝ expect:  4 20  6
 ⍝ expect:  7  8 30
-⍝ skipped (glyph ⍬): ⍉⍬
+🍎> ⍉⍬

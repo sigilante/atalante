@@ -62,7 +62,7 @@
 ⍝ skipped (user command): ]FILE_CTL NO_SKIP
 🍎> ⍴A⌹A
 ⍝ expect: 3 3
-⍝ skipped (glyph ⍬): ⍴⍬⌹⍤1(0 3⍴0)
+⍝ skipped (glyph ⍤): ⍴⍬⌹⍤1(0 3⍴0)
 ⍝ skipped (glyph ⍤): ⍴1⌹⍤1(0 3⍴0)
 ⍝ skipped (glyph ⍤): ⍴(0 3⍴0)⌹⍤1⊢⍬
-⍝ skipped (glyph ⍬): ⍴⍬⌹⍤1(0 0⍴0)
+⍝ skipped (glyph ⍤): ⍴⍬⌹⍤1(0 0⍴0)

@@ -13,7 +13,6 @@
 ⍝ skipped (user command): ]FILE_CTL NO_SKIP
 🍎> A +.× B
 ⍝ refuse: %length-error
-🍎> A+.×B
 ⍝ skipped (system name ⎕): LEFT←{(⍺+⍵)⊣⎕←'LEFT: ⍺=',(⍕⍺),', ⍵=',(⍕⍵)}
 ⍝ skipped (system name ⎕): RIGHT←{(⍺×⍵)⊣⎕←'RIGHT: ⍺=',(⍕⍺),', ⍵=',(⍕⍵)}
 🍎> A LEFT.RIGHT B

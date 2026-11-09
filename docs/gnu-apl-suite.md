@@ -6,17 +6,19 @@ Atalante runs GNU APL's own testcases, rewritten into its corpus format. Every r
 
 `tools/gnu-import.py` rewrites GNU's `.tc` session files into `tests/gnu/*.atl`. A step Atalante cannot express stays in the file as a `⍝ skipped (why):` comment. To run the cases, start a kernel with `tools/atl-repl.sh start`, then pass each case to `tools/repl-test.py`. A crash ends the session, so the driver must restart the kernel after one.
 
-## Results (2026-11-07)
+## Results (2026-11-09)
 
 | Lines in `tests/gnu/` | Count |
 |---|---|
-| Steps typed at the prompt | 2,835 |
+| Steps typed at the prompt | 2,787 |
 | Function definitions typed | 29 |
-| Steps and definitions skipped as inexpressible | 1,357 |
-| Typed lines that reproduce GNU's output | 1,772 |
-| Typed lines that differ from GNU | 1,092 |
+| Steps and definitions skipped as inexpressible | 1,271 |
+| Typed lines that reproduce GNU's output | 1,862 |
+| Typed lines that differ from GNU | 954 |
 
-The skips are mostly GNU features that sit outside Atalante's language. They are 394 system commands, 247 complex-number steps, 128 user commands, the `⎕` names other than `⎕IO` and `⎕PP` (`⎕CR` alone is 100), and the glyphs `⍤ ⍣ ⍬ ∪ ∩ ⍨ ⌷ ⍸`.
+The skips are mostly GNU features that sit outside Atalante's language. They are 394 system commands, 233 complex-number steps, 128 user commands, the `⎕` names other than `⎕IO` and `⎕PP` (`⎕CR` alone is 105), and the glyphs `⍨ ⍤ ⍣ ⌷ ⍸`.
+
+P14 (2026-11-09) added `⍬`, the set functions `∪ ∩ ∼` and n-wise reduction (D-97, D-98), and fixed the importer's echo bug (see the harness limits below). On 2026-11-07 the suite reproduced 1,772 of 2,864 typed lines; 106 of those lines were GNU's error echoes, which no longer count. The new features' own cases now fail only on display: Union 10 of 12 lines reproduce, Without 14 of 18, Zilde 3 of 5, Intersection 6 of 8, Reduce_N_wise 22 of 27 and Reduce_N_wise_with_axis 11 of 13. Every remaining failure in them is the strand display of a nested result, except two `Without` steps that use roll.
 
 ## Atalante bugs the suite found, all fixed
 
@@ -47,11 +49,9 @@ The skips are mostly GNU features that sit outside Atalante's language. They are
 These are the failures that need a ruling or a feature. Counts are failing steps in the latest run.
 
 - **Selective and strand assignment.** `(⌽V)←…`, `(2↑A)←…` and `D←(A B C)←4 5 6` refuse as "cannot assign to that". About 90 steps.
-- **N-wise reduction.** `2 +/⍳6`, with or without an axis. About 50 steps.
 - **Dyadic grade with a collating sequence.** `'ABCDE'⍋'BEAD'`, 35 steps.
 - **Axis on `↑ ↓ ⊂ ⊃`, and ravel with an axis list.** About 45 steps.
 - **Roll and deal.** Monadic and dyadic `?`, 13 steps.
-- **Without.** Dyadic `∼`, 8 steps.
 - **`∧` and `∨` beyond Booleans.** GNU computes the LCM and the GCD, as in `2028259601 ∧ 9094863431`. 17 steps.
 - **Circle codes past ±4.** The hyperbolic codes 5 to 7 and the complex codes 8 to 12.
 - **Negative replicate.** `1 ¯2 1/W` inserts fills in GNU.
@@ -63,5 +63,6 @@ These are the failures that need a ruling or a feature. Counts are failing steps
 ## Known harness limits
 
 - The harness types each line literally. Before 2026-11-07 tmux read a line that opens with `-`, such as `-/⍳4`, as an option and dropped it.
+- GNU echoes a failing line under its error in its own normal form, so `3550579489682168305 +/ 1 2 3 4 5` comes back as `3550579489682168305+/1 2 3 4 5`. Before 2026-11-09 the importer took a respelled echo for a new step and typed it; some echoes were assignments that Atalante accepted. It now drops any line with a caret line under it after an error, which removed 106 steps.
 - Cases share one kernel session unless one crashes, so a name defined in one case is visible in the next. GNU's files mostly start clean, and no failure in the latest run traces to a leaked name.
 - Steps that use a name defined by a skipped step fail with a VALUE ERROR. The 162 unbound-name failures are mostly these cascades, from `⎕FX`, `)COPY` (GNU's `ASSERT` helper) and `⎕TF`.

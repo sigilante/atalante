@@ -17,13 +17,15 @@
 ⍝ skipped (glyph ⌷): (2 3)(,4)⌷M
 ⍝ skipped (glyph ⌷): ⍴(1 2)(3 4⍴3)⌷M
 ⍝ skipped (glyph ⌷): ⍴(⍳0)(⍳0)⌷M
-⍝ skipped (glyph ⍬): (2 2⍴⍳4)[1;⍬]
-⍝ skipped (glyph ⍬): ⍴(2 2⍴⍳4)[1;⍬]
+🍎> (2 2⍴⍳4)[1;⍬]
+🍎> ⍴(2 2⍴⍳4)[1;⍬]
+⍝ expect: 0
 🍎> Z←2 2⍴1
-⍝ skipped (glyph ⍬): Z[1;⍬]←1 2
+🍎> Z[1;⍬]←1 2
+⍝ refuse: %length-error
 ⍝ skipped (system command): )MORE
 ⍝ skipped (system command): )SIC
-⍝ skipped (glyph ⍬): Z[1;⍬]←⍬
+🍎> Z[1;⍬]←⍬
 🍎> Z
 ⍝ expect: 1 1
 ⍝ expect: 1 1

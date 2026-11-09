@@ -30,7 +30,6 @@
 ⍝ skipped (system name ⎕ET): ⎕ET
 🍎> ⍎'1÷0'
 ⍝ refuse: %domain-error
-🍎> 1÷0
 ⍝ skipped (system command): )SIS
 ⍝ skipped (system command): )SIC
 ⍝ skipped (system command): )CHECK BRIEF

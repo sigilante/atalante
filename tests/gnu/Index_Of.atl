@@ -57,7 +57,6 @@
 ⍝ expect: 1
 🍎> A←3×⍳64 ⋄ B←⍳6 ⋄ B≡A[A⍳B]
 ⍝ refuse: %index-error
-🍎> B≡A[A⍳B]
 ⍝ skipped (system command): )SIC
 🍎> A←⎕IO+64|3×⍳64 ⋄ B←⍳6 ⋄ B≡A[A⍳B]
 ⍝ expect: 1

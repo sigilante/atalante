@@ -3,7 +3,6 @@
 ⍝ skipped (system name ⎕CR): 4 ⎕CR 1 0 1⊂'ABC'
 🍎> 1 0 1⊂'ABCD'
 ⍝ refuse: %length-error
-🍎> 1 0 1⊂'ABCD'
 ⍝ skipped (branch): →
 ⍝ skipped (system name ⎕CR): 4⎕CR 1 1 2⊂'ABC'
 ⍝ skipped (system name ⎕CR): 4⎕CR 1 0 1⊂'ABC'
@@ -81,17 +80,20 @@
 ⍝ expect: 1
 🍎> Z←L⊂R
 ⍝ skipped (system name ⎕): (⎕← (0≠L)/R )≡(⎕← ⊃,/Z )
-⍝ skipped (glyph ⍬): Z←⊂/⍬
+🍎> Z←⊂/⍬
+⍝ refuse: %length-error
 ⍝ skipped (system command): )MORE
 ⍝ skipped (system command): )SIC
 🍎> ⊂/3 0⍴0
 ⍝ refuse: %length-error
 ⍝ skipped (system command): )SIC
 ⍝ skipped (user command): ]FILE_CTL SKIP_APL2
-⍝ skipped (glyph ∪): ∪/⍬
+🍎> ∪/⍬
+⍝ refuse: %length-error
 ⍝ skipped (system command): )SIC
 ⍝ skipped (user command): ]FILE_CTL NO_SKIP
 🍎> Z←,/0 0⍴0
-⍝ skipped (glyph ⍬): Z≡0⍴⊂⍬
+🍎> Z≡0⍴⊂⍬
+⍝ expect: 1
 ⍝ skipped (system command): )SI
 ⍝ skipped (system command): )CHECK

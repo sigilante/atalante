@@ -78,7 +78,6 @@
 🍎> )ERASE A8
 ⍝ skipped (system name ⎕AF): ⎕AF ¯1
 ⍝ skipped (system name ⎕AF): ⎕AF(2*31)
-⍝ skipped (system name ⎕AF): ⎕AF(2⋆31)
 ⍝ skipped (system name ⎕AF): ⎕AF(¯1+2*31)
 ⍝ skipped (system name ⎕AF): ⎕AF 300
 ⍝ skipped (system command): )SIC

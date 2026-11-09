@@ -1,0 +1,13 @@
+⍝ from GNU APL Zilde.tc (GPLv3, tests/gnu/README.md)
+🍎> ⍬
+⍝ skipped (system name ⎕CR): 4 ⎕CR ⍬
+⍝ skipped (system name ⎕CR): 4 ⎕CR ⍬ + 42
+🍎> 1 ⍬ 2
+⍝ expect:  1   2 
+🍎> ⍴1 ⍬ 2
+⍝ expect: 3
+⍝ skipped (system name ⎕CR): 4 ⎕CR 1 ⍬ 2
+🍎> ⍬ ⍬
+🍎> ⍴⍬ ⍬
+⍝ expect: 2
+⍝ skipped (system name ⎕CR): 4 ⎕CR ⍬ ⍬

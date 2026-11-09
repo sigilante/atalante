@@ -120,7 +120,7 @@
 🍎> V
 ⍝ expect: 5
 🍎> V←5
-⍝ skipped (glyph ⍬): (1↓V)←⍬
+🍎> (1↓V)←⍬
 🍎> V
 ⍝ expect: 5
 🍎> V←5
@@ -137,9 +137,14 @@
 ⍝ expect: 5
 🍎> )ERASE V
 🍎> M←2 3⍴⍳6
-⍝ skipped (glyph ⍬): 2↓[⍬]M
-⍝ skipped (glyph ⍬): 'abc'↓[⍬]M
-⍝ skipped (glyph ⍬): 2↑[⍬]M
+🍎> 2↓[⍬]M
+⍝ refuse: %length-error
+🍎> 'abc'↓[⍬]M
+⍝ refuse: %length-error
+🍎> 2↑[⍬]M
+⍝ refuse: %length-error
 ⍝ skipped (system command): )SIC
-⍝ skipped (glyph ⍬): ⍬↓[⍬]M
+🍎> ⍬↓[⍬]M
+⍝ expect: 1 2 3
+⍝ expect: 4 5 6
 🍎> )ERASE M

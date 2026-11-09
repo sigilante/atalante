@@ -15,12 +15,10 @@
 ⍝ skipped (glyph ⍤): c6 (,⍤0) (⍳6)
 ⍝ skipped (glyph ⍤): c6 ,⍤(,0) (⍳6)
 ⍝ skipped (glyph ⍤): c6 ,⍤0,⊂⍳6
-⍝ skipped (glyph ⍤): c6,⍤0,⊂⍳6
 ⍝ skipped (glyph ⍤): c6 ,⍤[1] 0 (⍳6)
 ⍝ skipped (glyph ⍤): c6 (,⍤[1] 0) (⍳6)
 ⍝ skipped (glyph ⍤): c6 ,⍤[1] (,0) (⍳6)
 ⍝ skipped (glyph ⍤): c6 ,⍤[1] 0 ,⊂(⍳6)
-⍝ skipped (glyph ⍤): c6,⍤[1]0,⊂(⍳6)
 ⍝ skipped (glyph ⍤): 1(↑⍤0) ⍬
 ⍝ skipped (system name ⎕CR): 4 ⎕CR (⊂⍤1)4 2⍴⍳8
 ⍝ skipped (system name ⎕CR): 4 ⎕CR +⍤1 ⍬
