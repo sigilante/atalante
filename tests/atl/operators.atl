@@ -42,3 +42,32 @@
 ⍝ refuse: %length-error
 🍎> {⍵-1}⍣¯1 5
 ⍝ refuse: %unimplemented
+🍎> 2 (+⍣40) 5
+⍝ expect: 85
+🍎> 3(×⍣4)2
+⍝ expect: 162
+🍎> (+/)⍣2 ⊢1 2 3
+⍝ expect: 6
+🍎> ({2+⍵÷2}⍣=) 9
+⍝ expect: 4
+🍎> (∘.≤)⍨1 2 3
+⍝ expect: 1 1 1
+⍝ expect: 0 1 1
+⍝ expect: 0 0 1
+🍎> ({⍵,+/¯2↑⍵}⍣10) 1
+⍝ expect: 1 1 2 3 5 8 13 21 34 55 89
+🍎> {⍴⍵}⍤1⊢2 0⍴0
+⍝ expect: 0
+⍝ expect: 0
+🍎> ⍴{⍴⍵}⍤1⊢0 3⍴0
+⍝ expect: 0 1
+🍎> +/⍤(0 1) M
+⍝ expect: 6 15
+🍎> {⍵-1}⍣¯1.0 5
+⍝ refuse: %unimplemented
+🍎> {⍵}⍣{⍺} 5
+⍝ refuse: %domain-error
+🍎> 1 2+⍤(0 0) 2 2⍴⍳4
+⍝ refuse: %rank-error
+🍎> 1⍨2
+⍝ refuse: %syntax-error

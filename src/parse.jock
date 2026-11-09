@@ -466,22 +466,33 @@ func pushParen(t: lexer.Token, rest: List<lexer.Token>, sig: List<(String, @)>, 
   match matchTo(rest, 9, 10, 0, ~) {
     (inner, rest2, closed) => if not closed { sei(t.col, "unbalanced (") }
       // (A B C) ← … names its names, defined or not (D-108)
-      else if nameStrand(inner, 0) and arrowNext(rest2) { items(rest2, sig, (arrItem(Ast.strand(tokNames(inner, ~)), t.col, false, false), acc)) }
+      else if nameStrand(inner, 0, sig) and arrowNext(rest2) { items(rest2, sig, (arrItem(Ast.strand(tokNames(inner, ~)), t.col, false, false), acc)) }
       else {
         match inner {
-          (i0, irest) => match parseExpr(inner, sig) {
-            .err(e) => Items.err(e),
-            .ok(a) => pushArr(a, t.col, false, false, rest2, sig, acc),
+          (i0, irest) => match items(inner, sig, ~) {
+            // a parenthesised function, (+⍣40) or (∘.≤) or (+/), is one function item (D-105)
+            .ok(its) => match its {
+              (h, more) => match more {
+                (h2, m2) => parenExpr(inner, t.col, rest2, sig, acc),
+                _ => match h { .fun(x) => items(rest2, sig, (funItem(x.f, t.col), acc)), _ => parenExpr(inner, t.col, rest2, sig, acc), },
+              },
+              _ => parenExpr(inner, t.col, rest2, sig, acc),
+            },
+            .err(e) => parenExpr(inner, t.col, rest2, sig, acc),
           },
           _ => sei(t.col, "empty parentheses"),
         }
       },
   }
 };
-func nameStrand(ts: List<lexer.Token>, n: @) -> Bool { match ts { (h, t) => if kindOf(h) == 5 { nameStrand(t, n + 1) } else { false }, _ => n >= 2, } };
+// two or more names, none of them a function's or an operator's:  (F A)←… is a selection, not a strand
+func nameStrand(ts: List<lexer.Token>, n: @, sig: List<(String, @)>) -> Bool { match ts { (h, t) => if kindOf(h) == 5 and not isFnClass(cls(sig, h.text)) and not isOpClass(cls(sig, h.text)) { nameStrand(t, n + 1, sig) } else { false }, _ => n >= 2, } };
 func arrowNext(ts: List<lexer.Token>) -> Bool { match ts { (h, t) => kindOf(h) == 14, _ => false, } };
 func tokNames(ts: List<lexer.Token>, acc: List<Ast>) -> List<Ast> { match ts { (h, t) => tokNames(t, (Ast.name(h.text), acc)), _ => revAst(acc, ~), } };
 func revAst(xs: List<Ast>, acc: List<Ast>) -> List<Ast> { match xs { (h, t) => revAst(t, (h, acc)), _ => acc, } };
+func parenExpr(inner: List<lexer.Token>, col: @, rest2: List<lexer.Token>, sig: List<(String, @)>, acc: List<Item>) -> Items {
+  match parseExpr(inner, sig) { .err(e) => Items.err(e), .ok(a) => pushArr(a, col, false, false, rest2, sig, acc), }
+};
 // the index parts: each `;`-separated part is an expression or an elision
 func indexParts(parts: List<List<lexer.Token>>, sig: List<(String, @)>, acc: List<Ast>) -> Asts {
   match parts {

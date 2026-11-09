@@ -50,3 +50,40 @@
 ⍝ refuse: %length-error
 🍎> (2↑Undef)←1
 ⍝ refuse: %value-error
+🍎> V←⍳3
+🍎> (1 2,V)←5 6 7 8 9
+⍝ refuse: %syntax-error
+🍎> M←3 3⍴⍳9
+🍎> (M[;2])←0
+🍎> M
+⍝ expect: 1 0 3
+⍝ expect: 4 0 6
+⍝ expect: 7 0 9
+🍎> (⊖M)←3 3⍴⍳9
+🍎> M[1;]
+⍝ expect: 7 8 9
+🍎> (2 3⍴V)←2 3⍴⍳6
+🍎> V
+⍝ expect: 4 5 6
+🍎> (1 0 1 1\V)←0
+⍝ refuse: %index-error
+🍎> F←{⍵+1}
+🍎> (F V)←1 2 3
+⍝ refuse: %syntax-error
+🍎> F 1
+⍝ expect: 2
+🍎> (A B)←2 2⍴⍳4
+⍝ refuse: %rank-error
+🍎> (2⊃V)←99
+🍎> V
+⍝ expect: 4 99 6
+🍎> ⎕IO←0
+🍎> (1↑V)←0
+🍎> V
+⍝ expect: 0 99 6
+🍎> ⎕IO←1
+🍎> H←{V←⍵ ⋄ (1↑V)←0 ⋄ V}
+🍎> H 5 6
+⍝ expect: 0 6
+🍎> V
+⍝ expect: 0 99 6

@@ -16,7 +16,7 @@ Atalante runs GNU APL's own testcases, rewritten into its corpus format. Every r
 | Typed lines that reproduce GNU's output | 2,073 |
 | Typed lines that differ from GNU | 743 |
 
-The skips are mostly GNU features that sit outside Atalante's language. They are 394 system commands, 233 complex-number steps, 128 user commands, the `⎕` names other than `⎕IO` and `⎕PP` (`⎕CR` alone is 105), and the glyphs `⍨ ⍤ ⍣ ⌷ ⍸`.
+The skips are mostly GNU features that sit outside Atalante's language. They are 394 system commands, 233 complex-number steps, 128 user commands, the `⎕` names other than `⎕IO` and `⎕PP` (`⎕CR` alone is 105), and the glyphs `⌷ ⍸`. The operators `⍨ ⍤ ⍣` were skipped until P18 (2026-11-10), which brought 114 more lines into the typed count.
 
 The counts leave out the `)DISPLAY APL2` line that opens each case, which reproduces in all 116. Under it a box prints in APL2's layout (D-99), as GNU prints it; that took the reproducing lines from 1,862 to 2,024, and no case lost a line.
 
@@ -25,7 +25,7 @@ P14 (2026-11-09) added `⍬`, the set functions `∪ ∩ ∼` and n-wise reducti
 ## Atalante bugs the suite found, all fixed
 
 - **An empty array with a huge axis hung the kernel.** `⍴ 10 100000000000000 0⍴42` walked every position of the long axis inside Lagoon's `+zeros` and died out of memory. Lagoon's shape fold multiplies with a `+mul` that is unjetted inside the package. Empty shapes now skip it, and so does transpose.
-- **Factorial and binomial looped on non-integers.** `3!0.05` reached `/lib/math`'s `+factorial`, which never terminates on a fraction. Non-integral reals now refuse as a DOMAIN ERROR, since they need the gamma function. Large whole arguments are bounded too.
+- **Factorial and binomial looped on non-integers.** `3!0.05` reached `/lib/math`'s `+factorial`, which never terminates on a fraction. Non-integral reals refused as a DOMAIN ERROR until P19 computed them through Γ (D-106). Large whole arguments are bounded too.
 - **Powers with huge exponents looped.** `¯1*1E20` took one step per unit of the exponent in `/lib/math`'s `+pow-n`. Whole exponents above 64 now use repeated squaring.
 - **Integer overflow wrapped silently.** It is now a DOMAIN ERROR at every width (D-15, ruled 2026-11-07). The same rule covers `⌊` and `⌈` of a huge real, and negating the most negative integer.
 - **A real overflowing to infinity crashed the printer.** `1E300×1E300` was stored as infinity, and printing it raised a raw kernel error. It now refuses as a DOMAIN ERROR.
@@ -57,7 +57,6 @@ These are the failures that need a ruling or a feature. Counts are failing steps
 - **Dyadic grade with a collating sequence.** `'ABCDE'⍋'BEAD'`, 35 steps.
 - **Axis on `↑ ↓ ⊂ ⊃`, and ravel with an axis list.** About 45 steps.
 - **Circle codes 8 to 12.** These are complex, and wait for complex numbers.
-- **Gamma for `!`.** GNU computes `3!0.05` and `!2.5`. Atalante refuses.
 - **Complex numbers.** These are staged next, through Lagoon's `/lib/complex`.
 
 ## Known harness limits

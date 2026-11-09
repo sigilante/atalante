@@ -1,0 +1,45 @@
+⍝ D-106: ! of a fraction through gamma, and A!B for negative integers as in APL2
+🍎> !2.5
+⍝ expect: 3.32335097
+🍎> !0.05 ¯0.05
+⍝ expect: 0.9735042656 1.031453317
+🍎> !¯0.5
+⍝ expect: 1.772453851
+🍎> !¯1.5
+⍝ expect: ¯3.544907702
+🍎> !170.5
+⍝ expect: 9.483367567E307
+🍎> !5
+⍝ expect: 120
+🍎> !¯1.0
+⍝ refuse: %domain-error
+🍎> !¯1
+⍝ refuse: %domain-error
+🍎> 3!0.05 2.5 ¯3.6
+⍝ expect: 0.0154375 0.3125 ¯15.456
+🍎> ¯5!¯3
+⍝ expect: 6
+🍎> 3!¯5
+⍝ expect: ¯35
+🍎> ¯2!3
+⍝ expect: 0
+🍎> 2!1E¯10
+⍝ expect: ¯5E¯11
+🍎> 1!¯1E¯300
+⍝ expect: ¯1E¯300
+🍎> 0!¯1E¯300
+⍝ expect: 1
+🍎> 0.5!2.5
+⍝ expect: 1.875
+🍎> 2!5
+⍝ expect: 10
+🍎> 0!1E20
+⍝ expect: 1
+🍎> 1!1E20
+⍝ expect: 1E20
+🍎> 1E20!1E20
+⍝ expect: 1
+🍎> 200.5!201
+⍝ expect: 16.0074875
+🍎> !¯172.5
+⍝ expect: 1.931626543E¯310
