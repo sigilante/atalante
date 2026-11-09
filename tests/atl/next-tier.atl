@@ -1,4 +1,4 @@
-⍝ D-100..D-103: GCD and LCM, the hyperbolic circle codes, negative replicate, pick through a box path, and ⍕'s exact digits and column pairs
+⍝ D-100..D-103: GCD and LCM, hyperbolic ○, negative replicate, pick by path, exact ⍕
 🍎> 30∨36
 ⍝ expect: 6
 🍎> 30∧36
