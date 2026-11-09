@@ -16,7 +16,7 @@ Atalante runs GNU APL's own testcases, rewritten into its corpus format. Every r
 | Typed lines that reproduce GNU's output | 2,073 |
 | Typed lines that differ from GNU | 743 |
 
-The skips are mostly GNU features that sit outside Atalante's language. They are 394 system commands, 233 complex-number steps, 128 user commands, the `⎕` names other than `⎕IO` and `⎕PP` (`⎕CR` alone is 105), and the glyphs `⌷ ⍸`. The operators `⍨ ⍤ ⍣` were skipped until P18 (2026-11-10), which brought 114 more lines into the typed count.
+The skips are mostly GNU features that sit outside Atalante's language. They are 394 system commands, 233 complex-number steps, 128 user commands, the `⎕` names other than `⎕IO` and `⎕PP` (`⎕CR` alone is 105), and the glyphs `⌷ ⍸`. The operators `⍨ ⍤ ⍣` were skipped until P18 (2026-11-10).
 
 The counts leave out the `)DISPLAY APL2` line that opens each case, which reproduces in all 116. Under it a box prints in APL2's layout (D-99), as GNU prints it; that took the reproducing lines from 1,862 to 2,024, and no case lost a line.
 
