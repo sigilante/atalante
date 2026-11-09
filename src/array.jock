@@ -504,3 +504,117 @@ func formatSimple(a: Arr, pp: @) -> String {
     match last2(shape(a)) { (rows, cols) => if r == 2 { fmtMatrix(a.kind, cells, cols) } else { fmtPlanes(a.kind, cells, shape(a)) }, }
   }
 };
+// --- APL2's layout of a box (D-99), under )DISPLAY APL2 -------------------------------
+// Each item is laid out as a block of lines.  Adjacent columns are parted by the larger of the
+// two columns' spacings, an item's spacing being its rank plus 1 unless it is simple character
+// data (APL2 LRM p. 138:  S←((⍴⍴A)+NOTCHAR A)⌈(⍴⍴B)+NOTCHAR B), so 'A' 'B' abut, 'AB' 'CD' take
+// one blank and (1 2)(3 4) two.  A box holding anything but simple scalars takes one blank on
+// each side.  An empty item is one blank, spaced as a scalar, as GNU APL prints it.
+struct Blk { ls: List<String>, w: @, s: @, rt: Bool };
+func formatD(a: Arr, pp: @, dm: @) -> String {
+  if dm == 1 and isBox(a) { joinS(apl2Lines(a, pp), "\n") } else { format(a, pp) }
+};
+func maxLen(ls: List<String>, m: @) -> @ { match ls { (h, t) => maxLen(t, maxk(m, strLen(h))), _ => m, } };
+func padRight(ls: List<String>, w: @) -> List<String> { revS(padRAcc(ls, w, ~), ~) };
+func padRAcc(ls: List<String>, w: @, acc: List<String>) -> List<String> { match ls { (h, t) => padRAcc(t, w, (h + spaces(w - strLen(h)), acc)), _ => acc, } };
+func sides(ls: List<String>) -> List<String> { revS(sidesAcc(ls, ~), ~) };
+func sidesAcc(ls: List<String>, acc: List<String>) -> List<String> { match ls { (h, t) => sidesAcc(t, (" " + h + " ", acc)), _ => acc, } };
+// a simple array's lines, as format prints it
+func simpleLines(a: Arr, pp: @) -> List<String> {
+  let cells = fmtAll(a.kind, vals(a), pp);
+  let r = rank(a);
+  if r < 2 { (formatSimple(a, pp), ~) }
+  else {
+    match last2(shape(a)) { (rows, cols) => {
+      let all = chunk(cells, cols);
+      let lines = if a.kind == 4 { fmtRows(all, ~, "") } else { fmtRows(all, widths(all, ~), " ") };
+      if r == 2 { lines } else { revS(planeLines(lines, rows, dropL(revL(takeL(shape(a), r - 1), ~), 1), 1, ~), ~) }
+    }, }
+  }
+};
+func spacingOf(x: Arr) -> @ {
+  let n = size(shape(x));
+  if isBox(x) { if n == 0 { 1 } else { rank(x) + 1 } }
+  else if rank(x) == 0 { if x.kind == 4 { 0 } else { 1 } }
+  else if n == 0 { 1 }
+  else if x.kind == 4 { rank(x) }
+  else { rank(x) + 1 }
+};
+func blockOf(x: Arr, pp: @) -> Blk {
+  let ls = if size(shape(x)) == 0 and rank(x) > 0 { (" ", ~) } else if isBox(x) { apl2Lines(x, pp) } else { simpleLines(x, pp) };
+  let w = maxLen(ls, 0);
+  Blk( ls: padRight(ls, w), w: w, s: spacingOf(x), rt: not isBox(x) and x.kind != 4 )
+};
+func blocksOf(xs: List<Arr>, pp: @) -> List<Blk> { revBk(blocksAcc(xs, pp, ~), ~) };
+func blocksAcc(xs: List<Arr>, pp: @, acc: List<Blk>) -> List<Blk> { match xs { (h, t) => blocksAcc(t, pp, (blockOf(h, pp), acc)), _ => acc, } };
+func revBk(xs: List<Blk>, acc: List<Blk>) -> List<Blk> { match xs { (h, t) => revBk(t, (h, acc)), _ => acc, } };
+func takeBk(xs: List<Blk>, n: @) -> List<Blk> { revBk(takeBkAcc(xs, n, ~), ~) };
+func takeBkAcc(xs: List<Blk>, n: @, acc: List<Blk>) -> List<Blk> { if n == 0 { acc } else { match xs { (h, t) => takeBkAcc(t, n - 1, (h, acc)), _ => acc, } } };
+func dropBk(xs: List<Blk>, n: @) -> List<Blk> { if n == 0 { xs } else { match xs { (h, t) => dropBk(t, n - 1), _ => ~, } } };
+func rowsBk(xs: List<Blk>, cols: @, acc: List<List<Blk>>) -> List<List<Blk>> {
+  match xs { (h, t) => rowsBk(dropBk(xs, cols), cols, (takeBk(xs, cols), acc)), _ => revBkk(acc, ~), }
+};
+func revBkk(xs: List<List<Blk>>, acc: List<List<Blk>>) -> List<List<Blk>> { match xs { (h, t) => revBkk(t, (h, acc)), _ => acc, } };
+func countBk(xs: List<Blk>) -> @ { match xs { (h, t) => 1 + countBk(t), _ => 0, } };
+// per column, the widest block and the largest spacing
+func colStat(rows: List<List<Blk>>, ws: List<@>, ss: List<@>) -> (List<@>, List<@>) {
+  match rows { (r, rest) => colStat(rest, zipW(ws, r, ~), zipSp(ss, r, ~)), _ => (ws, ss), }
+};
+func zipW(ws: List<@>, r: List<Blk>, acc: List<@>) -> List<@> {
+  match r { (b, bt) => match ws { (w, wt) => zipW(wt, bt, (maxk(w, b.w), acc)), _ => zipW(~, bt, (b.w, acc)), }, _ => revL(acc, ws), }
+};
+func zipSp(ss: List<@>, r: List<Blk>, acc: List<@>) -> List<@> {
+  match r { (b, bt) => match ss { (s, st) => zipSp(st, bt, (maxk(s, b.s), acc)), _ => zipSp(~, bt, (b.s, acc)), }, _ => revL(acc, ss), }
+};
+// the blanks after each column but the last:  the larger spacing of it and the next
+func gapsOf(ss: List<@>) -> List<@> {
+  match ss { (s, t) => match t { (s2, t2) => (maxk(s, s2), gapsOf(t)), _ => ~, }, _ => ~, }
+};
+func heightOf(r: List<Blk>, m: @) -> @ { match r { (b, t) => heightOf(t, maxk(m, countS(b.ls))), _ => m, } };
+func countS(xs: List<String>) -> @ { match xs { (h, t) => 1 + countS(t), _ => 0, } };
+func nthS(xs: List<String>, i: @) -> String { match xs { (h, t) => if i == 0 { h } else { nthS(t, i - 1) }, _ => "", } };
+// line i of one row: each block's line i (blank past its height) set in its column
+func rowLine(r: List<Blk>, ws: List<@>, gs: List<@>, i: @, acc: List<String>) -> String {
+  match r {
+    (b, bt) => match ws { (w, wt) => {
+      let l = nthS(b.ls, i);
+      let l2 = if l == "" { spaces(b.w) } else { l };
+      let cell = if b.rt { spaces(w - b.w) + l2 } else { l2 + spaces(w - b.w) };
+      match gs { (g, gt) => rowLine(bt, wt, gt, i, (spaces(g), (cell, acc))), _ => rowLine(bt, wt, ~, i, (cell, acc)), }
+    }, _ => joinS(revS(acc, ~), ""), },
+    _ => joinS(revS(acc, ~), ""),
+  }
+};
+func rowLines(r: List<Blk>, ws: List<@>, gs: List<@>, i: @, h: @, acc: List<String>) -> List<String> {
+  if i == h { acc } else { rowLines(r, ws, gs, i + 1, h, (rowLine(r, ws, gs, i, ~), acc)) }
+};
+// every row's lines, a blank line between rows when an item spans lines, and one more at the
+// end of each plane and of each axis further out (as D-45 parts a simple array's planes)
+func gridLines(rows: List<List<Blk>>, ws: List<@>, gs: List<@>, sep: @, nrows: @, outer: List<@>, i: @, acc: List<String>) -> List<String> {
+  match rows {
+    (r, rest) => {
+      let acc2 = rowLines(r, ws, gs, 0, heightOf(r, 1), acc);
+      match rest { (r2, t2) => gridLines(rest, ws, gs, sep, nrows, outer, i + 1, pushEmpty(sep + nBlanks(i, nrows, outer), acc2)), _ => acc2, }
+    },
+    _ => acc,
+  }
+};
+func tallItem(xs: List<Arr>) -> Bool { match xs { (h, t) => if rank(h) > 1 { true } else { tallItem(t) }, _ => false, } };
+func allScalar(xs: List<Arr>) -> Bool { match xs { (h, t) => if isBox(h) or rank(h) > 0 { false } else { allScalar(t) }, _ => true, } };
+func apl2Lines(a: Arr, pp: @) -> List<String> {
+  let xs = itemsOf(a);
+  let r = rank(a);
+  match xs {
+    (h0, t0) => {
+      let cols = if r == 0 { 1 } else { match last2(shape(a)) { (rws, cs) => cs, } };
+      let nrows = if r < 2 { 1 } else { match last2(shape(a)) { (rws, cs) => rws, } };
+      let outer = if r < 3 { ~ } else { dropL(revL(takeL(shape(a), r - 1), ~), 1) };
+      let rows = rowsBk(blocksOf(xs, pp), cols, ~);
+      match colStat(rows, ~, ~) { (ws, ss) => {
+        let body = revS(gridLines(rows, ws, gapsOf(ss), if tallItem(xs) { 1 } else { 0 }, nrows, outer, 1, ~), ~);
+        if allScalar(xs) { body } else { sides(padRight(body, maxLen(body, 0))) }
+      }, }
+    },
+    _ => ("", ~),
+  }
+};

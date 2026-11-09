@@ -146,6 +146,17 @@ Laminate, partition past rank 1, and dfn operators, defaults and error guards (D
 len
 ```
 
+APL2's layout for boxes under `)DISPLAY APL2`, as GNU APL prints them (D-99); the strand is the default:
+
+```apl
+🍎> 'TO' 'KEN' (2 6)
+'TO' 'KEN' (2 6)
+🍎> )DISPLAY APL2
+display APL2
+🍎> 'TO' 'KEN' (2 6)
+ TO KEN  2 6 
+```
+
 ASCII words under `)ASCII ON`, and storage widths per kind under `⎕TYPE` (D-8, D-15):
 
 ```apl

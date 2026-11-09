@@ -1,4 +1,6 @@
 ⍝ from GNU APL Index_Of.tc (GPLv3, tests/gnu/README.md)
+🍎> )DISPLAY APL2
+⍝ expect: display APL2
 🍎> ⎕IO←1
 🍎> 8 4 2 7 3⍳3 8 4
 ⍝ expect: 5 1 2

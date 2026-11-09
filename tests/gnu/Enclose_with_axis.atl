@@ -1,4 +1,6 @@
 ⍝ from GNU APL Enclose_with_axis.tc (GPLv3, tests/gnu/README.md)
+🍎> )DISPLAY APL2
+⍝ expect: display APL2
 🍎> A←2 3⍴⍳6
 🍎> A
 ⍝ expect: 1 2 3

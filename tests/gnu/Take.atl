@@ -1,4 +1,6 @@
 ⍝ from GNU APL Take.tc (GPLv3, tests/gnu/README.md)
+🍎> )DISPLAY APL2
+⍝ expect: display APL2
 🍎> 3↑34 12 73 53 41
 ⍝ expect: 34 12 73
 🍎> ¯3↑34 12 73 53 41

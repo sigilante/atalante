@@ -1,4 +1,6 @@
 ⍝ from GNU APL Reduce_N_wise_with_axis.tc (GPLv3, tests/gnu/README.md)
+🍎> )DISPLAY APL2
+⍝ expect: display APL2
 🍎> R←4 3⍴⍳12
 🍎> R
 ⍝ expect:  1  2  3

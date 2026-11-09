@@ -1,4 +1,6 @@
 ⍝ from GNU APL Rank.tc (GPLv3, tests/gnu/README.md)
+🍎> )DISPLAY APL2
+⍝ expect: display APL2
 ⍝ skipped (system command): )COPY ASSERT.apl ASSERT ASSERT_EQUIV
 ⍝ skipped (glyph ⍤): ⍉⍤2 N233
 ⍝ skipped (glyph ⍤): ⍳⍤0 N3

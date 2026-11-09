@@ -1,4 +1,6 @@
 ⍝ from GNU APL Reduce_N_wise.tc (GPLv3, tests/gnu/README.md)
+🍎> )DISPLAY APL2
+⍝ expect: display APL2
 🍎> R←1 2 3 4 5 6
 🍎> 6+/R
 ⍝ expect: 21

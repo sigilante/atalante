@@ -40,6 +40,7 @@ struct Env {
   dfns: List<(String, Dfndef)>,        // global dfns by name (D-64)
   frames: List<Frame>,                 // the dfn calls in progress, innermost first (D-65)
   nb: @, ib: @, rb: @,                 // ⎕TYPE: the bloq naturals, integers and reals are made at (D-15)
+  dm: @,                               // )DISPLAY: 0 the strand (D-76), 1 APL2's layout (D-99)
 };
 struct EErr { tag: String, hint: String };
 enum Ev { err(EErr), ok((array.Arr, Env)) };
@@ -63,15 +64,16 @@ enum EncR { err(EErr), ok((List<List<array.Arr>>, Env)) };
 
 func fail(tag: String, hint: String) -> Ev { Ev.err(EErr( tag: tag, hint: hint )) };
 func noHeader() -> parse.Header { parse.Header( nm: "", res: "", lft: "", rgt: "", locals: ~ ) };
-func setStore(e: Env, st: List<(String, array.Arr)>) -> Env { Env( store: st, io: e.io, pp: e.pp, fns: e.fns, phdr: e.phdr, pend: e.pend, out: e.out, dfns: e.dfns, frames: e.frames, nb: e.nb, ib: e.ib, rb: e.rb ) };
-func setIo(e: Env, io: @) -> Env { Env( store: e.store, io: io, pp: e.pp, fns: e.fns, phdr: e.phdr, pend: e.pend, out: e.out, dfns: e.dfns, frames: e.frames, nb: e.nb, ib: e.ib, rb: e.rb ) };
-func setPp(e: Env, pp: @) -> Env { Env( store: e.store, io: e.io, pp: pp, fns: e.fns, phdr: e.phdr, pend: e.pend, out: e.out, dfns: e.dfns, frames: e.frames, nb: e.nb, ib: e.ib, rb: e.rb ) };
-func setFns(e: Env, fns: List<(String, Fndef)>) -> Env { Env( store: e.store, io: e.io, pp: e.pp, fns: fns, phdr: e.phdr, pend: e.pend, out: e.out, dfns: e.dfns, frames: e.frames, nb: e.nb, ib: e.ib, rb: e.rb ) };
-func setPending(e: Env, h: parse.Header, pend: List<String>) -> Env { Env( store: e.store, io: e.io, pp: e.pp, fns: e.fns, phdr: h, pend: pend, out: e.out, dfns: e.dfns, frames: e.frames, nb: e.nb, ib: e.ib, rb: e.rb ) };
-func setOut(e: Env, out: List<String>) -> Env { Env( store: e.store, io: e.io, pp: e.pp, fns: e.fns, phdr: e.phdr, pend: e.pend, out: out, dfns: e.dfns, frames: e.frames, nb: e.nb, ib: e.ib, rb: e.rb ) };
-func setDfns(e: Env, dfns: List<(String, Dfndef)>) -> Env { Env( store: e.store, io: e.io, pp: e.pp, fns: e.fns, phdr: e.phdr, pend: e.pend, out: e.out, dfns: dfns, frames: e.frames, nb: e.nb, ib: e.ib, rb: e.rb ) };
-func setTw(e: Env, nb: @, ib: @, rb: @) -> Env { Env( store: e.store, io: e.io, pp: e.pp, fns: e.fns, phdr: e.phdr, pend: e.pend, out: e.out, dfns: e.dfns, frames: e.frames, nb: nb, ib: ib, rb: rb ) };
-func setFrames(e: Env, frames: List<Frame>) -> Env { Env( store: e.store, io: e.io, pp: e.pp, fns: e.fns, phdr: e.phdr, pend: e.pend, out: e.out, dfns: e.dfns, frames: frames, nb: e.nb, ib: e.ib, rb: e.rb ) };
+func setStore(e: Env, st: List<(String, array.Arr)>) -> Env { Env( store: st, io: e.io, pp: e.pp, fns: e.fns, phdr: e.phdr, pend: e.pend, out: e.out, dfns: e.dfns, frames: e.frames, nb: e.nb, ib: e.ib, rb: e.rb, dm: e.dm ) };
+func setIo(e: Env, io: @) -> Env { Env( store: e.store, io: io, pp: e.pp, fns: e.fns, phdr: e.phdr, pend: e.pend, out: e.out, dfns: e.dfns, frames: e.frames, nb: e.nb, ib: e.ib, rb: e.rb, dm: e.dm ) };
+func setPp(e: Env, pp: @) -> Env { Env( store: e.store, io: e.io, pp: pp, fns: e.fns, phdr: e.phdr, pend: e.pend, out: e.out, dfns: e.dfns, frames: e.frames, nb: e.nb, ib: e.ib, rb: e.rb, dm: e.dm ) };
+func setFns(e: Env, fns: List<(String, Fndef)>) -> Env { Env( store: e.store, io: e.io, pp: e.pp, fns: fns, phdr: e.phdr, pend: e.pend, out: e.out, dfns: e.dfns, frames: e.frames, nb: e.nb, ib: e.ib, rb: e.rb, dm: e.dm ) };
+func setPending(e: Env, h: parse.Header, pend: List<String>) -> Env { Env( store: e.store, io: e.io, pp: e.pp, fns: e.fns, phdr: h, pend: pend, out: e.out, dfns: e.dfns, frames: e.frames, nb: e.nb, ib: e.ib, rb: e.rb, dm: e.dm ) };
+func setOut(e: Env, out: List<String>) -> Env { Env( store: e.store, io: e.io, pp: e.pp, fns: e.fns, phdr: e.phdr, pend: e.pend, out: out, dfns: e.dfns, frames: e.frames, nb: e.nb, ib: e.ib, rb: e.rb, dm: e.dm ) };
+func setDfns(e: Env, dfns: List<(String, Dfndef)>) -> Env { Env( store: e.store, io: e.io, pp: e.pp, fns: e.fns, phdr: e.phdr, pend: e.pend, out: e.out, dfns: dfns, frames: e.frames, nb: e.nb, ib: e.ib, rb: e.rb, dm: e.dm ) };
+func setTw(e: Env, nb: @, ib: @, rb: @) -> Env { Env( store: e.store, io: e.io, pp: e.pp, fns: e.fns, phdr: e.phdr, pend: e.pend, out: e.out, dfns: e.dfns, frames: e.frames, nb: nb, ib: ib, rb: rb, dm: e.dm ) };
+func setDm(e: Env, dm: @) -> Env { Env( store: e.store, io: e.io, pp: e.pp, fns: e.fns, phdr: e.phdr, pend: e.pend, out: e.out, dfns: e.dfns, frames: e.frames, nb: e.nb, ib: e.ib, rb: e.rb, dm: dm ) };
+func setFrames(e: Env, frames: List<Frame>) -> Env { Env( store: e.store, io: e.io, pp: e.pp, fns: e.fns, phdr: e.phdr, pend: e.pend, out: e.out, dfns: e.dfns, frames: frames, nb: e.nb, ib: e.ib, rb: e.rb, dm: e.dm ) };
 func pushOut(e: Env, line: String) -> Env { if line == "" { e } else { setOut(e, (line, e.out)) } };
 func dom(hint: String) -> Ev { fail("%domain-error", hint) };
 func nyi(what: String) -> Ev { fail("%unimplemented", what) };
@@ -1846,12 +1848,12 @@ func charsOf(text: String) -> array.Arr {
 func formatArr(a: array.Arr, env: Env) -> Ev {
   if a.kind == 4 { okv(a, env) }
   else if array.rank(a) > 2 {
-    let rows = dropBlank(splitNl(cps(array.format(a, env.pp)), ~, ~));
+    let rows = dropBlank(splitNl(cps(array.formatD(a, env.pp, env.dm)), ~, ~));
     let lead = array.takeL(array.shape(a), array.rank(a) - 1);
     if array.countLL(rows) != array.size(lead) { nyi("⍕ of this array past rank 2") }
     else { let w = maxLenL(rows, 0); okv(mk(4, array.catL(lead, [w]), array.flatten(padRows(rows, w))), env) }
   }
-  else { okv(charsOf(array.format(a, env.pp)), env) }
+  else { okv(charsOf(array.formatD(a, env.pp, env.dm)), env) }
 };
 func rankUp(m: array.Arr, b: array.Arr) -> array.Arr { if array.rank(b) > 2 { charsRank(m, array.shape(b)) } else { m } };
 // the rows of a display without the blank lines that part its planes
@@ -2504,7 +2506,7 @@ func sortS(xs: List<String>) -> List<String> { match xs { (h, t) => insS(h, sort
 func finish(a: parse.Ast, ev: Ev, env: Env) -> (String, Env) {
   match ev {
     .err(e) => (joinOut(env.out, e.tag + " " + e.hint), setOut(env, ~)),
-    .ok(r) => match r { (v, env2) => (joinOut(env2.out, if isAssign(a) { "" } else { array.format(v, env2.pp) }), setOut(env2, ~)), },
+    .ok(r) => match r { (v, env2) => (joinOut(env2.out, if isAssign(a) { "" } else { array.formatD(v, env2.pp, env2.dm) }), setOut(env2, ~)), },
   }
 };
 // what body lines printed before this statement's own output
@@ -2667,7 +2669,7 @@ func runBodyStmt(a: parse.Ast, f: *, env: Env) -> EnvR {
     .eguard(g) => EnvR.err(EErr( tag: "%syntax-error", hint: "an error guard belongs in a dfn body (D-94)" )),
     _ => match bodyEv(a, f, env) {
       .err(e) => EnvR.err(e),
-      .ok(r) => match r { (v, env2) => EnvR.ok(if isAssign(a) { env2 } else { pushOut(env2, array.format(v, env2.pp)) }), },
+      .ok(r) => match r { (v, env2) => EnvR.ok(if isAssign(a) { env2 } else { pushOut(env2, array.formatD(v, env2.pp, env2.dm)) }), },
     },
   }
 };
@@ -3178,7 +3180,7 @@ func strandVals(parts: List<Part>, acc: List<array.Arr>, env: Env) -> Ev {
     _ => okv(array.normalize([array.countA(acc)], acc), env),
   }
 };
-func initial() -> Env { Env( store: ~, io: 1, pp: 10, fns: ~, phdr: noHeader(), pend: ~, out: ~, dfns: ~, frames: ~, nb: 6, ib: 6, rb: 6 ) };
+func initial() -> Env { Env( store: ~, io: 1, pp: 10, fns: ~, phdr: noHeader(), pend: ~, out: ~, dfns: ~, frames: ~, nb: 6, ib: 6, rb: 6, dm: 0 ) };
 
 // --- the emitter (P5): a statement to a Nockasm program over [rt env] ---------------------------
 // (moved from emit.jock so that a tradfn body can be emitted and run from

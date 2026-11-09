@@ -1,4 +1,6 @@
 ⍝ from GNU APL Compress_with_axis.tc (GPLv3, tests/gnu/README.md)
+🍎> )DISPLAY APL2
+⍝ expect: display APL2
 🍎> N←3 2 4⍴'HIGHLOW HOT COLD UP DOWN'
 🍎> N
 ⍝ expect: HIGH

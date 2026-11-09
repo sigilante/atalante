@@ -1,4 +1,6 @@
 ⍝ from GNU APL apl2lrm.tc (GPLv3, tests/gnu/README.md)
+🍎> )DISPLAY APL2
+⍝ expect: display APL2
 ⍝ skipped (system command): )SAVE
 🍎> )ERASE F
 🍎> ∇Z←F X

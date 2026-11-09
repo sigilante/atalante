@@ -1,4 +1,6 @@
 ⍝ from GNU APL Depth.tc (GPLv3, tests/gnu/README.md)
+🍎> )DISPLAY APL2
+⍝ expect: display APL2
 🍎> ≡4
 ⍝ expect: 0
 🍎> ≡2 2⍴⍳4

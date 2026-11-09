@@ -1,4 +1,6 @@
 ⍝ from GNU APL Multiply.tc (GPLv3, tests/gnu/README.md)
+🍎> )DISPLAY APL2
+⍝ expect: display APL2
 🍎> 3×4
 ⍝ expect: 12
 🍎> 3×0 ¯2 5 0.7
