@@ -2941,6 +2941,9 @@ func callDfn(nm: String, d: parse.Dfn, dyadic: Bool, a: array.Arr, b: array.Arr,
 // a function operand is bound among the frame's operands, an array operand (evaluated here, in the
 // caller's environment) among its variables, where the body's signature sees an array (D-95)
 func callOp(x: parse.Dop, dyadic: Bool, a: array.Arr, b: array.Arr, env: Env) -> Ev {
+  match x.op { .prim(cp) => primOp(cp, x, dyadic, a, b, env), _ => callOpU(x, dyadic, a, b, env), }
+};
+func callOpU(x: parse.Dop, dyadic: Bool, a: array.Arr, b: array.Arr, env: Env) -> Ev {
   match opndVal(x.la, x.lv, env) { .err(e) => Ev.err(e), .ok(lr) => match lr { (lval, env1) => callOpR(x, dyadic, a, b, lval, env1), }, }
 };
 func callOpR(x: parse.Dop, dyadic: Bool, a: array.Arr, b: array.Arr, lval: array.Arr, env: Env) -> Ev {
@@ -3643,3 +3646,86 @@ func dealMN(m: @, n: @, env: Env) -> Ev {
 };
 // the host's entropy, at the first line only:  ⎕RL← after it, or before it, wins
 func seedHost(env: Env, eny: @) -> Env { if env.rng.set { env } else { setRng(env, rngOf(lagoon.rfold(eny), true)) } };
+// --- the primitive operators ⍨ ⍣ ⍤ (D-105) -----------------------------------------------------
+// f⍨B is B f B and A f⍨B is B f A.  f⍣n applies f n times, A f⍣n B applying A∘f;  f⍣g repeats f until
+// (f x) g x is 1.  f⍤k applies f to the rank-k cells of its arguments and mixes the results as ⊃
+// does;  k is c, (l r) or (c l r), a negative k counting from the argument's rank.
+func primOp(cp: @, x: parse.Dop, dyadic: Bool, a: array.Arr, b: array.Arr, env: Env) -> Ev {
+  if x.la { fail("%syntax-error", lexerText(cp) + " takes a function on its left") }
+  else {
+    let f = resolveFn(x.l, env);
+    if cp == 9064 { if dyadic { applyDyad(f, b, a, env) } else { applyDyad(f, b, b, env) } }
+    else if not x.ra and cp == 9059 { powUntil(f, resolveFn(x.r, env), dyadic, a, b, env) }
+    else if not x.ra { fail("%syntax-error", "⍤ takes an array of ranks on its right") }
+    else { match evalAst(x.rv, env) { .err(e) => Ev.err(e), .ok(rr) => match rr { (rv, env2) =>
+      if cp == 9059 { powTimes(f, dyadic, a, b, rv, env2) } else { rankOp(f, dyadic, a, b, rv, env2) }, }, } }
+  }
+};
+func apply1or2(f: parse.Fn, dyadic: Bool, a: array.Arr, b: array.Arr, env: Env) -> Ev { if dyadic { applyDyad(f, a, b, env) } else { applyMonad(f, b, env) } };
+func powTimes(f: parse.Fn, dyadic: Bool, a: array.Arr, b: array.Arr, n: array.Arr, env: Env) -> Ev {
+  if array.size(array.shape(n)) != 1 or array.isBox(n) or n.kind == 4 { dom("f⍣n takes a single whole number n") }
+  else if n.kind == 2 and array.isNeg(array.first(n)) { nyi("f⍣n with a negative n (an inverse)") }
+  else { match natVals(n, env) { (ok, ns) => if not ok { dom("f⍣n takes a single whole number n") } else { powN(f, dyadic, a, b, headOr0(ns), env) }, } }
+};
+func powN(f: parse.Fn, dyadic: Bool, a: array.Arr, b: array.Arr, n: @, env: Env) -> Ev {
+  if n == 0 { okv(b, env) }
+  else { match apply1or2(f, dyadic, a, b, env) { .err(e) => Ev.err(e), .ok(r) => match r { (y, env2) => powN(f, dyadic, a, y, n - 1, env2), }, } }
+};
+func powUntil(f: parse.Fn, g: parse.Fn, dyadic: Bool, a: array.Arr, b: array.Arr, env: Env) -> Ev {
+  match apply1or2(f, dyadic, a, b, env) { .err(e) => Ev.err(e), .ok(r) => match r { (y, env2) =>
+    match applyDyad(g, y, b, env2) { .err(e) => Ev.err(e), .ok(t) => match t { (tv, env3) =>
+      if array.size(array.shape(tv)) != 1 or tv.kind != 1 or not isBool(array.first(tv)) { dom("f⍣g needs g to give one Boolean") }
+      else if array.first(tv) == 1 { okv(y, env3) } else { powUntil(f, g, dyadic, a, y, env3) }, }, }, }, }
+};
+// the ranks:  (monadic, left, right)
+func rankSpec(k: array.Arr, env: Env) -> (Bool, (Bool, @), (Bool, @), (Bool, @)) {
+  let ks = if k.kind == 1 { specNat(array.vals(k), ~) } else if k.kind == 2 { specInt(array.vals(k), ~) } else { ~ };
+  let n = countP(ks);
+  if array.rank(k) > 1 or array.isBox(k) or n == 0 or n > 3 { (false, (false, 0), (false, 0), (false, 0)) }
+  else { match ks { (k0, t0) => match t0 {
+    (k1, t1) => match t1 { (k2, t2) => (true, k0, k1, k2), _ => (true, k1, k0, k1), },
+    _ => (true, k0, k0, k0), }, _ => (false, (false, 0), (false, 0), (false, 0)), } }
+};
+func effRank(k: (Bool, @), r: @) -> @ { match k { (neg, m) => if neg { if m > r { 0 } else { r - m } } else { if m > r { r } else { m } }, } };
+// the frame and the cells of rank e
+func cellsOf(b: array.Arr, e: @) -> (List<@>, List<array.Arr>) {
+  let shp = array.shape(b);
+  let fr = array.takeL(shp, array.rank(b) - e);
+  let cshp = array.dropL(shp, array.rank(b) - e);
+  (fr, cellsAcc(array.itemsOf(b), array.size(cshp), cshp, ~))
+};
+func cellsAcc(xs: List<array.Arr>, cs: @, cshp: List<@>, acc: List<array.Arr>) -> List<array.Arr> {
+  match xs { (h, t) => cellsAcc(array.dropA(xs, cs), cs, cshp, (array.normalize(cshp, array.takeA(xs, cs)), acc)), _ => array.revA(acc, ~), }
+};
+func mapCells(f: parse.Fn, dyadic: Bool, as2: List<array.Arr>, bs: List<array.Arr>, env: Env, acc: List<array.Arr>) -> Evs {
+  match bs {
+    (b, bt) => match as2 { (a, at) => match apply1or2(f, dyadic, a, b, env) { .err(e) => Evs.err(e), .ok(r) => match r { (y, env2) => mapCells(f, dyadic, at, bt, env2, (y, acc)), }, }, _ => Evs.ok((array.revA(acc, ~), env)), },
+    _ => Evs.ok((array.revA(acc, ~), env)),
+  }
+};
+func mixCells(fr: List<@>, ys: List<array.Arr>, env: Env) -> Ev {
+  match ys { (h, t) => if allSimpleScalar(ys) { okv(array.normalize(fr, ys), env) } else { disclose(array.boxOf(fr, ys), env) }, _ => okv(array.make(1, fr, ~), env), }
+};
+func allSimpleScalar(xs: List<array.Arr>) -> Bool { match xs { (h, t) => if array.isSimpleScalar(h) { allSimpleScalar(t) } else { false }, _ => true, } };
+func repCell(x: array.Arr, n: @, acc: List<array.Arr>) -> List<array.Arr> { if n == 0 { acc } else { repCell(x, n - 1, (x, acc)) } };
+func rankOp(f: parse.Fn, dyadic: Bool, a: array.Arr, b: array.Arr, k: array.Arr, env: Env) -> Ev {
+  match rankSpec(k, env) { (ok, km, kl, kr) =>
+    if not ok { dom("⍤ takes one to three whole numbers") }
+    else if not dyadic { rankMonad(f, cellsOf(b, effRank(km, array.rank(b))), env) }
+    else { rankDyad(f, cellsOf(a, effRank(kl, array.rank(a))), cellsOf(b, effRank(kr, array.rank(b))), env) },
+  }
+};
+func rankMonad(f: parse.Fn, c: (List<@>, List<array.Arr>), env: Env) -> Ev {
+  match c { (fr, bs) => mixed(fr, mapCells(f, false, bs, bs, env, ~)), }
+};
+func mixed(fr: List<@>, r: Evs) -> Ev { match r { .err(e) => Ev.err(e), .ok(p) => match p { (ys, env2) => mixCells(fr, ys, env2), }, } };
+func rankDyad(f: parse.Fn, ca: (List<@>, List<array.Arr>), cb: (List<@>, List<array.Arr>), env: Env) -> Ev {
+  match ca { (fa, as2) => match cb { (fb, bs) =>
+    if fa == fb { mixed(fb, mapCells(f, true, as2, bs, env, ~)) }
+    else if fa == ~ { mixed(fb, mapCells(f, true, repCell(headA(as2), array.countA(bs), ~), bs, env, ~)) }
+    else if fb == ~ { mixed(fa, mapCells(f, true, as2, repCell(headA(bs), array.countA(as2), ~), env, ~)) }
+    else if array.count(fa) != array.count(fb) { fail("%rank-error", "⍤'s frames differ in rank") }
+    else { fail("%length-error", "⍤'s frames differ") },
+  }, }
+};
+func headA(xs: List<array.Arr>) -> array.Arr { match xs { (h, t) => h, _ => array.scalar(1, 0), } };

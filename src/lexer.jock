@@ -104,6 +104,9 @@ func canon(c: @) -> @ {
     8746 => 8746,  // ∪ (D-98)
     8745 => 8745,  // ∩ (D-98)
     9068 => 9068,  // ⍬, an array (D-97)
+    9064 => 9064,  // ⍨ (D-105)
+    9059 => 9059,  // ⍣ (D-105)
+    9060 => 9060,  // ⍤ (D-105)
     8866 => 8866,  // ⊢
     9023 => 9023,  // ⌿
     9024 => 9024,  // ⍀
@@ -312,6 +315,9 @@ func asciiGlyph(w: String) -> String {
   else if w == "downshoe" { "∪" }
   else if w == "upshoe" { "∩" }
   else if w == "zilde" { "⍬" }
+  else if w == "tildediaeresis" { "⍨" }
+  else if w == "stardiaeresis" { "⍣" }
+  else if w == "jotdiaeresis" { "⍤" }
   else if w == "slashbar" { "⌿" }
   else if w == "backslashbar" { "⍀" }
   else if w == "jot" { "∘" }

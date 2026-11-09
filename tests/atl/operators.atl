@@ -1,0 +1,44 @@
+⍝ D-105: the primitive operators ⍨ ⍣ ⍤
+🍎> 2-⍨5
+⍝ expect: 3
+🍎> ×⍨3
+⍝ expect: 9
+🍎> 1 2 3,⍨4
+⍝ expect: 4 1 2 3
+🍎> {⍵×2}⍣3 1
+⍝ expect: 8
+🍎> 2 {⍺×⍵}⍣3 1
+⍝ expect: 8
+🍎> {⍵+1}⍣0 5
+⍝ expect: 5
+🍎> {⍵÷2}⍣{⍺<1} 100
+⍝ expect: 0.78125
+🍎> {1+÷⍵}⍣= 1
+⍝ expect: 1.618033989
+🍎> M←2 3⍴⍳6
+🍎> +/⍤1 M
+⍝ expect: 6 15
+🍎> ⌽⍤1 M
+⍝ expect: 3 2 1
+⍝ expect: 6 5 4
+🍎> +/⍤¯1 M
+⍝ expect: 6 15
+🍎> ⊂⍤1 M
+⍝ expect: (1 2 3) (4 5 6)
+🍎> 10 20+⍤(0 1) M
+⍝ expect: 11 12 13
+⍝ expect: 24 25 26
+🍎> 100+⍤(0 1) M
+⍝ expect: 101 102 103
+⍝ expect: 104 105 106
+🍎> V←1 2 3
+🍎> ⍳⍤0 V
+⍝ expect: 1 0 0
+⍝ expect: 1 2 0
+⍝ expect: 1 2 3
+🍎> {⍵}⍤'a' M
+⍝ refuse: %domain-error
+🍎> 1 2 3+⍤(0 0) 1 2
+⍝ refuse: %length-error
+🍎> {⍵-1}⍣¯1 5
+⍝ refuse: %unimplemented

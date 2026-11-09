@@ -100,9 +100,12 @@
 ⍝ expect:        SHOW_NC 'RO'
 ⍝ expect:        SHOW_NC 'B'
 🍎> ∇
-⍝ skipped (glyph ⍣): ≡⊂⍣4⍣6⊢'hello'
-⍝ skipped (glyph ⍣): ≡(⊂⍣4)⍣6⊢'hello'
-⍝ skipped (glyph ⍣): ≡⊂⍣(4⍣6)⊢'hello'
+🍎> ≡⊂⍣4⍣6⊢'hello'
+⍝ expect: 25
+🍎> ≡(⊂⍣4)⍣6⊢'hello'
+⍝ expect: 25
+🍎> ≡⊂⍣(4⍣6)⊢'hello'
+⍝ refuse: %syntax-error
 ⍝ skipped (branch): →
 ⍝ skipped (system command): )CHECK
 ⍝ skipped (system name ⎕FX): ⎕FX'R←(F LOP G)Y' 'R←F Y'
