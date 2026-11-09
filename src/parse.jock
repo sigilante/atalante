@@ -200,7 +200,7 @@ func funItem(f: Fn, col: @) -> Item { Item.fun(IFun( f: f, col: col )) };
 func isLit(a: Ast) -> Bool { match a { .lit(l) => true, _ => false, } };
 // ⍬, the empty numeric vector:  a natural literal with no numerals (D-97)
 func zilde() -> Ast { Ast.lit(Lit( kind: 1, vals: ~ )) };
-func isSysName(nm: String) -> Bool { nm == "IO" or nm == "PP" or nm == "TYPE" };   // D-60
+func isSysName(nm: String) -> Bool { nm == "IO" or nm == "PP" or nm == "TYPE" or nm == "RL" };   // D-60, D-104
 
 // --- token splitting ---------------------------------------------------------
 // statements on one line (D-7); parts in order. A `⋄` inside braces

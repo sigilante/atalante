@@ -7,6 +7,8 @@ files:
   lib/complex.hoon  <- libmath/desk/lib/complex.hoon
   lib/fixed.hoon  <- libmath/desk/lib/fixed.hoon
   lib/math.hoon  <- libmath/desk/lib/math.hoon
+  sur/rand.hoon  <- librand/desk/sur/rand.hoon
+  lib/rand.hoon  <- librand/desk/lib/rand.hoon
 patches, applied by the script (so a re-vendor re-applies them):
   1. trailing '::' comments stripped from /+ /- /= import lines --- honk's import
      parser reads the whole line as the import.

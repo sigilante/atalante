@@ -169,8 +169,10 @@ ascii ON
 ascii OFF
 
 🍎> ⎕TYPE←'UINT8 REAL32'
+🍎> 200+55
+255
 🍎> 200+100
-44
+%domain-error a natural result does not fit its width (D-15)
 🍎> 1÷3
 0.33333334
 ```

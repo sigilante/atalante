@@ -1,0 +1,50 @@
+⍝ D-104: roll and deal from /lib/rand's Philox stream; ⎕RL←n makes a run repeat
+🍎> ⎕RL←42
+🍎> ⎕RL
+⍝ expect: 42
+🍎> x←?1000⍴6
+🍎> ⍴x
+⍝ expect: 1000
+🍎> (∧/x≥1),(∧/x≤6)
+⍝ expect: 1 1
+🍎> ∧/(⍳6)∊x
+⍝ expect: 1
+🍎> ⎕RL←42
+🍎> x≡?1000⍴6
+⍝ expect: 1
+🍎> ?1
+⍝ expect: 1
+🍎> ⍴?2 3⍴10
+⍝ expect: 2 3
+🍎> y←10?10
+🍎> y[⍋y]
+⍝ expect: 1 2 3 4 5 6 7 8 9 10
+🍎> ⍴∪5?1000
+⍝ expect: 5
+🍎> ∧/(5?1000)≤1000
+⍝ expect: 1
+🍎> ⍴0?5
+⍝ expect: 0
+🍎> (?10.0)∊⍳10
+⍝ expect: 1
+🍎> ⎕IO←0
+🍎> ?1
+⍝ expect: 0
+🍎> z←4?4
+🍎> z[⍋z]
+⍝ expect: 0 1 2 3
+🍎> ⎕IO←1
+🍎> ?0
+⍝ refuse: %domain-error
+🍎> ?¯1
+⍝ refuse: %domain-error
+🍎> ?1.5
+⍝ refuse: %domain-error
+🍎> ?'a'
+⍝ refuse: %domain-error
+🍎> 11?10
+⍝ refuse: %domain-error
+🍎> 2 3?10
+⍝ refuse: %length-error
+🍎> ⎕RL←¯1
+⍝ refuse: %domain-error

@@ -27,6 +27,10 @@ func mk(sig: List<(String, @)>, defn: Bool, env: interp.Env, green: Bool) -> Ses
   Sess( sig: sig, defn: defn, env: env, green: green, open: ~, depth: 0, omode: 0, path: 0, ascii: false )
 };
 // the same, keeping the evaluation path of `s` (0 both, 1 interpreter, 2 emitter; `)PATH`)
+// the host's entropy into the session's stream, every other field kept (D-104)
+func seedSess(s: Sess, eny: @) -> Sess {
+  Sess( sig: s.sig, defn: s.defn, env: interp.seedHost(s.env, eny), green: s.green, open: s.open, depth: s.depth, omode: s.omode, path: s.path, ascii: s.ascii )
+};
 func mks(s: Sess, sig: List<(String, @)>, defn: Bool, env: interp.Env, green: Bool) -> Sess {
   Sess( sig: sig, defn: defn, env: env, green: green, open: ~, depth: 0, omode: 0, path: s.path, ascii: s.ascii )
 };
