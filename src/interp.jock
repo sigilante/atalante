@@ -154,7 +154,12 @@ func putFnDef(env: Env, nm: String, d: parse.Dfn) -> Env {
 func digitsNat(cs: List<@>, acc: @) -> @ { match cs { (c, t) => if c >= 48 and c <= 57 { digitsNat(t, acc * 10 + (c - 48)) } else { acc }, _ => acc, } };
 func cps(s: String) -> List<@> { array.toCps(s.chars()) };
 func natOf(s: String) -> @ { digitsNat(cps(s), 0) };
-func intOf(s: String) -> @ { match cps(s) { (c, t) => if c == 175 { lagoon.tneg(digitsNat(t, 0)) } else { digitsNat(cps(s), 0) }, _ => 0, } };
+// a numeral past the 64-bit integers is the overflow mark, which litEv refuses (D-15):  9223372036854775808
+// in an integer literal (`9223372036854775808 ¯7`) once wrapped to ¯9223372036854775808
+func intOf(s: String) -> @ {
+  match cps(s) { (c, t) => if c == 175 { let m = digitsNat(t, 0); if m > array.two63() { two64() } else { lagoon.tneg(m) } }
+    else { let m = digitsNat(cps(s), 0); if m >= array.two63() { two64() } else { m } }, _ => 0, }
+};
 // mantissa digits m, fraction length k, exponent (eneg, emag):  m × 10^(e−k) (scanMant, scanExp; realAt below)
 func scanMant(cs: List<@>, m: @, k: @, frac: Bool) -> (@, @, List<@>) {
   match cs {
@@ -191,7 +196,7 @@ func typeOfKind(k: @, env: Env) -> String { if k == 1 { "UINT" + bitsText(env.nb
 func natsFit(xs: List<@>, lim: @) -> Bool { match xs { (x, t) => if x < lim { natsFit(t, lim) } else { false }, _ => true, } };
 // int2 bits: a magnitude below half (positive) or at most half (negative)
 func intsFit(xs: List<@>, half: @) -> Bool {
-  match xs { (x, t) => { let ok = if array.isNeg(x) { lagoon.tabs(x) <= half } else { x < half }; if ok { intsFit(t, half) } else { false } }, _ => true, }
+  match xs { (x, t) => { let ok = if x >= two64() { false } else if array.isNeg(x) { lagoon.tabs(x) <= half } else { x < half }; if ok { intsFit(t, half) } else { false } }, _ => true, }
 };
 func realsFinite(xs: List<@>) -> Bool { match xs { (x, t) => if array.finite(x) { realsFinite(t) } else { false }, _ => true, } };
 // a literal as the session makes it:  reals at its real width, naturals and integers at theirs (D-15;  litEv has refused one that does not fit)
@@ -490,7 +495,8 @@ func decPair(x: @, y: @) -> (@, @, @) {
     (a1 * array.pow10(if n1 { m - e1 } else { m + e1 }), a2 * array.pow10(if n2 { m - e2 } else { m + e2 }), m)
   }, }, }
 };
-func decReal(w: @, n: @, m: @) -> @ { if m == 0 { array.rsunAt(w, n) } else { array.rop(4, array.rsunAt(w, n), array.rsunAt(w, array.pow10(m))) } };
+// n×10^−m rounded once, by the decimal-to-binary conversion a numeral takes (Lagoon's +grd)
+func decReal(w: @, n: @, m: @) -> @ { array.rgrd(w, true, if m == 0 { 0 } else { 2 * m - 1 }, n) };
 func gcdR(x: @, y: @) -> @ { match decPair(x, y) { (p, q, m) => decReal(array.widthOf(x), gcdN(p, q), m), } };
 func lcmR(x: @, y: @) -> @ {
   match decPair(x, y) { (p, q, m) => if p == 0 or q == 0 { array.zeroLike(x) } else {
@@ -525,11 +531,20 @@ func log1p(x: @) -> @ {
   if w == one { x } else { array.rop(4, array.rop(3, lnR(w), x), array.rop(2, w, one)) }
 };
 func halfR(x: @) -> @ { array.rop(4, x, array.rsunAt(array.widthOf(x), 2)) };
-func sinhR(x: @) -> @ { let e = expm1(absR(x)); let s = halfR(array.rop(1, e, array.rop(4, e, array.rop(1, e, array.oneLike(x))))); if array.realIsNeg(x) { negR(s) } else { s } };
-func coshR(x: @) -> @ { let e = expR(absR(x)); halfR(array.rop(1, e, array.rop(4, array.oneLike(x), e))) };
+// past e^x's overflow, sinh and cosh are e^(x÷2)÷2×e^(x÷2), finite a little further (5○710)
+func bigHalf(m: @) -> @ { let h = expR(halfR(m)); array.rop(3, halfR(h), h) };
+func sinhR(x: @) -> @ {
+  let m = absR(x);
+  let e = expm1(m);
+  let s = if array.finite(e) { halfR(array.rop(1, e, array.rop(4, e, array.rop(1, e, array.oneLike(x))))) } else { bigHalf(m) };
+  if array.realIsNeg(x) { negR(s) } else { s }
+};
+func coshR(x: @) -> @ { let m = absR(x); let e = expR(m); if array.finite(e) { halfR(array.rop(1, e, array.rop(4, array.oneLike(x), e))) } else { bigHalf(m) } };
+// tanh is 1 to the width's precision past (p+2)ln2÷2:  5 at REAL16, 10 at 32, 20 at 64, 40 at 128
+func tanhCut(w: @) -> @ { if w == 4 { 5 } else if w == 5 { 10 } else if w == 7 { 40 } else { 20 } };
 func tanhR(x: @) -> @ {
   let m = absR(x);
-  let t = if ltR(array.rsunAt(array.widthOf(x), 20), m) { array.oneLike(x) } else { let e = expm1(array.rop(1, m, m)); array.rop(4, e, array.rop(1, e, array.rsunAt(array.widthOf(x), 2))) };
+  let t = if ltR(array.rsunAt(array.widthOf(x), tanhCut(array.widthOf(x))), m) { array.oneLike(x) } else { let e = expm1(array.rop(1, m, m)); array.rop(4, e, array.rop(1, e, array.rsunAt(array.widthOf(x), 2))) };
   if array.realIsNeg(x) { negR(t) } else { t }
 };
 // asinh |x| = ln(1+|x|+x²÷(1+√(1+x²))), the sign restored;  acosh x = ln(x+√(x²−1)) for x ≥ 1;
@@ -544,7 +559,9 @@ func asinhR(x: @) -> @ {
 func acoshR(x: @) -> @ {
   let one = array.oneLike(x);
   let q = array.rop(3, x, x);
-  if array.finite(q) { lnR(array.rop(1, x, array.rfun(1, array.rop(2, q, one)))) } else { array.rop(1, lnR(x), lnR(array.rsunAt(array.widthOf(x), 2))) }
+  // Kahan:  with t = x−1, acosh x = ln(1+t+√(2t+t²)), which keeps x near 1's digits
+  let t = array.rop(2, x, one);
+  if array.finite(q) { log1p(array.rop(1, t, array.rfun(1, array.rop(1, array.rop(1, t, t), array.rop(3, t, t))))) } else { array.rop(1, lnR(x), lnR(array.rsunAt(array.widthOf(x), 2))) }
 };
 func atanhR(x: @) -> @ {
   let one = array.oneLike(x);
@@ -570,7 +587,7 @@ func gamma64(x: @) -> @ {
   let one = array.rsunAt(6, 1);
   if ltR(x, half) {
     if wholeR(x) { array.rop(4, array.zeroLike(x), array.zeroLike(x)) }
-    else { array.rop(4, array.rpiAt(6), array.rop(3, sinPi(x), gamma64(array.rop(2, one, x)))) }
+    else { let g1 = gamma64(array.rop(2, one, x)); if array.finite(g1) { array.rop(4, array.rpiAt(6), array.rop(3, sinPi(x), g1)) } else { lgExp(lgamma64(x)) } }
   } else {
     let y = array.rop(2, x, one);
     let a = lzSum(lanczosC(), y, 0, array.zeroLike(x));
@@ -586,6 +603,22 @@ func sinPi(x: @) -> @ {
   let v = array.rfun(4, array.rop(3, array.rpiAt(6), array.rop(2, x, n)));
   if evenR(n) { v } else { negR(v) }
 };
+// ln|Γ(x)| and Γ's sign, for where Γ overflows but a ratio or a reflection does not:
+// ln Γ = ½ln 2π + (y+½)ln t − t + ln a above ½;  below, ln π − ln|sin πx| − ln Γ(1−x), the sign sin πx's
+func lgamma64(x: @) -> (Bool, @) {
+  let half = rlit("0.5");
+  let one = array.rsunAt(6, 1);
+  if ltR(x, half) {
+    let sp = sinPi(x);
+    match lgamma64(array.rop(2, one, x)) { (n1, l1) => (array.realIsNeg(sp), array.rop(2, array.rop(2, lnR(array.rpiAt(6)), lnR(absR(sp))), l1)), }
+  } else {
+    let y = array.rop(2, x, one);
+    let a = lzSum(lanczosC(), y, 0, array.zeroLike(x));
+    let t = array.rop(1, y, rlit("7.5"));
+    (false, array.rop(1, array.rop(2, array.rop(1, halfR(lnR(array.rop(3, array.rsunAt(6, 2), array.rpiAt(6)))), array.rop(3, array.rop(1, y, half), lnR(t))), t), lnR(a)))
+  }
+};
+func lgExp(p: (Bool, @)) -> @ { match p { (n, l) => signedR(n, expR(l)), } };
 func gammaR(x: @) -> @ { array.toWidth(gamma64(array.toWidth(x, 6)), array.widthOf(x)) };
 func factG(x: @) -> @ { if wholeNN(x) { factR(x) } else { gammaR(array.rop(1, x, array.oneLike(x))) } };
 // 1÷Γ(x):  0 at a pole
@@ -604,10 +637,23 @@ func binomNeg(x: @, y: @) -> @ {
 // A!B through gamma:  Γ(B+1)×(1÷Γ(A+1))×1÷Γ(B−A+1);  B a pole is a NaN
 func binomG(x: @, y: @) -> @ {
   let one = array.oneLike(x);
-  if wholeR(x) and wholeR(y) { if wholeNN(x) and wholeNN(y) { binomW(x, y) } else { binomNeg(x, y) } }
+  if wholeR(x) and wholeR(y) { if (not array.realIsNeg(x)) and (not array.realIsNeg(y)) { binomW(x, y) } else { binomNeg(x, y) } }
   else if wholeNN(x) and ltR(x, array.rsunAt(array.widthOf(x), 1000)) { binProd(y, natOfReal(x), 0, one) }
-  else { array.rop(3, array.rop(3, gammaR(array.rop(1, y, one)), rgammaR(array.rop(1, x, one))), rgammaR(array.rop(1, array.rop(2, y, x), one))) }
+  else {
+    let r = array.rop(3, array.rop(3, gammaR(array.rop(1, y, one)), rgammaR(array.rop(1, x, one))), rgammaR(array.rop(1, array.rop(2, y, x), one)));
+    if array.finite(r) { r } else { binomLog(x, y) }
+  }
 };
+// Γ(B+1) overflowed:  the ratio through ln|Γ|, 0 where a denominator sits on a pole
+func binomLog(x: @, y: @) -> @ {
+  let one = array.oneLike(x);
+  let xa = array.rop(1, x, one);
+  let xb = array.rop(1, array.rop(2, y, x), one);
+  if isPole(xa) or isPole(xb) { array.zeroLike(x) }
+  else { match lgamma64(array.toWidth(array.rop(1, y, one), 6)) { (n0, l0) => match lgamma64(array.toWidth(xa, 6)) { (n1, l1) => match lgamma64(array.toWidth(xb, 6)) { (n2, l2) =>
+    array.toWidth(signedR(n0 != (n1 != n2), expR(array.rop(2, array.rop(2, l0, l1), l2))), array.widthOf(x)), }, }, } }
+};
+func isPole(x: @) -> Bool { wholeR(x) and not ltR(array.zeroLike(x), x) };
 // k!y for a whole k:  the product of (y−i)÷(i+1), which keeps a small y's digits (2!1E¯10)
 func binProd(y: @, k: @, i: @, acc: @) -> @ {
   if i == k { acc } else { binProd(y, k, i + 1, array.rop(3, acc, array.rop(4, array.rop(2, y, array.rsunAt(array.widthOf(y), i)), array.rsunAt(array.widthOf(y), i + 1)))) }
@@ -618,7 +664,7 @@ func binProd(y: @, k: @, i: @, acc: @) -> @ {
 // every element fits one, else a natural array when every element is non-negative, else a
 // DOMAIN ERROR (D-15):  9223372036854775808+¯1 is 9223372036854775807, and
 // 18446744073709551615−1 is 18446744073709551614.  No kind turns real.
-func exactOps(cp: @) -> Bool { cp == 43 or cp == 8722 or cp == 215 or cp == 8968 or cp == 8970 or cp == 60 or cp == 8804 or cp == 61 or cp == 8805 or cp == 62 or cp == 8800 };
+func exactOps(cp: @) -> Bool { cp == 8744 or cp == 8743 or cp == 8739 or cp == 43 or cp == 8722 or cp == 215 or cp == 8968 or cp == 8970 or cp == 60 or cp == 8804 or cp == 61 or cp == 8805 or cp == 62 or cp == 8800 };
 func bigNat(a: array.Arr) -> Bool { a.kind == 1 and array.anyGE(array.vals(a), array.two63()) };
 func needsExact(cp: @, a: array.Arr, b: array.Arr) -> Bool {
   exactOps(cp) and (a.kind == 1 or a.kind == 2) and (b.kind == 1 or b.kind == 2) and (bigNat(a) or bigNat(b))
@@ -638,9 +684,20 @@ func sGt(p: (Bool, @), q: (Bool, @)) -> Bool {
 func sEq(p: (Bool, @), q: (Bool, @)) -> Bool { match p { (pn, pm) => match q { (qn, qm) => pn == qn and pm == qm, }, } };
 func sOp(cp: @, p: (Bool, @), q: (Bool, @)) -> (Bool, @) {
   if cp == 43 { sAdd(p, q) } else if cp == 8722 { sAdd(p, sNeg(q)) } else if cp == 215 { sMul(p, q) }
+  else if cp == 8744 { match p { (pn, pm) => match q { (qn, qm) => (false, gcdN(pm, qm)), }, } }
+  else if cp == 8743 { match p { (pn, pm) => match q { (qn, qm) => if pm == 0 or qm == 0 { (false, 0) } else { sNorm(pn != qn, (pm / gcdN(pm, qm)) * qm) }, }, } }
+  else if cp == 8739 { sRes(p, q) }
   else if cp == 8968 { if sGt(p, q) { p } else { q } }
   else if cp == 8970 { if sGt(p, q) { q } else { p } }
   else { (false, b2n(sCmp(cp, p, q))) }
+};
+// A|B on exact values:  0|B is B;  else B mod |A|, taking A's sign when it is not 0
+func sRes(p: (Bool, @), q: (Bool, @)) -> (Bool, @) {
+  match p { (pn, pm) => match q { (qn, qm) => if pm == 0 { q } else {
+    let r0 = qm % pm;
+    let r = if qn and r0 != 0 { pm - r0 } else { r0 };
+    if pn and r != 0 { (true, pm - r) } else { (false, r) }
+  }, }, }
 };
 func sCmp(cp: @, p: (Bool, @), q: (Bool, @)) -> Bool {
   if cp == 60 { sGt(q, p) } else if cp == 8804 { not sGt(p, q) } else if cp == 61 { sEq(p, q) }
@@ -656,7 +713,7 @@ func encInt(xs: List<(Bool, @)>, acc: List<@>) -> List<@> { match xs { (h, t) =>
 func encNat(xs: List<(Bool, @)>, acc: List<@>) -> List<@> { match xs { (h, t) => match h { (n, m) => encNat(t, (m, acc)), }, _ => array.revL(acc, ~), } };
 func exactNI(cp: @, a: array.Arr, b: array.Arr, env: Env) -> Ev {
   let rs = sZip(cp, sgnL(a.kind, array.vals(a), ~), sgnL(b.kind, array.vals(b), ~), ~);
-  if cp != 43 and cp != 8722 and cp != 215 and cp != 8968 and cp != 8970 { okv(mk(1, array.shape(a), encNat(rs, ~)), env) }
+  if cp != 43 and cp != 8722 and cp != 215 and cp != 8968 and cp != 8970 and cp != 8744 and cp != 8743 and cp != 8739 { okv(mk(1, array.shape(a), encNat(rs, ~)), env) }
   else if allP(rs, fitsInt) { okv(mk(2, array.shape(a), encInt(rs, ~)), env) }
   else if allP(rs, fitsNat) { okv(mk(1, array.shape(a), encNat(rs, ~)), env) }
   else { dom("an exact result fits neither a natural nor an integer (D-15, D-107)") }
