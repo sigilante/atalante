@@ -13,8 +13,8 @@ Atalante runs GNU APL's own testcases, rewritten into its corpus format. Every r
 | Steps typed at the prompt | 2,787 |
 | Function definitions typed | 29 |
 | Steps and definitions skipped as inexpressible | 1,271 |
-| Typed lines that reproduce GNU's output | 2,024 |
-| Typed lines that differ from GNU | 792 |
+| Typed lines that reproduce GNU's output | 2,073 |
+| Typed lines that differ from GNU | 743 |
 
 The skips are mostly GNU features that sit outside Atalante's language. They are 394 system commands, 233 complex-number steps, 128 user commands, the `⎕` names other than `⎕IO` and `⎕PP` (`⎕CR` alone is 105), and the glyphs `⍨ ⍤ ⍣ ⌷ ⍸`.
 
@@ -42,6 +42,8 @@ P14 (2026-11-09) added `⍬`, the set functions `∪ ∩ ∼` and n-wise reducti
 
 - **Nested display is a setting.** Atalante prints a box as the strand that builds it (D-76), for example `(1 1) (1 2)`, unless `)DISPLAY APL2` asks for APL2's layout (D-99), which GNU prints. The suite runs under `)DISPLAY APL2`.
 - **Exponent format in a column.** GNU gives every number in a column the same exponent form, as in `2.300E1 5.6E¯3`. Atalante formats each number by itself.
+- **APL2's `⍕` drops a leading zero.** GNU prints `5 1⍕0.15` as `   .1`; Atalante prints `  0.1` in the same width (D-102). The importer restores the zero in GNU's expected output, so those steps differ only in their width.
+- **A natural holds 64 bits.** `2028259601∧9094863431` is 18446744073709551031 in Atalante; GNU's integers hold 63 bits, so it promotes the answer to a real.
 - **Integer overflow refuses.** GNU and APL2 promote to a real, so `9223372036854775807+1` and `!20 22` answer in floating point there. Atalante raises a DOMAIN ERROR, because a change of kind is the program's to ask for (D-15).
 - **A mixed comparison goes through the real (ruled 2026-11-07).** Atalante converts an integer to a real before comparing it with one, so `9007199254740993 ≠ 9007199254740992.0` is 0. GNU compares exactly and gives 1.
 - **Roll and deal draw from another generator (D-104).** Atalante's `?` draws from `/lib/rand`'s Philox stream, seeded by the host's entropy or by `⎕RL←n`. GNU APL's numbers after `⎕RL←444444` come from its own generator, so those steps cannot match; the importer skips GNU's `⎕RL` lines.
@@ -54,11 +56,7 @@ These are the failures that need a ruling or a feature. Counts are failing steps
 - **Selective and strand assignment.** `(⌽V)←…`, `(2↑A)←…` and `D←(A B C)←4 5 6` refuse as "cannot assign to that". About 90 steps.
 - **Dyadic grade with a collating sequence.** `'ABCDE'⍋'BEAD'`, 35 steps.
 - **Axis on `↑ ↓ ⊂ ⊃`, and ravel with an axis list.** About 45 steps.
-- **`∧` and `∨` beyond Booleans.** GNU computes the LCM and the GCD, as in `2028259601 ∧ 9094863431`. 17 steps.
-- **Circle codes past ±4.** The hyperbolic codes 5 to 7 and the complex codes 8 to 12.
-- **Negative replicate.** `1 ¯2 1/W` inserts fills in GNU.
-- **Pick through a scalar box.** `(⊂2 2)⊃M` picks one element of a matrix.
-- **Multiple width and precision pairs in `⍕`.** `4 2 12 ¯5⍕R`.
+- **Circle codes 8 to 12.** These are complex, and wait for complex numbers.
 - **Gamma for `!`.** GNU computes `3!0.05` and `!2.5`. Atalante refuses.
 - **Complex numbers.** These are staged next, through Lagoon's `/lib/complex`.
 
