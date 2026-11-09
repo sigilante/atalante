@@ -13,7 +13,7 @@ naming why, so every skip is visible in the output.
 """
 import os, re, sys
 
-ATL_GLYPHS = set("¨¯×÷←↑↓∇∈∊−∘∣∧∨∼≠≡≢≤≥⊂⊃⊖⊢⊣⊤⊥⋄⋆⌈⌊⌹⌽⌿⍀⍉⍋⍎⍒⍕⍝⍟⍪⍱⍲⍳⍴⍵⍷⍺⎕○∪∩⍬")
+ATL_GLYPHS = set("¨¯×÷←↑↓∇∈∊−∘∣∧∨∼≠≡≢≤≥⊂⊃⊖⊢⊣⊤⊥⋄⋆⌈⌊⌹⌽⌿⍀⍉⍋⍎⍒⍕⍝⍟⍪⍱⍲⍳⍴⍵⍷⍺⎕○∪∩⍬⍨⍣⍤")
 REWRITE = {"ρ": "⍴", "ι": "⍳", "◊": "⋄", "ϵ": "∊", "ε": "∊", "⍶": "⍺⍺", "⍹": "⍵⍵"}
 ERRORS = {"DOMAIN ERROR": "%domain-error", "LENGTH ERROR": "%length-error", "RANK ERROR": "%rank-error",
           "INDEX ERROR": "%index-error", "VALUE ERROR": "%value-error", "SYNTAX ERROR": "%syntax-error",

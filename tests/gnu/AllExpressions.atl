@@ -17,7 +17,8 @@
 🍎> (⍉ V4)←(*\ '')[(4)]
 ⍝ refuse: %index-error
 ⍝ skipped (system command): )SIC
-⍝ skipped (glyph ⍨): V1[]←{(-1J-4)∧[2]!⍨ '' ≢ ⍺ ⋄ ⍵⍵ ∨ ⍵⍵} 'abc'
+🍎> V1[]←{(-1J-4)∧[2]!⍨ '' ≢ ⍺ ⋄ ⍵⍵ ∨ ⍵⍵} 'abc'
+⍝ refuse: %syntax-error
 ⍝ skipped (system command): )SIC
 ⍝ skipped (system name ⎕LC): V7←⎕LC
 ⍝ skipped (system command): )SIC
@@ -61,7 +62,8 @@
 ⍝ skipped (system command): )SIC
 ⍝ skipped (complex numbers): V6[1]←⌊/ ⎕NC 86.54 0 6J9 7E5
 ⍝ skipped (system command): )SIC
-⍝ skipped (glyph ⍣): V7←⍎'0-4'⍉[1]|⍣2 ¯90 4E4
+🍎> V7←⍎'0-4'⍉[1]|⍣2 ¯90 4E4
+⍝ refuse: %length-error
 ⍝ skipped (system command): )SIC
 ⍝ skipped (GNU-only error DEFN ERROR): V2←({χ ⋄ χ}∘.~ ⊖ 'a' 'bc' 'def')[('⍺⍵')[]]
 ⍝ skipped (system command): )SIC
@@ -123,7 +125,8 @@
 ⍝ skipped (system command): )SIC
 🍎> V7←(⍳1)
 ⍝ skipped (system command): )SIC
-⍝ skipped (glyph ⍣): V5←{'x'}⍣⌈ ((-9J-2 -257 6E2 6E1))
+🍎> V5←{'x'}⍣⌈ ((-9J-2 -257 6E2 6E1))
+⍝ refuse: %syntax-error
 ⍝ skipped (system command): )SIC
 ⍝ skipped (double-quoted strings): V4←(V5÷[2]"⋄") ÷ 180 ↓ "⋄"∩[1](⍳1) ⍸ '⋄'
 ⍝ skipped (system command): )SIC
@@ -165,7 +168,8 @@
 ⍝ skipped (system command): )SIC
 ⍝ skipped (complex numbers): (, V7)←((⌊ (⍳0))[0J3])[⎕PP , (⍳0);]
 ⍝ skipped (system command): )SIC
-⍝ skipped (glyph ⍣): V7←(⌽⍣2 ⍎'1+0')[-324⊂[2]9 9E2 7E0]
+🍎> V7←(⌽⍣2 ⍎'1+0')[-324⊂[2]9 9E2 7E0]
+⍝ refuse: %axis-error
 ⍝ skipped (system command): )SIC
 🍎> V0←¯78
 ⍝ skipped (system command): )SIC
@@ -180,13 +184,15 @@
 ⍝ skipped (system command): )SIC
 ⍝ skipped (double-quoted strings): V4←{'a' - ⍺⍺ ⋄ "⋄"} 17
 ⍝ skipped (system command): )SIC
-⍝ skipped (glyph ⍤): V1←(*⍤, ('⋄')[;])
+🍎> V1←(*⍤, ('⋄')[;])
+⍝ refuse: %rank-error
 ⍝ skipped (system command): )SIC
 ⍝ skipped (system name ⎕AI): V4←×⌿ ⍟ ⍳/ ⎕AI
 ⍝ skipped (system command): )SIC
 ⍝ skipped (double-quoted strings): V4←"⋄"⍱[2](÷ 9 45.66)
 ⍝ skipped (system command): )SIC
-⍝ skipped (glyph ⍣): V3←(28.23 9 ¯87)[;{⍵}⍣0 5E1 ¯14]
+🍎> V3←(28.23 9 ¯87)[;{⍵}⍣0 5E1 ¯14]
+⍝ refuse: %length-error
 ⍝ skipped (system command): )SIC
 🍎> V3←⍉ (⍳5) ⍲ 6J-4 + ⍎'7-9'
 ⍝ refuse: %syntax-error
@@ -272,7 +278,8 @@
 🍎> V6←-9J-4
 ⍝ refuse: %syntax-error
 ⍝ skipped (system command): )SIC
-⍝ skipped (glyph ⍨): V3←↓⍨ ('a')
+🍎> V3←↓⍨ ('a')
+⍝ refuse: %domain-error
 ⍝ skipped (system command): )SIC
 ⍝ skipped (glyph ⌷): (⍉ V2)←⍎'4-0' ⌷ -8J-4 ⍴ ¯65~[2](V2)[]
 ⍝ skipped (system command): )SIC
@@ -461,7 +468,7 @@
 ⍝ skipped (system command): )SIC
 🍎> V3←0
 ⍝ skipped (system command): )SIC
-⍝ skipped (glyph ⍨): V6←*⍨ ((3))
+🍎> V6←*⍨ ((3))
 ⍝ skipped (system command): )SIC
 🍎> V3←(7≢[1]-493⍉[1]⍬)
 ⍝ refuse: %axis-error
@@ -571,7 +578,8 @@
 🍎> V4←(= V0 ∊ {χ ⋄ ⍵⍵ ∧ ⍵⍵} -1J-1 5.12 2J-7 39.92)[{⍺⍺} 65.86;÷ (⍳2)]
 ⍝ refuse: %syntax-error
 ⍝ skipped (system command): )SIC
-⍝ skipped (glyph ⍣): V5←(*⍣1 V3 ⌈ 'abc')
+🍎> V5←(*⍣1 V3 ⌈ 'abc')
+⍝ refuse: %domain-error
 ⍝ skipped (system command): )SIC
 ⍝ skipped (system name ⎕TC): V6←≢¨ (¯26)[] ⊂ ⎕TC
 ⍝ skipped (system command): )SIC

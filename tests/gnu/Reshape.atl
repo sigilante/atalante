@@ -142,7 +142,8 @@
 🍎> A←0 ¯2 ⋄ ⍴A⍴0
 ⍝ refuse: %domain-error
 ⍝ skipped (system command): )SIC
-⍝ skipped (glyph ⍤): (⌈/⍤1)0 ¯2⍴0
+🍎> (⌈/⍤1)0 ¯2⍴0
+⍝ refuse: %domain-error
 ⍝ skipped (system command): )SIC
 🍎> Z←1 0/0 ¯2⍴0
 ⍝ refuse: %domain-error

@@ -33,5 +33,5 @@
 ⍝ expect: 1
 🍎> X←(⍳100)∼30 40 50
 ⍝ skipped (system name ⎕SYL): before←⎕SYL[6;2]
-⍝ skipped (glyph ⍣): ⊣{⊣(⍳100)∼30 40 50 ⋄ ⍵+1}⍣1000⊢0
+🍎> ⊣{⊣(⍳100)∼30 40 50 ⋄ ⍵+1}⍣1000⊢0
 ⍝ skipped (system name ⎕SYL): before=⎕SYL[6;2]

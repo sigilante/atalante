@@ -154,7 +154,12 @@ func putFnDef(env: Env, nm: String, d: parse.Dfn) -> Env {
 func digitsNat(cs: List<@>, acc: @) -> @ { match cs { (c, t) => if c >= 48 and c <= 57 { digitsNat(t, acc * 10 + (c - 48)) } else { acc }, _ => acc, } };
 func cps(s: String) -> List<@> { array.toCps(s.chars()) };
 func natOf(s: String) -> @ { digitsNat(cps(s), 0) };
-func intOf(s: String) -> @ { match cps(s) { (c, t) => if c == 175 { lagoon.tneg(digitsNat(t, 0)) } else { digitsNat(cps(s), 0) }, _ => 0, } };
+// a numeral past the 64-bit integers is the overflow mark, which litEv refuses (D-15):  9223372036854775808
+// in an integer literal (`9223372036854775808 ¯7`) once wrapped to ¯9223372036854775808
+func intOf(s: String) -> @ {
+  match cps(s) { (c, t) => if c == 175 { let m = digitsNat(t, 0); if m > array.two63() { two64() } else { lagoon.tneg(m) } }
+    else { let m = digitsNat(cps(s), 0); if m >= array.two63() { two64() } else { m } }, _ => 0, }
+};
 // mantissa digits m, fraction length k, exponent (eneg, emag):  m × 10^(e−k) (scanMant, scanExp; realAt below)
 func scanMant(cs: List<@>, m: @, k: @, frac: Bool) -> (@, @, List<@>) {
   match cs {
@@ -191,7 +196,7 @@ func typeOfKind(k: @, env: Env) -> String { if k == 1 { "UINT" + bitsText(env.nb
 func natsFit(xs: List<@>, lim: @) -> Bool { match xs { (x, t) => if x < lim { natsFit(t, lim) } else { false }, _ => true, } };
 // int2 bits: a magnitude below half (positive) or at most half (negative)
 func intsFit(xs: List<@>, half: @) -> Bool {
-  match xs { (x, t) => { let ok = if array.isNeg(x) { lagoon.tabs(x) <= half } else { x < half }; if ok { intsFit(t, half) } else { false } }, _ => true, }
+  match xs { (x, t) => { let ok = if x >= two64() { false } else if array.isNeg(x) { lagoon.tabs(x) <= half } else { x < half }; if ok { intsFit(t, half) } else { false } }, _ => true, }
 };
 func realsFinite(xs: List<@>) -> Bool { match xs { (x, t) => if array.finite(x) { realsFinite(t) } else { false }, _ => true, } };
 // a literal as the session makes it:  reals at its real width, naturals and integers at theirs (D-15;  litEv has refused one that does not fit)
@@ -299,8 +304,9 @@ func binomW(x: @, y: @) -> @ {
     // a large B:  the product over the k = min(A, B−A) terms (B−k+i)÷i, +∞ when k is past the width's range
     let d = array.rop(2, y, x);
     let k = if gtK(3, x, d) { d } else { x };
-    let kn = natOfWhole(k);
-    if kn > binomCap(w) { infLike(y) } else { binomProd(array.oneLike(y), array.rop(2, y, k), kn, 1, array.oneLike(y)) }
+    if array.rcmp(3, k, array.rsunAt(w, binomCap(w))) { infLike(y) }
+    else { let kn = natOfWhole(k);
+    if kn > binomCap(w) { infLike(y) } else { binomProd(array.oneLike(y), array.rop(2, y, k), kn, 1, array.oneLike(y)) } }
   }
 };
 func binomCap(w: @) -> @ { if w == 4 { 20 } else if w == 5 { 140 } else if w == 7 { 16500 } else { 1100 } };
@@ -395,6 +401,7 @@ func dyadPrim(cp: @, a0: array.Arr, b0: array.Arr, env: Env) -> Ev {
       (a, b, tag) => if tag != "" { fail(tag, "shapes " + shp(a0) + " and " + shp(b0)) }
       else {
         let k = array.maxk(a.kind, b.kind);
+        if needsExact(cp, a, b) { exactNI(cp, a, b, env) } else {
         match cp {
           // reals through Lagoon's jetted %i754 arms; naturals and integers by the linear zip g-arith uses,
           // since Lagoon's +bin-op walk is a non-tail recursion, quadratic under NockVM for a kind it does not jet (P11b)
@@ -423,7 +430,7 @@ func dyadPrim(cp: @, a0: array.Arr, b0: array.Arr, env: Env) -> Ev {
           9073 => boolean(a, b, lambda (x: @, y: @) -> @ { if x == 0 and y == 0 { 1 } else { 0 } }, env),    // ⍱
           9074 => boolean(a, b, lambda (x: @, y: @) -> @ { if x == 1 and y == 1 { 0 } else { 1 } }, env),    // ⍲
           _    => nyi("dyadic " + lexerText(cp)),
-        }
+        } }
       },
     }
   }
@@ -450,8 +457,7 @@ func binomial(a: array.Arr, b: array.Arr, k: @, env: Env) -> Ev {
   match k {
     1 => if array.anyZip(array.vals(a), array.vals(b), lambda (x: @, y: @) -> Bool { x > y }) { okv(array.zipArr(a, b, 1, lambda (x: @, y: @) -> @ { if x > y { 0 } else { factNat(y) / (factNat(x) * factNat(y - x)) } }), env) }
          else { okv(array.zipArr(a, b, 1, lambda (x: @, y: @) -> @ { factNat(y) / (factNat(x) * factNat(y - x)) }), env) },
-    _ => if array.allL(array.vals(array.toRealAt(a, env.rb)), wholeReal) and array.allL(array.vals(array.toRealAt(b, env.rb)), wholeReal) { okv(array.zipArr(array.toRealAt(a, env.rb), array.toRealAt(b, env.rb), 3, binomW), env) }
-         else { dom("! of negative or non-integral reals needs the gamma function, which is not implemented") },
+    _ => okv(array.zipArr(array.toRealAt(a, env.rb), array.toRealAt(b, env.rb), 3, binomG), env),
   }
 };
 func cmp(a: array.Arr, b: array.Arr, k: @, p: (@, @) -> Bool, env: Env) -> Ev {
@@ -490,7 +496,8 @@ func decPair(x: @, y: @) -> (@, @, @) {
     (a1 * array.pow10(if n1 { m - e1 } else { m + e1 }), a2 * array.pow10(if n2 { m - e2 } else { m + e2 }), m)
   }, }, }
 };
-func decReal(w: @, n: @, m: @) -> @ { if m == 0 { array.rsunAt(w, n) } else { array.rop(4, array.rsunAt(w, n), array.rsunAt(w, array.pow10(m))) } };
+// n×10^−m rounded once, by the decimal-to-binary conversion a numeral takes (Lagoon's +grd)
+func decReal(w: @, n: @, m: @) -> @ { array.rgrd(w, true, if m == 0 { 0 } else { 2 * m - 1 }, n) };
 func gcdR(x: @, y: @) -> @ { match decPair(x, y) { (p, q, m) => decReal(array.widthOf(x), gcdN(p, q), m), } };
 func lcmR(x: @, y: @) -> @ {
   match decPair(x, y) { (p, q, m) => if p == 0 or q == 0 { array.zeroLike(x) } else {
@@ -525,11 +532,20 @@ func log1p(x: @) -> @ {
   if w == one { x } else { array.rop(4, array.rop(3, lnR(w), x), array.rop(2, w, one)) }
 };
 func halfR(x: @) -> @ { array.rop(4, x, array.rsunAt(array.widthOf(x), 2)) };
-func sinhR(x: @) -> @ { let e = expm1(absR(x)); let s = halfR(array.rop(1, e, array.rop(4, e, array.rop(1, e, array.oneLike(x))))); if array.realIsNeg(x) { negR(s) } else { s } };
-func coshR(x: @) -> @ { let e = expR(absR(x)); halfR(array.rop(1, e, array.rop(4, array.oneLike(x), e))) };
+// past e^x's overflow, sinh and cosh are e^(x÷2)÷2×e^(x÷2), finite a little further (5○710)
+func bigHalf(m: @) -> @ { let h = expR(halfR(m)); array.rop(3, halfR(h), h) };
+func sinhR(x: @) -> @ {
+  let m = absR(x);
+  let e = expm1(m);
+  let s = if array.finite(e) { halfR(array.rop(1, e, array.rop(4, e, array.rop(1, e, array.oneLike(x))))) } else { bigHalf(m) };
+  if array.realIsNeg(x) { negR(s) } else { s }
+};
+func coshR(x: @) -> @ { let m = absR(x); let e = expR(m); if array.finite(e) { halfR(array.rop(1, e, array.rop(4, array.oneLike(x), e))) } else { bigHalf(m) } };
+// tanh is 1 to the width's precision past (p+2)ln2÷2:  5 at REAL16, 10 at 32, 20 at 64, 40 at 128
+func tanhCut(w: @) -> @ { if w == 4 { 5 } else if w == 5 { 10 } else if w == 7 { 40 } else { 20 } };
 func tanhR(x: @) -> @ {
   let m = absR(x);
-  let t = if ltR(array.rsunAt(array.widthOf(x), 20), m) { array.oneLike(x) } else { let e = expm1(array.rop(1, m, m)); array.rop(4, e, array.rop(1, e, array.rsunAt(array.widthOf(x), 2))) };
+  let t = if ltR(array.rsunAt(array.widthOf(x), tanhCut(array.widthOf(x))), m) { array.oneLike(x) } else { let e = expm1(array.rop(1, m, m)); array.rop(4, e, array.rop(1, e, array.rsunAt(array.widthOf(x), 2))) };
   if array.realIsNeg(x) { negR(t) } else { t }
 };
 // asinh |x| = ln(1+|x|+x²÷(1+√(1+x²))), the sign restored;  acosh x = ln(x+√(x²−1)) for x ≥ 1;
@@ -544,13 +560,171 @@ func asinhR(x: @) -> @ {
 func acoshR(x: @) -> @ {
   let one = array.oneLike(x);
   let q = array.rop(3, x, x);
-  if array.finite(q) { lnR(array.rop(1, x, array.rfun(1, array.rop(2, q, one)))) } else { array.rop(1, lnR(x), lnR(array.rsunAt(array.widthOf(x), 2))) }
+  // Kahan:  with t = x−1, acosh x = ln(1+t+√(2t+t²)), which keeps x near 1's digits
+  let t = array.rop(2, x, one);
+  if ltR(x, one) { array.rop(4, array.zeroLike(x), array.zeroLike(x)) }
+  else if array.finite(q) { log1p(array.rop(1, t, array.rfun(1, array.rop(1, array.rop(1, t, t), array.rop(3, t, t))))) } else { array.rop(1, lnR(x), lnR(array.rsunAt(array.widthOf(x), 2))) }
 };
 func atanhR(x: @) -> @ {
   let one = array.oneLike(x);
   let m = absR(x);
   let r = halfR(log1p(array.rop(4, array.rop(1, m, m), array.rop(2, one, m))));
   if array.realIsNeg(x) { negR(r) } else { r }
+};
+// --- gamma, for ! of a fraction (D-106) -------------------------------------------------------
+// Lanczos (g 7, 9 terms, about 15 digits) at REAL64, reflecting below ½:  Γ(x) = π÷(sin(πx)Γ(1−x)).
+// !x is Γ(x+1);  a pole (a whole x ≤ ¯1) is a NaN, which the width layer refuses.
+func rlit(t: String) -> @ { headOr0(litValsAt(3, 6, [t])) };
+func lanczosC() -> List<String> { ["0.99999999999980993", "676.5203681218851", "-1259.1392167224028", "771.32342877765313", "-176.61502916214059", "12.507343278686905", "-0.13857109526572012", "0.0000099843695780195716", "0.00000015056327351493116"] };
+func lzSum(cs: List<String>, x: @, i: @, acc: @) -> @ {
+  match cs { (c, t) => {
+    let neg = hoon.crip(array.takeB(c.bytes(), 1)) == "-";
+    let v = rlit(if neg { hoon.crip(array.dropB(c.bytes(), 1)) } else { c });
+    let term = if i == 0 { v } else { array.rop(4, v, array.rop(1, x, array.rsunAt(6, i))) };
+    lzSum(t, x, i + 1, if neg { array.rop(2, acc, term) } else { array.rop(1, acc, term) })
+  }, _ => acc, }
+};
+func gamma64(x: @) -> @ {
+  let half = rlit("0.5");
+  let one = array.rsunAt(6, 1);
+  if ltR(x, half) {
+    if wholeR(x) { array.rop(4, array.zeroLike(x), array.zeroLike(x)) }
+    else { let g1 = gamma64(array.rop(2, one, x)); if array.finite(g1) { array.rop(4, array.rpiAt(6), array.rop(3, sinPi(x), g1)) } else { lgExp(lgamma64(x)) } }
+  } else {
+    let y = array.rop(2, x, one);
+    let a = lzSum(lanczosC(), y, 0, array.zeroLike(x));
+    let t = array.rop(1, y, rlit("7.5"));
+    let h = halfR(array.rop(1, y, half));
+    let p = array.rpow(t, h);
+    array.rop(3, array.rop(3, array.rop(3, array.rfun(1, array.rop(3, array.rsunAt(6, 2), array.rpiAt(6))), p), array.rop(3, expR(negR(t)), p)), a)
+  }
+};
+// sin(πx) through x−n for the nearest whole n, which is exact, so x near a pole keeps its digits
+func sinPi(x: @) -> @ {
+  let n = floorReal(array.rop(1, x, rlit("0.5")));
+  let v = array.rfun(4, array.rop(3, array.rpiAt(6), array.rop(2, x, n)));
+  if evenR(n) { v } else { negR(v) }
+};
+// ln|Γ(x)| and Γ's sign, for where Γ overflows but a ratio or a reflection does not:
+// ln Γ = ½ln 2π + (y+½)ln t − t + ln a above ½;  below, ln π − ln|sin πx| − ln Γ(1−x), the sign sin πx's
+func lgamma64(x: @) -> (Bool, @) {
+  let half = rlit("0.5");
+  let one = array.rsunAt(6, 1);
+  if ltR(x, half) {
+    let sp = sinPi(x);
+    match lgamma64(array.rop(2, one, x)) { (n1, l1) => (array.realIsNeg(sp), array.rop(2, array.rop(2, lnR(array.rpiAt(6)), lnR(absR(sp))), l1)), }
+  } else {
+    let y = array.rop(2, x, one);
+    let a = lzSum(lanczosC(), y, 0, array.zeroLike(x));
+    let t = array.rop(1, y, rlit("7.5"));
+    (false, array.rop(1, array.rop(2, array.rop(1, halfR(lnR(array.rop(3, array.rsunAt(6, 2), array.rpiAt(6)))), array.rop(3, array.rop(1, y, half), lnR(t))), t), lnR(a)))
+  }
+};
+func lgExp(p: (Bool, @)) -> @ { match p { (n, l) => signedR(n, expR(l)), } };
+func gammaR(x: @) -> @ { array.toWidth(gamma64(array.toWidth(x, 6)), array.widthOf(x)) };
+func factG(x: @) -> @ { if wholeNN(x) { factR(x) } else { gammaR(array.rop(1, x, array.oneLike(x))) } };
+// 1÷Γ(x):  0 at a pole
+func rgammaR(x: @) -> @ { if wholeR(x) and not ltR(array.zeroLike(x), x) { array.zeroLike(x) } else { array.rop(4, array.oneLike(x), gammaR(x)) } };
+func evenR(x: @) -> Bool { let h = halfR(x); floorReal(h) == h };
+func signedR(neg: Bool, v: @) -> @ { if neg { negR(v) } else { v } };
+// A!B for whole A and B, either negative (APL2):  B<0≤A gives (¯1)^A×A!(A−B−1);  A≤B<0 gives
+// (¯1)^(B−A)×(B−A)!(−A−1);  otherwise 0
+func binomNeg(x: @, y: @) -> @ {
+  let one = array.oneLike(x);
+  if not array.realIsNeg(y) { array.zeroLike(x) }
+  else if not array.realIsNeg(x) { signedR(not evenR(x), binomW(x, array.rop(2, array.rop(2, x, y), one))) }
+  else if not ltR(y, x) { let d = array.rop(2, y, x); signedR(not evenR(d), binomW(d, array.rop(2, negR(x), one))) }
+  else { array.zeroLike(x) }
+};
+// A!B through gamma:  Γ(B+1)×(1÷Γ(A+1))×1÷Γ(B−A+1);  B a pole is a NaN
+func binomG(x: @, y: @) -> @ {
+  let one = array.oneLike(x);
+  if wholeR(x) and wholeR(y) { if (not array.realIsNeg(x)) and (not array.realIsNeg(y)) { binomW(x, y) } else { binomNeg(x, y) } }
+  else if wholeNN(x) and ltR(x, array.rsunAt(array.widthOf(x), 1000)) { binProd(y, natOfReal(x), 0, one) }
+  else {
+    let xa = array.rop(1, x, one);
+    let xb = array.rop(1, array.rop(2, y, x), one);
+    let g0 = gammaR(array.rop(1, y, one));
+    let ra = rgammaR(xa);
+    let rb = rgammaR(xb);
+    // a Γ that overflows, or a 1÷Γ that underflows off a pole, loses the ratio:  go through ln|Γ|
+    if (not array.finite(g0)) or (realZero(ra) and not isPole(xa)) or (realZero(rb) and not isPole(xb)) { binomLog(x, y) }
+    else { array.rop(3, array.rop(3, g0, ra), rb) }
+  }
+};
+// Γ(B+1) overflowed:  the ratio through ln|Γ|, 0 where a denominator sits on a pole
+func binomLog(x: @, y: @) -> @ {
+  let one = array.oneLike(x);
+  let xa = array.rop(1, x, one);
+  let xb = array.rop(1, array.rop(2, y, x), one);
+  if isPole(xa) or isPole(xb) { array.zeroLike(x) }
+  else { match lgamma64(array.toWidth(array.rop(1, y, one), 6)) { (n0, l0) => match lgamma64(array.toWidth(xa, 6)) { (n1, l1) => match lgamma64(array.toWidth(xb, 6)) { (n2, l2) =>
+    array.toWidth(signedR(n0 != (n1 != n2), expR(array.rop(2, array.rop(2, l0, l1), l2))), array.widthOf(x)), }, }, } }
+};
+func isPole(x: @) -> Bool { wholeR(x) and not ltR(array.zeroLike(x), x) };
+// k!y for a whole k:  the product of (y−i)÷(i+1), which keeps a small y's digits (2!1E¯10)
+func binProd(y: @, k: @, i: @, acc: @) -> @ {
+  if i == k { acc } else { binProd(y, k, i + 1, array.rop(3, acc, array.rop(4, array.rop(2, y, array.rsunAt(array.widthOf(y), i)), array.rsunAt(array.widthOf(y), i + 1)))) }
+};
+// --- naturals past 2^63 with integers, exactly (D-107) ---------------------------------------
+// A natural of 2^63 or more has no integer, so where it meets an integer, or meets subtraction,
+// + − × ⌈ ⌊ and the comparisons work on exact signed values.  The result is an integer array when
+// every element fits one, else a natural array when every element is non-negative, else a
+// DOMAIN ERROR (D-15):  9223372036854775808+¯1 is 9223372036854775807, and
+// 18446744073709551615−1 is 18446744073709551614.  No kind turns real.
+func exactOps(cp: @) -> Bool { cp == 8744 or cp == 8743 or cp == 8739 or cp == 43 or cp == 8722 or cp == 215 or cp == 8968 or cp == 8970 or cp == 60 or cp == 8804 or cp == 61 or cp == 8805 or cp == 62 or cp == 8800 };
+func bigNat(a: array.Arr) -> Bool { a.kind == 1 and array.anyGE(array.vals(a), array.two63()) };
+func needsExact(cp: @, a: array.Arr, b: array.Arr) -> Bool {
+  exactOps(cp) and (a.kind == 1 or a.kind == 2) and (b.kind == 1 or b.kind == 2) and (bigNat(a) or bigNat(b))
+  and (a.kind == 2 or b.kind == 2 or cp == 8722)
+};
+func sgnOf(k: @, x: @) -> (Bool, @) { if k == 2 and array.isNeg(x) { (true, magI(x)) } else { (false, x) } };
+func sgnL(k: @, xs: List<@>, acc: List<(Bool, @)>) -> List<(Bool, @)> { match xs { (h, t) => sgnL(k, t, (sgnOf(k, h), acc)), _ => revP(acc, ~), } };
+func sNorm(n: Bool, m: @) -> (Bool, @) { if m == 0 { (false, 0) } else { (n, m) } };
+func sAdd(p: (Bool, @), q: (Bool, @)) -> (Bool, @) {
+  match p { (pn, pm) => match q { (qn, qm) => if pn == qn { sNorm(pn, pm + qm) } else if pm >= qm { sNorm(pn, pm - qm) } else { sNorm(qn, qm - pm) }, }, }
+};
+func sNeg(p: (Bool, @)) -> (Bool, @) { match p { (n, m) => sNorm(not n, m), } };
+func sMul(p: (Bool, @), q: (Bool, @)) -> (Bool, @) { match p { (pn, pm) => match q { (qn, qm) => sNorm(pn != qn, pm * qm), }, } };
+func sGt(p: (Bool, @), q: (Bool, @)) -> Bool {
+  match p { (pn, pm) => match q { (qn, qm) => if pn != qn { qn } else if pn { pm < qm } else { pm > qm }, }, }
+};
+func sEq(p: (Bool, @), q: (Bool, @)) -> Bool { match p { (pn, pm) => match q { (qn, qm) => pn == qn and pm == qm, }, } };
+func sOp(cp: @, p: (Bool, @), q: (Bool, @)) -> (Bool, @) {
+  if cp == 43 { sAdd(p, q) } else if cp == 8722 { sAdd(p, sNeg(q)) } else if cp == 215 { sMul(p, q) }
+  else if cp == 8744 { match p { (pn, pm) => match q { (qn, qm) => (false, gcdN(pm, qm)), }, } }
+  else if cp == 8743 { match p { (pn, pm) => match q { (qn, qm) => if pm == 0 or qm == 0 { (false, 0) } else { sNorm(pn != qn, (pm / gcdN(pm, qm)) * qm) }, }, } }
+  else if cp == 8739 { sRes(p, q) }
+  else if cp == 8968 { if sGt(p, q) { p } else { q } }
+  else if cp == 8970 { if sGt(p, q) { q } else { p } }
+  else { (false, b2n(sCmp(cp, p, q))) }
+};
+// A|B on exact values:  0|B is B;  else B mod |A|, taking A's sign when it is not 0
+func sRes(p: (Bool, @), q: (Bool, @)) -> (Bool, @) {
+  match p { (pn, pm) => match q { (qn, qm) => if pm == 0 { q } else {
+    let r0 = qm % pm;
+    let r = if qn and r0 != 0 { pm - r0 } else { r0 };
+    if pn and r != 0 { (true, pm - r) } else { (false, r) }
+  }, }, }
+};
+func sCmp(cp: @, p: (Bool, @), q: (Bool, @)) -> Bool {
+  if cp == 60 { sGt(q, p) } else if cp == 8804 { not sGt(p, q) } else if cp == 61 { sEq(p, q) }
+  else if cp == 8805 { not sGt(q, p) } else if cp == 62 { sGt(p, q) } else { not sEq(p, q) }
+};
+func sZip(cp: @, xs: List<(Bool, @)>, ys: List<(Bool, @)>, acc: List<(Bool, @)>) -> List<(Bool, @)> {
+  match xs { (x, xt) => match ys { (y, yt) => sZip(cp, xt, yt, (sOp(cp, x, y), acc)), _ => revP(acc, ~), }, _ => revP(acc, ~), }
+};
+func fitsInt(p: (Bool, @)) -> Bool { match p { (n, m) => if n { m <= array.two63() } else { m < array.two63() }, } };
+func fitsNat(p: (Bool, @)) -> Bool { match p { (n, m) => (not n) and m < two64(), } };
+func allP(xs: List<(Bool, @)>, f: ((Bool, @)) -> Bool) -> Bool { match xs { (h, t) => if f(h) { allP(t, f) } else { false }, _ => true, } };
+func encInt(xs: List<(Bool, @)>, acc: List<@>) -> List<@> { match xs { (h, t) => match h { (n, m) => encInt(t, ((if n { two64() - m } else { m }), acc)), }, _ => array.revL(acc, ~), } };
+func encNat(xs: List<(Bool, @)>, acc: List<@>) -> List<@> { match xs { (h, t) => match h { (n, m) => encNat(t, (m, acc)), }, _ => array.revL(acc, ~), } };
+func exactNI(cp: @, a: array.Arr, b: array.Arr, env: Env) -> Ev {
+  let rs = sZip(cp, sgnL(a.kind, array.vals(a), ~), sgnL(b.kind, array.vals(b), ~), ~);
+  if cp != 43 and cp != 8722 and cp != 215 and cp != 8968 and cp != 8970 and cp != 8744 and cp != 8743 and cp != 8739 { okv(mk(1, array.shape(a), encNat(rs, ~)), env) }
+  else if allP(rs, fitsInt) { okv(mk(2, array.shape(a), encInt(rs, ~)), env) }
+  else if allP(rs, fitsNat) { okv(mk(1, array.shape(a), encNat(rs, ~)), env) }
+  else { dom("an exact result fits neither a natural nor an integer (D-15, D-107)") }
 };
 // --- monadic scalar functions (D-41) ------------------------------------------------------
 func monadPrim(cp: @, a0: array.Arr, env: Env) -> Ev {
@@ -577,8 +751,8 @@ func monadPrim(cp: @, a0: array.Arr, env: Env) -> Ev {
       9055 => okv(array.mapArr(array.toRealAt(a, env.rb), 3, lnR), env),         // ⍟ ln
       9675 => okv(array.mapArr(array.toRealAt(a, env.rb), 3, piR), env),   // ○ pi times
       33   => match a.kind { 1 => okv(array.mapArr(a, 1, factNat), env),
-                             3 => if array.allL(array.vals(a), wholeReal) { okv(array.mapArr(a, 3, factR), env) } else { dom("! of a negative or non-integral real needs the gamma function, which is not implemented") },
-                             _ => dom("! of a negative") },                                                  // ! factorial
+                             3 => okv(array.mapArr(a, 3, factG), env),
+                             _ => if array.anyL(array.vals(a), negP) { dom("! of a negative integer is a pole of gamma") } else { okv(array.mapArr(a, 1, factNat), env) } },   // ! factorial, gamma (D-106)
       8764 => if a.kind == 1 and array.allL(array.vals(a), isBool) { okv(array.mapArr(a, 1, lambda (x: @) -> @ { 1 - x }), env) } else { dom("∼ takes 0 and 1") },   // ∼ not
       _    => nyi("monadic " + lexerText(cp)),
     }
@@ -2941,6 +3115,9 @@ func callDfn(nm: String, d: parse.Dfn, dyadic: Bool, a: array.Arr, b: array.Arr,
 // a function operand is bound among the frame's operands, an array operand (evaluated here, in the
 // caller's environment) among its variables, where the body's signature sees an array (D-95)
 func callOp(x: parse.Dop, dyadic: Bool, a: array.Arr, b: array.Arr, env: Env) -> Ev {
+  match x.op { .prim(cp) => primOp(cp, x, dyadic, a, b, env), _ => callOpU(x, dyadic, a, b, env), }
+};
+func callOpU(x: parse.Dop, dyadic: Bool, a: array.Arr, b: array.Arr, env: Env) -> Ev {
   match opndVal(x.la, x.lv, env) { .err(e) => Ev.err(e), .ok(lr) => match lr { (lval, env1) => callOpR(x, dyadic, a, b, lval, env1), }, }
 };
 func callOpR(x: parse.Dop, dyadic: Bool, a: array.Arr, b: array.Arr, lval: array.Arr, env: Env) -> Ev {
@@ -3300,7 +3477,7 @@ func gReduce(cp: @, x: Ev) -> Ev {
 // + − × on two same-kind same-shape numeric arrays, one linear pass
 func gArith(cp: @, l: Ev, r: Ev) -> Ev {
   match r { .err(e) => r, .ok(p) => match p { (rv, env1) => match l { .err(e2) => l, .ok(q) => match q { (lv, env2) =>
-    if plain2(env2, lv, rv) and numKind(lv) and sameMeta(lv, rv) {
+    if plain2(env2, lv, rv) and numKind(lv) and sameMeta(lv, rv) and not needsExact(cp, lv, rv) {
       let k = lv.kind;
       match cp {
         43  => okn(mk(k, array.shape(lv), zipK(addK, k, array.vals(lv), array.vals(rv))), env2),
@@ -3643,3 +3820,106 @@ func dealMN(m: @, n: @, env: Env) -> Ev {
 };
 // the host's entropy, at the first line only:  ⎕RL← after it, or before it, wins
 func seedHost(env: Env, eny: @) -> Env { if env.rng.set { env } else { setRng(env, rngOf(lagoon.rfold(eny), true)) } };
+// --- the primitive operators ⍨ ⍣ ⍤ (D-105) -----------------------------------------------------
+// f⍨B is B f B and A f⍨B is B f A.  f⍣n applies f n times, A f⍣n B applying A∘f;  f⍣g repeats f until
+// (f x) g x is 1.  f⍤k applies f to the rank-k cells of its arguments and mixes the results as ⊃
+// does;  k is c, (l r) or (c l r), a negative k counting from the argument's rank.
+func primOp(cp: @, x: parse.Dop, dyadic: Bool, a: array.Arr, b: array.Arr, env: Env) -> Ev {
+  if x.la { fail("%syntax-error", lexerText(cp) + " takes a function on its left") }
+  else {
+    let f = resolveFn(x.l, env);
+    if cp == 9064 { if dyadic { applyDyad(f, b, a, env) } else { applyDyad(f, b, b, env) } }
+    else if not x.ra and cp == 9059 { powUntil(f, resolveFn(x.r, env), dyadic, a, b, env) }
+    else if not x.ra { fail("%syntax-error", "⍤ takes an array of ranks on its right") }
+    else { match evalAst(x.rv, env) { .err(e) => Ev.err(e), .ok(rr) => match rr { (rv, env2) =>
+      if cp == 9059 { powTimes(f, dyadic, a, b, rv, env2) } else { rankOp(f, dyadic, a, b, rv, env2) }, }, } }
+  }
+};
+func apply1or2(f: parse.Fn, dyadic: Bool, a: array.Arr, b: array.Arr, env: Env) -> Ev { if dyadic { applyDyad(f, a, b, env) } else { applyMonad(f, b, env) } };
+func powTimes(f: parse.Fn, dyadic: Bool, a: array.Arr, b: array.Arr, n: array.Arr, env: Env) -> Ev {
+  if array.size(array.shape(n)) != 1 or array.isBox(n) or n.kind == 4 { dom("f⍣n takes a single whole number n") }
+  else if (n.kind == 2 and array.isNeg(array.first(n))) or (n.kind == 3 and array.realIsNeg(array.first(n)) and not realZero(array.first(n))) { nyi("f⍣n with a negative n (an inverse)") }
+  else { match natVals(n, env) { (ok, ns) => if not ok { dom("f⍣n takes a single whole number n") } else { powN(f, dyadic, a, b, headOr0(ns), env) }, } }
+};
+func powN(f: parse.Fn, dyadic: Bool, a: array.Arr, b: array.Arr, n: @, env: Env) -> Ev {
+  if n == 0 { okv(b, env) }
+  else { match apply1or2(f, dyadic, a, b, env) { .err(e) => Ev.err(e), .ok(r) => match r { (y, env2) => powN(f, dyadic, a, y, n - 1, env2), }, } }
+};
+func powUntil(f: parse.Fn, g: parse.Fn, dyadic: Bool, a: array.Arr, b: array.Arr, env: Env) -> Ev {
+  match apply1or2(f, dyadic, a, b, env) { .err(e) => Ev.err(e), .ok(r) => match r { (y, env2) =>
+    match applyDyad(g, y, b, env2) { .err(e) => Ev.err(e), .ok(t) => match t { (tv, env3) =>
+      if array.size(array.shape(tv)) != 1 or tv.kind != 1 or not isBool(array.first(tv)) { dom("f⍣g needs g to give one Boolean") }
+      else if array.first(tv) == 1 { okv(y, env3) } else { powUntil(f, g, dyadic, a, y, env3) }, }, }, }, }
+};
+// the ranks:  (monadic, left, right)
+func rankSpec(k: array.Arr, env: Env) -> (Bool, (Bool, @), (Bool, @), (Bool, @)) {
+  let ks = if k.kind == 1 { specNat(array.vals(k), ~) } else if k.kind == 2 { specInt(array.vals(k), ~) } else { ~ };
+  let n = countP(ks);
+  if array.rank(k) > 1 or array.isBox(k) or n == 0 or n > 3 { (false, (false, 0), (false, 0), (false, 0)) }
+  else { match ks { (k0, t0) => match t0 {
+    (k1, t1) => match t1 { (k2, t2) => (true, k0, k1, k2), _ => (true, k1, k0, k1), },
+    _ => (true, k0, k0, k0), }, _ => (false, (false, 0), (false, 0), (false, 0)), } }
+};
+func effRank(k: (Bool, @), r: @) -> @ { match k { (neg, m) => if neg { if m > r { 0 } else { r - m } } else { if m > r { r } else { m } }, } };
+// the frame and the cells of rank e
+func cellsOf(b: array.Arr, e: @) -> (List<@>, List<array.Arr>) {
+  let shp = array.shape(b);
+  let fr = array.takeL(shp, array.rank(b) - e);
+  let cshp = array.dropL(shp, array.rank(b) - e);
+  let cs = array.size(cshp);
+  if cs == 0 { (fr, repCell(array.emptyOf(cshp, array.proto(b)), array.size(fr), ~)) }
+  else { (fr, cellsAcc(array.itemsOf(b), cs, cshp, ~)) }
+};
+// the cell f would see when there is none:  b's prototype in the cell's shape (D-77)
+func protoCell(b: array.Arr, e: @) -> array.Arr {
+  let cshp = array.dropL(array.shape(b), array.rank(b) - e);
+  if array.size(cshp) == 0 { array.emptyOf(cshp, array.proto(b)) }
+  else if array.isSimpleScalar(array.proto(b)) { array.make(array.proto(b).kind, cshp, array.repL(array.first(array.proto(b)), array.size(cshp))) }
+  else { array.Arr( kind: 5, ray: array.fromL(array.metaOf(1, cshp), array.repL(0, array.size(cshp))), items: [array.proto(b)] ) }
+};
+func cellsAcc(xs: List<array.Arr>, cs: @, cshp: List<@>, acc: List<array.Arr>) -> List<array.Arr> {
+  match xs { (h, t) => cellsAcc(array.dropA(xs, cs), cs, cshp, (array.normalize(cshp, array.takeA(xs, cs)), acc)), _ => array.revA(acc, ~), }
+};
+func mapCells(f: parse.Fn, dyadic: Bool, as2: List<array.Arr>, bs: List<array.Arr>, env: Env, acc: List<array.Arr>) -> Evs {
+  match bs {
+    (b, bt) => match as2 { (a, at) => match apply1or2(f, dyadic, a, b, env) { .err(e) => Evs.err(e), .ok(r) => match r { (y, env2) => mapCells(f, dyadic, at, bt, env2, (y, acc)), }, }, _ => Evs.ok((array.revA(acc, ~), env)), },
+    _ => Evs.ok((array.revA(acc, ~), env)),
+  }
+};
+func mixCells(fr: List<@>, ys: List<array.Arr>, env: Env) -> Ev {
+  match ys { (h, t) => if allSimpleScalar(ys) { okv(array.normalize(fr, ys), env) } else { disclose(array.boxOf(fr, ys), env) }, _ => okv(array.make(1, fr, ~), env), }
+};
+// no cells at all (a frame with a 0):  f runs once on a prototype cell, for the shape and kind of
+// the empty result, as APL2 runs a function on an empty argument's prototype
+func mixEmpty(f: parse.Fn, dyadic: Bool, a: array.Arr, b: array.Arr, fr: List<@>, env: Env) -> Ev {
+  match apply1or2(f, dyadic, a, b, env) {
+    .err(e) => Ev.err(e),
+    .ok(r) => match r { (y, env2) => okv(array.emptyOf(array.catL(fr, array.shape(y)), array.proto(y)), env2), },
+  }
+};
+func allSimpleScalar(xs: List<array.Arr>) -> Bool { match xs { (h, t) => if array.isSimpleScalar(h) { allSimpleScalar(t) } else { false }, _ => true, } };
+func repCell(x: array.Arr, n: @, acc: List<array.Arr>) -> List<array.Arr> { if n == 0 { acc } else { repCell(x, n - 1, (x, acc)) } };
+func rankOp(f: parse.Fn, dyadic: Bool, a: array.Arr, b: array.Arr, k: array.Arr, env: Env) -> Ev {
+  match rankSpec(k, env) { (ok, km, kl, kr) =>
+    if not ok { dom("⍤ takes one to three whole numbers") }
+    else if not dyadic { let e = effRank(km, array.rank(b)); rankMonad(f, cellsOf(b, e), protoCell(b, e), env) }
+    else { let el = effRank(kl, array.rank(a)); let er = effRank(kr, array.rank(b)); rankDyad(f, cellsOf(a, el), cellsOf(b, er), protoCell(a, el), protoCell(b, er), env) },
+  }
+};
+func rankMonad(f: parse.Fn, c: (List<@>, List<array.Arr>), pc: array.Arr, env: Env) -> Ev {
+  match c { (fr, bs) => match bs { (h, t) => mixed(fr, mapCells(f, false, bs, bs, env, ~)), _ => mixEmpty(f, false, pc, pc, fr, env), }, }
+};
+func mixed(fr: List<@>, r: Evs) -> Ev { match r { .err(e) => Ev.err(e), .ok(p) => match p { (ys, env2) => mixCells(fr, ys, env2), }, } };
+func rankDyad(f: parse.Fn, ca: (List<@>, List<array.Arr>), cb: (List<@>, List<array.Arr>), pa: array.Arr, pb: array.Arr, env: Env) -> Ev {
+  match ca { (fa, as2) => match cb { (fb, bs) =>
+    if fa == fb and array.countA(bs) == 0 { mixEmpty(f, true, pa, pb, fb, env) }
+    else if fa == ~ and array.countA(bs) == 0 { mixEmpty(f, true, pa, pb, fb, env) }
+    else if fb == ~ and array.countA(as2) == 0 { mixEmpty(f, true, pa, pb, fa, env) }
+    else if fa == fb { mixed(fb, mapCells(f, true, as2, bs, env, ~)) }
+    else if fa == ~ { mixed(fb, mapCells(f, true, repCell(headA(as2), array.countA(bs), ~), bs, env, ~)) }
+    else if fb == ~ { mixed(fa, mapCells(f, true, as2, repCell(headA(bs), array.countA(as2), ~), env, ~)) }
+    else if array.count(fa) != array.count(fb) { fail("%rank-error", "⍤'s frames differ in rank") }
+    else { fail("%length-error", "⍤'s frames differ") },
+  }, }
+};
+func headA(xs: List<array.Arr>) -> array.Arr { match xs { (h, t) => h, _ => array.scalar(1, 0), } };

@@ -153,7 +153,7 @@ func kindOf(t: lexer.Token) -> @ {
   }
 };
 func inBody(sig: List<(String, @)>) -> Bool { cls(sig, "∇") == 4 };   // parsing a dfn body (D-66)
-func isOp(cp: @) -> Bool { cp == 47 or cp == 92 or cp == 9023 or cp == 9024 or cp == 168 or cp == 46 or cp == 8728 };  // / \ ⌿ ⍀ ¨ . ∘
+func isOp(cp: @) -> Bool { cp == 47 or cp == 92 or cp == 9023 or cp == 9024 or cp == 168 or cp == 46 or cp == 8728 or cp == 9064 or cp == 9059 or cp == 9060 };  // / \ ⌿ ⍀ ¨ . ∘ ⍨ ⍣ ⍤
 func maxk(a: @, b: @) -> @ { if a > b { a } else { b } };
 func natText(s: String) -> @ { natDigits(lexer.toCps(s.chars()), 0) };
 // a scalar dyadic glyph: its axis may name several axes of the higher-rank argument (D-96)
@@ -401,6 +401,9 @@ func pushGlyph(t: lexer.Token, rest: List<lexer.Token>, sig: List<(String, @)>, 
     9023 => pushOpOrFn(3, t, rest, sig, acc),    // ⌿
     9024 => pushOpOrFn(4, t, rest, sig, acc),    // ⍀
     168  => pushEach(t, rest, sig, acc),         // ¨
+    9064 => pushOperator(Fn.prim(9064), false, t.col, rest, sig, acc),   // ⍨ (D-105)
+    9059 => pushOperator(Fn.prim(9059), true, t.col, rest, sig, acc),    // ⍣
+    9060 => pushOperator(Fn.prim(9060), true, t.col, rest, sig, acc),    // ⍤
     46   => pushInner(t, rest, sig, acc),        // .
     8728 => pushOuter(t, rest, sig, acc),        // ∘
     _    => items(rest, sig, (funItem(Fn.prim(t.cp), t.col), acc)),
@@ -462,14 +465,24 @@ func pushParen(t: lexer.Token, rest: List<lexer.Token>, sig: List<(String, @)>, 
     (inner, rest2, closed) => if not closed { sei(t.col, "unbalanced (") }
       else {
         match inner {
-          (i0, irest) => match parseExpr(inner, sig) {
-            .err(e) => Items.err(e),
-            .ok(a) => pushArr(a, t.col, false, false, rest2, sig, acc),
+          (i0, irest) => match items(inner, sig, ~) {
+            // a parenthesised function, (+⍣40) or (∘.≤) or (+/), is one function item (D-105)
+            .ok(its) => match its {
+              (h, more) => match more {
+                (h2, m2) => parenExpr(inner, t.col, rest2, sig, acc),
+                _ => match h { .fun(x) => items(rest2, sig, (funItem(x.f, t.col), acc)), _ => parenExpr(inner, t.col, rest2, sig, acc), },
+              },
+              _ => parenExpr(inner, t.col, rest2, sig, acc),
+            },
+            .err(e) => parenExpr(inner, t.col, rest2, sig, acc),
           },
           _ => sei(t.col, "empty parentheses"),
         }
       },
   }
+};
+func parenExpr(inner: List<lexer.Token>, col: @, rest2: List<lexer.Token>, sig: List<(String, @)>, acc: List<Item>) -> Items {
+  match parseExpr(inner, sig) { .err(e) => Items.err(e), .ok(a) => pushArr(a, col, false, false, rest2, sig, acc), }
 };
 // the index parts: each `;`-separated part is an expression or an elision
 func indexParts(parts: List<List<lexer.Token>>, sig: List<(String, @)>, acc: List<Ast>) -> Asts {

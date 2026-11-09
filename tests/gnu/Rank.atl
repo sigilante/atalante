@@ -2,46 +2,109 @@
 🍎> )DISPLAY APL2
 ⍝ expect: display APL2
 ⍝ skipped (system command): )COPY ASSERT.apl ASSERT ASSERT_EQUIV
-⍝ skipped (glyph ⍤): ⍉⍤2 N233
-⍝ skipped (glyph ⍤): ⍳⍤0 N3
-⍝ skipped (glyph ⍤): j ← 2 ⋄ ( ,⍤2 N233 )  ASSERT_EQUIV  ( ,⍤j N233 )
-⍝ skipped (glyph ⍤): j ← 2 ⋄ ( ⍉⍤2 N233)   ASSERT_EQUIV  ( ⍉⍤j N233 )
-⍝ skipped (glyph ⍤): j ← 0 ⋄ ( ⍳⍤0 N3   )  ASSERT_EQUIV  ( ⍳⍤j N3   )
-⍝ skipped (glyph ⍤): j ← 0 ⋄ ( ⍳⍤j 1 2 3)  ASSERT_EQUIV  ( ⍳⍤j N3   )
-⍝ skipped (glyph ⍤): 0 1 2 ⌽⍤0 1 'ABC'
-⍝ skipped (glyph ⍤): 2 2 2⊤⍤1 0 N5
-⍝ skipped (glyph ⍤): N34+⍤2 N234
-⍝ skipped (glyph ⍤): N3,⍤1 N34
-⍝ skipped (glyph ⍤): N2,⍤0 2 N34
-⍝ skipped (glyph ⍤): c6 ,⍤0 (⍳6)
-⍝ skipped (glyph ⍤): c6 (,⍤0) (⍳6)
-⍝ skipped (glyph ⍤): c6 ,⍤(,0) (⍳6)
-⍝ skipped (glyph ⍤): c6 ,⍤0,⊂⍳6
-⍝ skipped (glyph ⍤): c6 ,⍤[1] 0 (⍳6)
-⍝ skipped (glyph ⍤): c6 (,⍤[1] 0) (⍳6)
-⍝ skipped (glyph ⍤): c6 ,⍤[1] (,0) (⍳6)
-⍝ skipped (glyph ⍤): c6 ,⍤[1] 0 ,⊂(⍳6)
-⍝ skipped (glyph ⍤): 1(↑⍤0) ⍬
+🍎> ⍉⍤2 N233
+⍝ expect: 111 121 131
+⍝ expect: 112 122 132
+⍝ expect: 113 123 133
+⍝ expect: 
+⍝ expect: 211 221 231
+⍝ expect: 212 222 232
+⍝ expect: 213 223 233
+🍎> ⍳⍤0 N3
+⍝ expect: 1 0 0
+⍝ expect: 1 2 0
+⍝ expect: 1 2 3
+🍎> j ← 2 ⋄ ( ,⍤2 N233 )  ASSERT_EQUIV  ( ,⍤j N233 )
+🍎> j ← 2 ⋄ ( ⍉⍤2 N233)   ASSERT_EQUIV  ( ⍉⍤j N233 )
+🍎> j ← 0 ⋄ ( ⍳⍤0 N3   )  ASSERT_EQUIV  ( ⍳⍤j N3   )
+🍎> j ← 0 ⋄ ( ⍳⍤j 1 2 3)  ASSERT_EQUIV  ( ⍳⍤j N3   )
+🍎> 0 1 2 ⌽⍤0 1 'ABC'
+⍝ expect: ABC
+⍝ expect: BCA
+⍝ expect: CAB
+🍎> 2 2 2⊤⍤1 0 N5
+⍝ expect: 0 0 1
+⍝ expect: 0 1 0
+⍝ expect: 0 1 1
+⍝ expect: 1 0 0
+⍝ expect: 1 0 1
+🍎> N34+⍤2 N234
+⍝ expect: 122 124 126 128
+⍝ expect: 142 144 146 148
+⍝ expect: 162 164 166 168
+⍝ expect: 
+⍝ expect: 222 224 226 228
+⍝ expect: 242 244 246 248
+⍝ expect: 262 264 266 268
+🍎> N3,⍤1 N34
+⍝ expect: 1 2 3 11 12 13 14
+⍝ expect: 1 2 3 21 22 23 24
+⍝ expect: 1 2 3 31 32 33 34
+🍎> N2,⍤0 2 N34
+⍝ expect: 1 11 12 13 14
+⍝ expect: 1 21 22 23 24
+⍝ expect: 1 31 32 33 34
+⍝ expect: 
+⍝ expect: 2 11 12 13 14
+⍝ expect: 2 21 22 23 24
+⍝ expect: 2 31 32 33 34
+🍎> c6 ,⍤0 (⍳6)
+⍝ expect: a 1
+⍝ expect: b 2
+⍝ expect: c 3
+⍝ expect: d 4
+⍝ expect: e 5
+⍝ expect: f 6
+🍎> c6 (,⍤0) (⍳6)
+⍝ expect: a 1
+⍝ expect: b 2
+⍝ expect: c 3
+⍝ expect: d 4
+⍝ expect: e 5
+⍝ expect: f 6
+🍎> c6 ,⍤(,0) (⍳6)
+⍝ expect: a 1
+⍝ expect: b 2
+⍝ expect: c 3
+⍝ expect: d 4
+⍝ expect: e 5
+⍝ expect: f 6
+🍎> c6 ,⍤0,⊂⍳6
+⍝ refuse: %length-error
+🍎> c6 ,⍤[1] 0 (⍳6)
+⍝ expect: a b c d e f
+⍝ expect: 1 2 3 4 5 6
+🍎> c6 (,⍤[1] 0) (⍳6)
+⍝ expect: a b c d e f
+⍝ expect: 1 2 3 4 5 6
+🍎> c6 ,⍤[1] (,0) (⍳6)
+⍝ expect: a b c d e f
+⍝ expect: 1 2 3 4 5 6
+🍎> c6 ,⍤[1] 0 ,⊂(⍳6)
+⍝ refuse: %syntax-error
+🍎> 1(↑⍤0) ⍬
 ⍝ skipped (system name ⎕CR): 4 ⎕CR (⊂⍤1)4 2⍴⍳8
 ⍝ skipped (system name ⎕CR): 4 ⎕CR +⍤1 ⍬
 ⍝ skipped (system name ⎕CR): 24 ⎕CR  {⍴ (⊢⍤1) (⍵,6)⍴9} ¨ 0 1 2 3 4 5 6
-⍝ skipped (glyph ⍤): ASSERT ( ⍉⍤2 N233 )      ≡ ( ⍉⍤(2)     N233 )
-⍝ skipped (glyph ⍤): ASSERT ( ⍉⍤2 N233 )      ≡ ( ⍉⍤(,2)    N233 )
-⍝ skipped (glyph ⍤): ASSERT ( ⍉⍤2 N233 )      ≡ ( ⍉⍤((2))  N233  )
-⍝ skipped (glyph ⍤): ASSERT ( ⍉⍤2 N233 )      ≡ ( (⍉⍤2)    N233  )
-⍝ skipped (glyph ⍤): ASSERT ( ⍉⍤2 N233 )      ≡ ( (⍉⍤(2))  N233  )
-⍝ skipped (glyph ⍤): ASSERT ( ⍉⍤2 N233 )      ≡ ( (⍉⍤(,2)) N233  )
-⍝ skipped (glyph ⍤): ASSERT ( 2 2 2⊤⍤1 0 N5 ) ≡ ( 2 2 2⊤⍤(1 0)    N5 )
-⍝ skipped (glyph ⍤): ASSERT ( 2 2 2⊤⍤1 0 N5 ) ≡ ( 2 2 2⊤⍤(,1 0)   N5 )
-⍝ skipped (glyph ⍤): ASSERT ( 2 2 2⊤⍤1 0 N5 ) ≡ ( 2 2 2⊤⍤((1 0))  N5 )
-⍝ skipped (glyph ⍤): ASSERT ( 2 2 2⊤⍤1 0 N5 ) ≡ ( 2 2 2(⊤⍤1 0)    N5 )
-⍝ skipped (glyph ⍤): ASSERT ( 2 2 2⊤⍤1 0 N5 ) ≡ ( 2 2 2(⊤⍤(1 0))  N5 )
-⍝ skipped (glyph ⍤): ASSERT ( 2 2 2⊤⍤1 0 N5 ) ≡ ( 2 2 2(⊤⍤(,1 0)) N5 )
-⍝ skipped (glyph ⍤): ASSERT ( +/⍤1⊢2 3⍴⍳6 )   ≡ ( (+/)⍤1⊢2 3⍴⍳6 )
-⍝ skipped (glyph ⍤): ASSERT ( +/⍤1⊢2 3⍴⍳6 )   ≡ 6 15
-⍝ skipped (glyph ⍤): ASSERT ( +\⍤1⊢2 3⍴⍳6 )   ≡ ( (+\)⍤1⊢2 3⍴⍳6 )
-⍝ skipped (glyph ⍤): ASSERT ( +⌿⍤1⊢2 3⍴⍳6 )   ≡ ( (+⌿)⍤1⊢2 3⍴⍳6 )
-⍝ skipped (glyph ⍤): ASSERT ( {⍵}¨⍤1⊢2 3⍴⍳6 ) ≡ ( ({⍵}¨)⍤1⊢2 3⍴⍳6 )
+🍎> ASSERT ( ⍉⍤2 N233 )      ≡ ( ⍉⍤(2)     N233 )
+🍎> ASSERT ( ⍉⍤2 N233 )      ≡ ( ⍉⍤(,2)    N233 )
+🍎> ASSERT ( ⍉⍤2 N233 )      ≡ ( ⍉⍤((2))  N233  )
+🍎> ASSERT ( ⍉⍤2 N233 )      ≡ ( (⍉⍤2)    N233  )
+🍎> ASSERT ( ⍉⍤2 N233 )      ≡ ( (⍉⍤(2))  N233  )
+🍎> ASSERT ( ⍉⍤2 N233 )      ≡ ( (⍉⍤(,2)) N233  )
+⍝ expect: 
+⍝ expect:            ⍝     y←y1 y2
+🍎> ASSERT ( 2 2 2⊤⍤1 0 N5 ) ≡ ( 2 2 2⊤⍤(1 0)    N5 )
+🍎> ASSERT ( 2 2 2⊤⍤1 0 N5 ) ≡ ( 2 2 2⊤⍤(,1 0)   N5 )
+🍎> ASSERT ( 2 2 2⊤⍤1 0 N5 ) ≡ ( 2 2 2⊤⍤((1 0))  N5 )
+🍎> ASSERT ( 2 2 2⊤⍤1 0 N5 ) ≡ ( 2 2 2(⊤⍤1 0)    N5 )
+🍎> ASSERT ( 2 2 2⊤⍤1 0 N5 ) ≡ ( 2 2 2(⊤⍤(1 0))  N5 )
+🍎> ASSERT ( 2 2 2⊤⍤1 0 N5 ) ≡ ( 2 2 2(⊤⍤(,1 0)) N5 )
+🍎> ASSERT ( +/⍤1⊢2 3⍴⍳6 )   ≡ ( (+/)⍤1⊢2 3⍴⍳6 )
+🍎> ASSERT ( +/⍤1⊢2 3⍴⍳6 )   ≡ 6 15
+🍎> ASSERT ( +\⍤1⊢2 3⍴⍳6 )   ≡ ( (+\)⍤1⊢2 3⍴⍳6 )
+🍎> ASSERT ( +⌿⍤1⊢2 3⍴⍳6 )   ≡ ( (+⌿)⍤1⊢2 3⍴⍳6 )
+🍎> ASSERT ( {⍵}¨⍤1⊢2 3⍴⍳6 ) ≡ ( ({⍵}¨)⍤1⊢2 3⍴⍳6 )
 🍎> ASSERT ( +/[1]2 3⍴⍳6 )   ≡ ( (+/)[1]2 3⍴⍳6 )
 🍎> ASSERT ( +/[1]2 3⍴⍳6 )   ≡ 5 7 9
 🍎> ASSERT ( +/[2]2 3⍴⍳6 )   ≡ ( (+/)[2]2 3⍴⍳6 )
@@ -53,19 +116,33 @@
 🍎> N ← 1 ⋄ ASSERT ( ⌽[N]2 3⍴⍳6 )  ≡ ( (⌽[N])2 3⍴⍳6 )
 🍎> N ← 1 ⋄ ASSERT ( +/[N]2 3⍴⍳6 ) ≡ ( (+/)[N]2 3⍴⍳6 )
 🍎> N ← 2 ⋄ ASSERT ( +/[N]2 3⍴⍳6 ) ≡ ( (+/)[N]2 3⍴⍳6 )
-⍝ skipped (glyph ⍤): ({⎕IO←0 ⋄ ⍵+100}⍤0)3 2⍴⍳6
+🍎> ({⎕IO←0 ⋄ ⍵+100}⍤0)3 2⍴⍳6
+⍝ expect: 101 102
+⍝ expect: 103 104
+⍝ expect: 105 106
 🍎> ⎕IO←1
-⍝ skipped (glyph ⍤): 1 2 3({⎕IO←0 ⋄ ⍺+⍵}⍤0 1)3 2⍴⍳6
+🍎> 1 2 3({⎕IO←0 ⋄ ⍺+⍵}⍤0 1)3 2⍴⍳6
+⍝ expect: 2 3
+⍝ expect: 5 6
+⍝ expect: 8 9
 🍎> ⎕IO←1
-⍝ skipped (glyph ⍤): (⍳⍤1)2 2⍴'ab'
+🍎> (⍳⍤1)2 2⍴'ab'
+⍝ refuse: %domain-error
 ⍝ skipped (system command): )SIC
-⍝ skipped (glyph ⍤): ⍴1 (,⍤1)1 3⍴0
-⍝ skipped (glyph ⍤): ⍴1 (,⍤1)0 3⍴0
-⍝ skipped (glyph ⍤): ⍴2 (↑⍤1)1 3⍴0
-⍝ skipped (glyph ⍤): ⍴2 (↑⍤1)0 3⍴0
-⍝ skipped (glyph ⍤): ⍴1 ({⍺,⍵}⍤1)1 3⍴0
-⍝ skipped (glyph ⍤): ⍴1 ({⍺,⍵}⍤1)0 3⍴0
-⍝ skipped (glyph ⍤): ⍴'' (,⍤0) ''
+🍎> ⍴1 (,⍤1)1 3⍴0
+⍝ expect: 1 4
+🍎> ⍴1 (,⍤1)0 3⍴0
+⍝ expect: 0 4
+🍎> ⍴2 (↑⍤1)1 3⍴0
+⍝ expect: 1 2
+🍎> ⍴2 (↑⍤1)0 3⍴0
+⍝ expect: 0 2
+🍎> ⍴1 ({⍺,⍵}⍤1)1 3⍴0
+⍝ expect: 1 4
+🍎> ⍴1 ({⍺,⍵}⍤1)0 3⍴0
+⍝ expect: 0 4
+🍎> ⍴'' (,⍤0) ''
+⍝ expect: 0 2
 ⍝ skipped (system name ⎕TF): Z←1 (,⍤1)0 3⍴0 ⋄ 2⎕TF 'Z'
 ⍝ skipped (system name ⎕TF): Z←'ab' (,⍤1)0 3⍴0 ⋄ 2⎕TF 'Z'
 🍎> )ERASE Z
@@ -73,16 +150,23 @@
 ⍝ skipped (system name ⎕EC): ∇Z←G B
 🍎> ⍴G 0 0 0
 ⍝ expect: 3
-⍝ skipped (glyph ⍤): ⍴(G⍤1)1 3⍴0
-⍝ skipped (glyph ⍤): ⍴(G⍤1)0 3⍴0
+🍎> ⍴(G⍤1)1 3⍴0
+⍝ expect: 1 3
+🍎> ⍴(G⍤1)0 3⍴0
+⍝ expect: 0 3
 ⍝ skipped (system name ⎕EC): ∇Z←G2 B
-⍝ skipped (glyph ⍤): ⍴(G2⍤1)0 3⍴0
+🍎> ⍴(G2⍤1)0 3⍴0
+⍝ expect: 0 4
 ⍝ skipped (system name ⎕EC): ∇Z←G3 B
-⍝ skipped (glyph ⍤): ⍴(G3⍤1)1 3⍴0
-⍝ skipped (glyph ⍤): ⍴(G3⍤1)0 3⍴0
+🍎> ⍴(G3⍤1)1 3⍴0
+⍝ expect: 1 3
+🍎> ⍴(G3⍤1)0 3⍴0
+⍝ expect: 0 3
 ⍝ skipped (system name ⎕EA): ∇Z←G4 B
-⍝ skipped (glyph ⍤): ⍴(G4⍤1)1 3⍴0
-⍝ skipped (glyph ⍤): ⍴(G4⍤1)0 3⍴0
+🍎> ⍴(G4⍤1)1 3⍴0
+⍝ expect: 1
+🍎> ⍴(G4⍤1)0 3⍴0
+⍝ expect: 0
 🍎> ∇Z←HEC B
 	Z←÷0
 	∇
