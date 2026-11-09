@@ -41,7 +41,11 @@ struct Env {
   frames: List<Frame>,                 // the dfn calls in progress, innermost first (D-65)
   nb: @, ib: @, rb: @,                 // ⎕TYPE: the bloq naturals, integers and reals are made at (D-15)
   dm: @,                               // )DISPLAY: 0 the strand (D-76), 1 APL2's layout (D-99)
+  rng: Rng,                            // roll and deal's stream (D-104)
 };
+// ⎕RL's seed, the Philox stream it started (/lib/rand, NOT cryptographic), and whether the host's
+// entropy or ⎕RL← has seeded it yet
+struct Rng { seed: @, st: *, set: Bool };
 struct EErr { tag: String, hint: String };
 enum Ev { err(EErr), ok((array.Arr, Env)) };
 enum EnvR { err(EErr), ok(Env) };
@@ -64,16 +68,18 @@ enum EncR { err(EErr), ok((List<List<array.Arr>>, Env)) };
 
 func fail(tag: String, hint: String) -> Ev { Ev.err(EErr( tag: tag, hint: hint )) };
 func noHeader() -> parse.Header { parse.Header( nm: "", res: "", lft: "", rgt: "", locals: ~ ) };
-func setStore(e: Env, st: List<(String, array.Arr)>) -> Env { Env( store: st, io: e.io, pp: e.pp, fns: e.fns, phdr: e.phdr, pend: e.pend, out: e.out, dfns: e.dfns, frames: e.frames, nb: e.nb, ib: e.ib, rb: e.rb, dm: e.dm ) };
-func setIo(e: Env, io: @) -> Env { Env( store: e.store, io: io, pp: e.pp, fns: e.fns, phdr: e.phdr, pend: e.pend, out: e.out, dfns: e.dfns, frames: e.frames, nb: e.nb, ib: e.ib, rb: e.rb, dm: e.dm ) };
-func setPp(e: Env, pp: @) -> Env { Env( store: e.store, io: e.io, pp: pp, fns: e.fns, phdr: e.phdr, pend: e.pend, out: e.out, dfns: e.dfns, frames: e.frames, nb: e.nb, ib: e.ib, rb: e.rb, dm: e.dm ) };
-func setFns(e: Env, fns: List<(String, Fndef)>) -> Env { Env( store: e.store, io: e.io, pp: e.pp, fns: fns, phdr: e.phdr, pend: e.pend, out: e.out, dfns: e.dfns, frames: e.frames, nb: e.nb, ib: e.ib, rb: e.rb, dm: e.dm ) };
-func setPending(e: Env, h: parse.Header, pend: List<String>) -> Env { Env( store: e.store, io: e.io, pp: e.pp, fns: e.fns, phdr: h, pend: pend, out: e.out, dfns: e.dfns, frames: e.frames, nb: e.nb, ib: e.ib, rb: e.rb, dm: e.dm ) };
-func setOut(e: Env, out: List<String>) -> Env { Env( store: e.store, io: e.io, pp: e.pp, fns: e.fns, phdr: e.phdr, pend: e.pend, out: out, dfns: e.dfns, frames: e.frames, nb: e.nb, ib: e.ib, rb: e.rb, dm: e.dm ) };
-func setDfns(e: Env, dfns: List<(String, Dfndef)>) -> Env { Env( store: e.store, io: e.io, pp: e.pp, fns: e.fns, phdr: e.phdr, pend: e.pend, out: e.out, dfns: dfns, frames: e.frames, nb: e.nb, ib: e.ib, rb: e.rb, dm: e.dm ) };
-func setTw(e: Env, nb: @, ib: @, rb: @) -> Env { Env( store: e.store, io: e.io, pp: e.pp, fns: e.fns, phdr: e.phdr, pend: e.pend, out: e.out, dfns: e.dfns, frames: e.frames, nb: nb, ib: ib, rb: rb, dm: e.dm ) };
-func setDm(e: Env, dm: @) -> Env { Env( store: e.store, io: e.io, pp: e.pp, fns: e.fns, phdr: e.phdr, pend: e.pend, out: e.out, dfns: e.dfns, frames: e.frames, nb: e.nb, ib: e.ib, rb: e.rb, dm: dm ) };
-func setFrames(e: Env, frames: List<Frame>) -> Env { Env( store: e.store, io: e.io, pp: e.pp, fns: e.fns, phdr: e.phdr, pend: e.pend, out: e.out, dfns: e.dfns, frames: frames, nb: e.nb, ib: e.ib, rb: e.rb, dm: e.dm ) };
+func setStore(e: Env, st: List<(String, array.Arr)>) -> Env { Env( store: st, io: e.io, pp: e.pp, fns: e.fns, phdr: e.phdr, pend: e.pend, out: e.out, dfns: e.dfns, frames: e.frames, nb: e.nb, ib: e.ib, rb: e.rb, dm: e.dm, rng: e.rng ) };
+func setIo(e: Env, io: @) -> Env { Env( store: e.store, io: io, pp: e.pp, fns: e.fns, phdr: e.phdr, pend: e.pend, out: e.out, dfns: e.dfns, frames: e.frames, nb: e.nb, ib: e.ib, rb: e.rb, dm: e.dm, rng: e.rng ) };
+func setPp(e: Env, pp: @) -> Env { Env( store: e.store, io: e.io, pp: pp, fns: e.fns, phdr: e.phdr, pend: e.pend, out: e.out, dfns: e.dfns, frames: e.frames, nb: e.nb, ib: e.ib, rb: e.rb, dm: e.dm, rng: e.rng ) };
+func setFns(e: Env, fns: List<(String, Fndef)>) -> Env { Env( store: e.store, io: e.io, pp: e.pp, fns: fns, phdr: e.phdr, pend: e.pend, out: e.out, dfns: e.dfns, frames: e.frames, nb: e.nb, ib: e.ib, rb: e.rb, dm: e.dm, rng: e.rng ) };
+func setPending(e: Env, h: parse.Header, pend: List<String>) -> Env { Env( store: e.store, io: e.io, pp: e.pp, fns: e.fns, phdr: h, pend: pend, out: e.out, dfns: e.dfns, frames: e.frames, nb: e.nb, ib: e.ib, rb: e.rb, dm: e.dm, rng: e.rng ) };
+func setOut(e: Env, out: List<String>) -> Env { Env( store: e.store, io: e.io, pp: e.pp, fns: e.fns, phdr: e.phdr, pend: e.pend, out: out, dfns: e.dfns, frames: e.frames, nb: e.nb, ib: e.ib, rb: e.rb, dm: e.dm, rng: e.rng ) };
+func setDfns(e: Env, dfns: List<(String, Dfndef)>) -> Env { Env( store: e.store, io: e.io, pp: e.pp, fns: e.fns, phdr: e.phdr, pend: e.pend, out: e.out, dfns: dfns, frames: e.frames, nb: e.nb, ib: e.ib, rb: e.rb, dm: e.dm, rng: e.rng ) };
+func setTw(e: Env, nb: @, ib: @, rb: @) -> Env { Env( store: e.store, io: e.io, pp: e.pp, fns: e.fns, phdr: e.phdr, pend: e.pend, out: e.out, dfns: e.dfns, frames: e.frames, nb: nb, ib: ib, rb: rb, dm: e.dm, rng: e.rng ) };
+func setDm(e: Env, dm: @) -> Env { Env( store: e.store, io: e.io, pp: e.pp, fns: e.fns, phdr: e.phdr, pend: e.pend, out: e.out, dfns: e.dfns, frames: e.frames, nb: e.nb, ib: e.ib, rb: e.rb, dm: dm, rng: e.rng ) };
+func setRng(e: Env, r: Rng) -> Env { Env( store: e.store, io: e.io, pp: e.pp, fns: e.fns, phdr: e.phdr, pend: e.pend, out: e.out, dfns: e.dfns, frames: e.frames, nb: e.nb, ib: e.ib, rb: e.rb, dm: e.dm, rng: r ) };
+func rngOf(seed: @, set: Bool) -> Rng { Rng( seed: seed, st: lagoon.rseed(seed), set: set ) };
+func setFrames(e: Env, frames: List<Frame>) -> Env { Env( store: e.store, io: e.io, pp: e.pp, fns: e.fns, phdr: e.phdr, pend: e.pend, out: e.out, dfns: e.dfns, frames: frames, nb: e.nb, ib: e.ib, rb: e.rb, dm: e.dm, rng: e.rng ) };
 func pushOut(e: Env, line: String) -> Env { if line == "" { e } else { setOut(e, (line, e.out)) } };
 func dom(hint: String) -> Ev { fail("%domain-error", hint) };
 func nyi(what: String) -> Ev { fail("%unimplemented", what) };
@@ -968,6 +974,7 @@ func axisDyad(f: parse.Fn, k0: @, a: array.Arr, b: array.Arr, env: Env) -> Ev {
 // --- monadic structural functions (D-42) --------------------------------------------------
 func monadStruct(cp: @, a: array.Arr, env: Env) -> Ev {
   if cp == 8746 { unique(a, env) }                                                            // ∪B (D-98)
+  else if cp == 63 { roll(a, env) }                                                            // ?B (D-104)
   else if array.isBox(a) { monadBox(cp, a, env) } else { monadSimple(cp, a, env) }
 };
 // on a box: the shape-only and element-moving functions run on the index ray (D-72)
@@ -1225,6 +1232,7 @@ func pickPath(path: List<@>, b: array.Arr, env: Env) -> Ev {
 // --- dyadic structural functions (D-42) ----------------------------------------------------
 func dyadStruct(cp: @, a: array.Arr, b: array.Arr, env: Env) -> Ev {
   if cp == 8764 { without(a, b, env) }                                                        // A∼B (D-98)
+  else if cp == 63 { deal(a, b, env) }                                                       // A?B (D-104)
   else if cp == 8745 { intersect(a, b, env) }                                                 // A∩B (D-98)
   else if cp == 8746 { union(a, b, env) }                                                     // A∪B (D-98)
   else if array.isBox(a) or array.isBox(b) { dyadBox(cp, a, b, env) } else { dyadSimple(cp, a, b, env) }
@@ -2351,7 +2359,7 @@ func evalAst(a: parse.Ast, env: Env) -> Ev {
     .strand(xs) => evalStrand(xs, env),
     .name(nm) => match lookupVar(env, nm) { (found, v) => if found { okv(v, env) } else { fail("%value-error", nm + " is not defined") }, },
     .nilad(nm) => callUser(nm, false, false, array.scalar(1, 0), array.scalar(1, 0), env),
-    .sysvar(nm) => if nm == "IO" { okv(array.scalar(1, env.io), env) } else if nm == "PP" { okv(array.scalar(1, env.pp), env) } else if nm == "TYPE" { okv(charsVec(typeText(env)), env) } else { nyi("⎕" + nm) },
+    .sysvar(nm) => if nm == "IO" { okv(array.scalar(1, env.io), env) } else if nm == "PP" { okv(array.scalar(1, env.pp), env) } else if nm == "TYPE" { okv(charsVec(typeText(env)), env) } else if nm == "RL" { okv(array.scalar(1, env.rng.seed), env) } else { nyi("⎕" + nm) },
     .monad(m) => match evalAst(m.r, env) {
       .err(e) => Ev.err(e),
       .ok(r) => match r { (rv, env2) => applyMonad(m.f, rv, env2), },
@@ -2456,6 +2464,7 @@ func sysSet(nm: String, v: array.Arr, env: Env) -> Ev {
     let x = array.first(v);
     if nm == "IO" { if isBool(x) { okv(v, setIo(env, x)) } else { dom("⎕IO is 0 or 1") } }
     else if nm == "PP" { if x >= 1 and x <= 17 { okv(v, setPp(env, x)) } else { dom("⎕PP is 1..17") } }
+    else if nm == "RL" { if x < two64() { okv(v, setRng(env, rngOf(x, true))) } else { dom("⎕RL is a natural below 2^64") } }
     else { nyi("⎕" + nm) }
   }
 };
@@ -3180,7 +3189,7 @@ func strandVals(parts: List<Part>, acc: List<array.Arr>, env: Env) -> Ev {
     _ => okv(array.normalize([array.countA(acc)], acc), env),
   }
 };
-func initial() -> Env { Env( store: ~, io: 1, pp: 10, fns: ~, phdr: noHeader(), pend: ~, out: ~, dfns: ~, frames: ~, nb: 6, ib: 6, rb: 6, dm: 0 ) };
+func initial() -> Env { Env( store: ~, io: 1, pp: 10, fns: ~, phdr: noHeader(), pend: ~, out: ~, dfns: ~, frames: ~, nb: 6, ib: 6, rb: 6, dm: 0, rng: rngOf(0, false) ) };
 
 // --- the emitter (P5): a statement to a Nockasm program over [rt env] ---------------------------
 // (moved from emit.jock so that a tradfn body can be emitted and run from
@@ -3345,3 +3354,50 @@ func lowerText(a: parse.Ast, env: Env) -> String { showNoun(lower(a, env)) };
 func run(a: parse.Ast, env: Env) -> Ev {
   eval((runtime(), env), lower(a, env)) as! Ev
 };
+// --- roll and deal (D-104) ----------------------------------------------------------------------
+// One Philox4x32-10 stream per session from /lib/rand:  the host's entropy seeds it at the first
+// line (jojo's eny), ⎕RL←n reseeds it so a run repeats, and ⎕RL reads the seed.  NOT cryptographic.
+// ?B rolls each element n of B to a uniform integer in ⎕IO..n−1+⎕IO;  A?B deals A distinct
+// integers from ⍳B in random order, by Floyd's sampling in Knuth's ordering (O(A²) in A).
+func negP(x: @) -> Bool { array.isNeg(x) };
+func posNat(x: @) -> Bool { x > 0 };
+func wholeR(x: @) -> Bool { array.finite(x) and (realZero(x) or floorReal(x) == x) };
+func wholeNN(x: @) -> Bool { wholeR(x) and (not array.realIsNeg(x)) and ltR(x, array.rsunAt(array.widthOf(x), two64())) };
+func natOfReal(x: @) -> @ { sMag(array.rtoi(100, x)) };
+// a simple numeric array's elements as naturals, when every one is a whole number ≥ 0
+func natVals(a: array.Arr, env: Env) -> (Bool, List<@>) {
+  if array.isBox(a) or a.kind == 4 { (false, ~) }
+  else if a.kind == 1 { (true, array.vals(a)) }
+  else if a.kind == 2 { (not array.anyL(array.vals(a), negP), array.vals(a)) }
+  else { let r = array.toRealAt(a, env.rb); if array.allL(array.vals(r), wholeNN) { (true, array.turnL(array.vals(r), natOfReal)) } else { (false, ~) } }
+};
+func drawBelow(r: Rng, n: @) -> (@, Rng) { match lagoon.rbelow(r.st, n) { (v, st2) => (v, Rng( seed: r.seed, st: st2, set: r.set )), } };
+func rollL(xs: List<@>, io: @, r: Rng, acc: List<@>) -> (List<@>, Rng) {
+  match xs { (n, t) => match drawBelow(r, n) { (v, r2) => rollL(t, io, r2, (v + io, acc)), }, _ => (array.revL(acc, ~), r), }
+};
+func roll(a: array.Arr, env: Env) -> Ev {
+  match natVals(a, env) {
+    (ok, ns) => if not ok or not array.allL(ns, posNat) { dom("? takes positive integers") }
+      else { match rollL(ns, env.io, env.rng, ~) { (vs, r2) => okv(mk(1, array.shape(a), vs), setRng(env, r2)), } },
+  }
+};
+func memL(x: @, xs: List<@>) -> Bool { match xs { (h, t) => if h == x { true } else { memL(x, t) }, _ => false, } };
+// Knuth's ordering of Floyd's sample:  a fresh t goes first, else j goes just after t
+func insertAfter(t: @, j: @, xs: List<@>) -> List<@> { match xs { (h, rest) => if h == t { (h, (j, rest)) } else { (h, insertAfter(t, j, rest)) }, _ => (j, ~), } };
+func floyd(j: @, n: @, r: Rng, acc: List<@>) -> (List<@>, Rng) {
+  if j == n { (acc, r) }
+  else { match drawBelow(r, j + 1) { (t, r2) => floyd(j + 1, n, r2, if memL(t, acc) { insertAfter(t, j, acc) } else { (t, acc) }), } }
+};
+func plusL(xs: List<@>, d: @, acc: List<@>) -> List<@> { match xs { (h, t) => plusL(t, d, (h + d, acc)), _ => array.revL(acc, ~), } };
+func deal(a: array.Arr, b: array.Arr, env: Env) -> Ev {
+  if array.size(array.shape(a)) != 1 or array.size(array.shape(b)) != 1 { fail("%length-error", "A?B takes two single numbers") }
+  else {
+    match natVals(a, env) { (oka, ms) => match natVals(b, env) { (okb, ns) => if not oka or not okb { dom("A?B takes non-negative integers") } else { dealMN(headOr0(ms), headOr0(ns), env) }, }, }
+  }
+};
+func dealMN(m: @, n: @, env: Env) -> Ev {
+  if m > n { dom("A?B deals at most B integers") }
+  else { match floyd(n - m, n, env.rng, ~) { (vs, r2) => okv(vec(1, plusL(vs, env.io, ~)), setRng(env, r2)), } }
+};
+// the host's entropy, at the first line only:  ⎕RL← after it, or before it, wins
+func seedHost(env: Env, eny: @) -> Env { if env.rng.set { env } else { setRng(env, rngOf(lagoon.rfold(eny), true)) } };

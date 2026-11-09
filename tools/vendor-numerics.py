@@ -29,6 +29,8 @@ FILES = {
     "lib/complex.hoon": "libmath/desk/lib/complex.hoon",
     "lib/fixed.hoon": "libmath/desk/lib/fixed.hoon",
     "lib/math.hoon": "libmath/desk/lib/math.hoon",
+    "sur/rand.hoon": "librand/desk/sur/rand.hoon",
+    "lib/rand.hoon": "librand/desk/lib/rand.hoon",
 }
 LIT = re.compile(r"(?<![A-Za-z0-9.])\.(~{0,3})(-?)(\d+(?:\.\d+)?)(?:e(-?\d+))?(?![\w.])")
 

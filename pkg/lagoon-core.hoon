@@ -18,6 +18,7 @@
 /+  lag=lagoon
 /+  math
 /+  twoc
+/+  rnd=rand
 =/  jck   ~(. jf [~ %.n ~ ~])
 =/  la    ~(. la:lag %n)
 =/  rdm   ~(. rd:math [%n .~1e-10 .~0])
@@ -289,6 +290,14 @@
     %6  (~(bit rd %n) f)
     %7  (~(bit rq %n) f)
   ==
+::  --- roll and deal (D-104):  /lib/rand's Philox4x32-10 stream, NOT
+::  cryptographic.  The state crosses to Jock as a bare noun.
+::  rseed:  a seed atom's low 64 bits to a stream;  rfold:  any atom (jojo's
+::  512-bit eny) folded to 64 bits;  rbelow:  a draw uniform in [0,n), n>0,
+::  and the advanced stream.
+=/  wrseed   |=(a=@ ^-(* (from-atom:seed:rnd %phil a)))
+=/  wrfold   |=(a=@ ^-(@ (fold-wide:seed:rnd a)))
+=/  wrbelow  |=([r=* n=@] ^-([@ *] (below:uni:rnd ;;(rng:rnd r) n)))
 ::  --- signatures
 =/  tatom=typ:typ  [%atom %$ ~]
 =/  tnoun=typ:typ  [%noun ~]
@@ -348,6 +357,9 @@
       ['fdrg' [~ (g2 tatom tatom [%cell tbool [%cell tatom tatom]])]]
       ['fgrd' [~ (g4 tatom tbool tatom tatom tatom)]]
       ['fconv' [~ (g3 tatom tatom tatom tatom)]]
+      ['rseed' [~ (g1 tatom tnoun)]]
+      ['rfold' [~ (g1 tatom tatom)]]
+      ['rbelow' [~ (g2 tnoun tatom [%cell tatom tnoun])]]
   ==
 =/  metatd=typedef:typ
   [~ [%struct ~[['shape' tlist] ['bloq' tatom] ['kind' ttas] ['tail' tnoun]]]]
@@ -368,6 +380,7 @@
         wtneg  wtabs  wtmsb
         wrflo  wrcei  wts2t  wtt2s
         wfop  wfcmp  wfun  wfpow  wfpi  wfsun  wfsan  wftoi  wfdrg  wfgrd  wfconv
+        wrseed  wrfold  wrbelow
     ==
   arms
   tys

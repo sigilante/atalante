@@ -29,6 +29,8 @@ class Atl(KS) impl Kernel<Effect> {
     // bare [%command line] is accepted too
     match e {
       as? (Term, @) => self.run(e as! (Term, @)),
+      // eny, the third element, seeds roll and deal at the first line (D-104)
+      as? (*, *, @, *, *, (Term, @)) => match e as! (*, *, @, *, *, (Term, @)) { (a, b, eny, d, f, cause) => Atl( s: atl.seedSess(self.s, eny) ).run(cause), },
       as? (*, *, *, *, *, (Term, @)) => match e as! (*, *, *, *, *, (Term, @)) { (a, b, c, d, f, cause) => self.run(cause), },
       _ => ([Effect.markdown("error: bad cause " + interp.showNoun(e))], self),
     }

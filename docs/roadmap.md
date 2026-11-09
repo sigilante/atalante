@@ -1,6 +1,6 @@
 # Atalante — Roadmap
 
-**Status: P8, P9 and P10 landed 2026-11-03; P11 landed 2026-11-04 on the float half of its exit; P11b is profiled with its first fixes in; the rest of §9 and P12 landed the same day; the GNU APL suite (P13) landed 2026-11-07, its first missing features (P14) and APL2's display (P15) on 2026-11-09; the rest of P11b, the suite's other missing features, complex numbers and the hosts remain.** v0.1.1 implements dialect v1 in full ([release notes](release-v0.1.md)). This file carries what comes after, in the plan's shape: numbered phases from P8, each with its scope, the rules it closes, a mechanical exit test, and what it waits on. The order below is a dependency order and a recommendation; the maintainer rules it. A phase lands as the P0–P7 phases did ([plan.md §3](plan.md)): with its vectors, recorded in the plan with numbers, and the spec's rules pinned.
+**Status: P8, P9 and P10 landed 2026-11-03; P11 landed 2026-11-04 on the float half of its exit; P11b is profiled with its first fixes in; the rest of §9 and P12 landed the same day; the GNU APL suite (P13) landed 2026-11-07, its first missing features (P14), APL2's display (P15) and roll and deal (P16) on 2026-11-09; the rest of P11b, the suite's other missing features, complex numbers and the hosts remain.** v0.1.1 implements dialect v1 in full ([release notes](release-v0.1.md)). This file carries what comes after, in the plan's shape: numbered phases from P8, each with its scope, the rules it closes, a mechanical exit test, and what it waits on. The order below is a dependency order and a recommendation; the maintainer rules it. A phase lands as the P0–P7 phases did ([plan.md §3](plan.md)): with its vectors, recorded in the plan with numbers, and the spec's rules pinned.
 
 Two facts fix most of the order. Nested arrays change the array model every structural function sits on, so they precede the primitives that need them (`⍷ ⍪ ≡`, dyadic `⍕`). Dfns need `⍺ ⍵` and guards in the parser before the emitter can see them, so they are a phase of their own and come first, since nothing else depends on them and they are what the v1 tradfn programmer reaches for next.
 
@@ -36,6 +36,10 @@ Two facts fix most of the order. Nested arrays change the array model every stru
 **P15 — APL2's display as a setting (2026-11-09).** `)DISPLAY APL2` prints a box in IBM APL2's layout as GNU APL prints it, and `)DISPLAY STRAND` keeps the strand, the default (D-99). Columns part by APL2's spacing rule (LRM p. 138), and `⍕` follows the setting. The GNU cases run under it.
 *Exit:* `atl/display-apl2` passes in every lane and at the prompt, and no GNU case loses a line.
 **LANDED 2026-11-09:** 2,024 of 2,816 typed GNU lines reproduce, up from 1,862.
+
+**P16 — Roll, deal and `⎕RL` (2026-11-09).** `?B` and `A?B` draw from one Philox4x32-10 stream per session, from numerics' `/lib/rand` (vendored at the same pin, 0611fac; not cryptographic). Jojo's `eny` seeds the stream at the first line, and `⎕RL←n` reseeds it so a run repeats (D-104). Deal is Floyd's sampling in Knuth's ordering, quadratic in `A`.
+*Exit:* `atl/roll-deal` passes in every lane and at the prompt.
+**LANDED 2026-11-09.** GNU's own roll and deal numbers come from its generator, so its `Roll` and `Deal` cases cannot match them (a dialect difference, not a failure to fix).
 
 ## Performance
 
