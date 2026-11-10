@@ -13,10 +13,10 @@ Atalante runs GNU APL's own testcases, rewritten into its corpus format. Every r
 | Steps typed at the prompt | 2,901 |
 | Function definitions typed | 29 |
 | Steps and definitions skipped as inexpressible | 1,157 |
-| Typed lines that reproduce GNU's output | 2,143 |
-| Typed lines that differ from GNU | 787 |
+| Typed lines that reproduce GNU's output | 2,223 |
+| Typed lines that differ from GNU | 707 |
 
-The skips are mostly GNU features that sit outside Atalante's language. They are 394 system commands, 233 complex-number steps, 128 user commands, the `⎕` names other than `⎕IO` and `⎕PP` (`⎕CR` alone is 105), and the glyphs `⌷ ⍸`. The operators `⍨ ⍤ ⍣` were skipped until P18 (2026-11-10), which typed 114 more lines; with P19's gamma and exact arithmetic the suite went from 2,073 of 2,816 lines to 2,143 of 2,930. Many of the new lines fail on names that skipped definitions would have made, such as `Rank`'s `N233`.
+The skips are mostly GNU features that sit outside Atalante's language. They are 394 system commands, 233 complex-number steps, 128 user commands, the `⎕` names other than `⎕IO` and `⎕PP` (`⎕CR` alone is 105), and the glyphs `⌷ ⍸`. The operators `⍨ ⍤ ⍣` were skipped until P18 (2026-11-10), which typed 114 more lines; with P19's gamma and exact arithmetic the suite went from 2,073 of 2,816 lines to 2,143 of 2,930. Many of the new lines fail on names that skipped definitions would have made, such as `Rank`'s `N233`. P20's selective and strand assignment (D-108) then took the suite to 2,223, with 21 cases gaining lines (Binding and AllExpressions 13 each, Drop 9) and none losing one.
 
 The counts leave out the `)DISPLAY APL2` line that opens each case, which reproduces in all 116. Under it a box prints in APL2's layout (D-99), as GNU prints it; that took the reproducing lines from 1,862 to 2,024, and no case lost a line.
 
@@ -53,7 +53,6 @@ P14 (2026-11-09) added `⍬`, the set functions `∪ ∩ ∼` and n-wise reducti
 
 These are the failures that need a ruling or a feature. Counts are failing steps in the latest run.
 
-- **Selective and strand assignment.** `(⌽V)←…`, `(2↑A)←…` and `D←(A B C)←4 5 6` refuse as "cannot assign to that". About 90 steps.
 - **Dyadic grade with a collating sequence.** `'ABCDE'⍋'BEAD'`, 35 steps.
 - **Axis on `↑ ↓ ⊂ ⊃`, and ravel with an axis list.** About 45 steps.
 - **Circle codes 8 to 12.** These are complex, and wait for complex numbers.
