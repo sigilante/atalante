@@ -648,7 +648,9 @@ func binomG(x: @, y: @) -> @ {
     let ra = rgammaR(xa);
     let rb = rgammaR(xb);
     // a Γ that overflows, or a 1÷Γ that underflows off a pole, loses the ratio:  go through ln|Γ|
-    if (not array.finite(g0)) or (realZero(ra) and not isPole(xa)) or (realZero(rb) and not isPole(xb)) { binomLog(x, y) }
+    // also a 1÷Γ that overflows (its Γ underflowed), or a Γ(B+1) of 0 off a pole:  0.3!¯200.5 is finite
+    if (not array.finite(g0)) or (not array.finite(ra)) or (not array.finite(rb)) or (realZero(g0) and not isPole(array.rop(1, y, one)))
+       or (realZero(ra) and not isPole(xa)) or (realZero(rb) and not isPole(xb)) { binomLog(x, y) }
     else { array.rop(3, array.rop(3, g0, ra), rb) }
   }
 };
@@ -2794,6 +2796,8 @@ func evalAst(a: parse.Ast, env: Env) -> Ev {
         .ok(pr) => match pr { (parts, rshp, env3) => indexed(xv, parts, rshp, env3), },
       }, },
     },
+    .sassign(s) => match evalAst(s.v, env) { .err(e) => Ev.err(e), .ok(r) => match r { (v, env2) => strandAssign(s.nms, v, env2), }, },
+    .selassign(s) => match evalAst(s.v, env) { .err(e) => Ev.err(e), .ok(r) => match r { (v, env2) => selAssign(s, v, env2), }, },
     .iassign(s) => match lookupVar(env, s.nm) {
       (found, x0) => if not found { fail("%value-error", s.nm + " is not defined") }
       else {
@@ -2884,7 +2888,7 @@ func sysSet(nm: String, v: array.Arr, env: Env) -> Ev {
     else { nyi("⎕" + nm) }
   }
 };
-func isAssign(a: parse.Ast) -> Bool { match a { .assign(s) => true, .sysassign(s) => true, .iassign(s) => true, _ => false, } };
+func isAssign(a: parse.Ast) -> Bool { match a { .assign(s) => true, .sysassign(s) => true, .iassign(s) => true, .sassign(s) => true, .selassign(s) => true, _ => false, } };
 // one statement: what it prints (D-24) and the environment after it
 func runStmt(a: parse.Ast, env: Env) -> (String, Env) {
   match a {
@@ -3753,10 +3757,12 @@ func wrap(binds: List<(String, Nasm)>, body: Nasm) -> Nasm {
 func listOf(ps: List<Nasm>) -> Nasm { cel(snocN(ps, konst(0))) };   // a FORMULA for the null: a raw atom would land in formula position
 func snocN(xs: List<Nasm>, x: Nasm) -> List<Nasm> { match xs { (h, t) => (h, snocN(t, x)), _ => [x], } };
 
+// D←(A B)←… and D←(2↑V)←… run in the interpreter, which alone knows those assignments (D-108)
+func notNewAssign(a: parse.Ast) -> Bool { match a { .sassign(s) => false, .selassign(s) => false, .assign(s) => notNewAssign(s.v), _ => true, } };
 func emittable(a: parse.Ast) -> Bool {
   match a {
     .lit(l) => true, .name(nm) => true, .nilad(nm) => true, .sysvar(nm) => true, .monad(m) => true, .dyad(d) => true,
-    .assign(s) => true, .sysassign(s) => true, .index(ix) => true, .iassign(s) => true, .strand(xs) => true,
+    .assign(s) => notNewAssign(s.v), .sysassign(s) => notNewAssign(s.v), .index(ix) => true, .iassign(s) => notNewAssign(s.v), .strand(xs) => true,
     _ => false,
   }
 };
@@ -3913,8 +3919,8 @@ func mixed(fr: List<@>, r: Evs) -> Ev { match r { .err(e) => Ev.err(e), .ok(p) =
 func rankDyad(f: parse.Fn, ca: (List<@>, List<array.Arr>), cb: (List<@>, List<array.Arr>), pa: array.Arr, pb: array.Arr, env: Env) -> Ev {
   match ca { (fa, as2) => match cb { (fb, bs) =>
     if fa == fb and array.countA(bs) == 0 { mixEmpty(f, true, pa, pb, fb, env) }
-    else if fa == ~ and array.countA(bs) == 0 { mixEmpty(f, true, pa, pb, fb, env) }
-    else if fb == ~ and array.countA(as2) == 0 { mixEmpty(f, true, pa, pb, fa, env) }
+    else if fa == ~ and array.countA(bs) == 0 { mixEmpty(f, true, headA(as2), pb, fb, env) }
+    else if fb == ~ and array.countA(as2) == 0 { mixEmpty(f, true, pa, headA(bs), fa, env) }
     else if fa == fb { mixed(fb, mapCells(f, true, as2, bs, env, ~)) }
     else if fa == ~ { mixed(fb, mapCells(f, true, repCell(headA(as2), array.countA(bs), ~), bs, env, ~)) }
     else if fb == ~ { mixed(fa, mapCells(f, true, as2, repCell(headA(bs), array.countA(as2), ~), env, ~)) }
@@ -3923,3 +3929,72 @@ func rankDyad(f: parse.Fn, ca: (List<@>, List<array.Arr>), cb: (List<@>, List<ar
   }, }
 };
 func headA(xs: List<array.Arr>) -> array.Arr { match xs { (h, t) => h, _ => array.scalar(1, 0), } };
+// --- strand and selective assignment (D-108) ---------------------------------------------------
+// (A B C)←V gives each name one item of V, or every name V when V has one element.
+func strandAssign(nms: List<String>, v: array.Arr, env: Env) -> Ev {
+  let n = countStr(nms);
+  if array.size(array.shape(v)) == 1 { okv(v, putAll(nms, repCell(array.firstItem(v), n, ~), env)) }
+  else if array.rank(v) != 1 { fail("%rank-error", "a strand assignment takes a vector") }
+  else if array.size(array.shape(v)) != n { fail("%length-error", "a strand assignment takes one item per name") }
+  else { okv(v, putAll(nms, array.itemsOf(v), env)) }
+};
+func countStr(xs: List<String>) -> @ { match xs { (h, t) => 1 + countStr(t), _ => 0, } };
+func putAll(nms: List<String>, xs: List<array.Arr>, env: Env) -> Env {
+  match nms { (n, nt) => match xs { (x, xt) => putAll(nt, xt, putVar(env, n, x)), _ => env, }, _ => env, }
+};
+// (f A)←V:  f runs on A's positions, 1 to ×/⍴A in A's shape, and V goes in at the positions it
+// selects, as A[…]←V would (D-23).  f is made of the structural functions alone, whose left
+// arguments do not name A:  ↑ ↓ , ⍪ ⌽ ⊖ ⍉ ⍴ / \ ⌿ ⍀ ⊃ and indexing, with an axis or without.
+func selFn1(f: parse.Fn) -> Bool {
+  match f { .prim(cp) => cp == 44 or cp == 9066 or cp == 9021 or cp == 8854 or cp == 9033 or cp == 8593 or cp == 8595 or cp == 8835 or cp == 8712,
+            .axis(x) => selFn1(x.f), _ => false, }
+};
+func selFn2(f: parse.Fn) -> Bool {
+  // not dyadic , or ⍪:  their other argument would bring values that are no positions of A
+  match f { .prim(cp) => cp == 9076 or cp == 8593 or cp == 8595 or cp == 9021 or cp == 8854 or cp == 9033 or cp == 47 or cp == 92 or cp == 9023 or cp == 9024 or cp == 8835,
+            .axis(x) => selFn2(x.f), _ => false, }
+};
+func names(a: parse.Ast, nm: String) -> Bool {
+  match a {
+    .name(n) => n == nm, .lit(l) => false, .sysvar(n) => false, .nilad(n) => false, .elide => false, .empty => false,
+    .monad(m) => names(m.r, nm), .dyad(d) => names(d.l, nm) or names(d.r, nm),
+    .index(ix) => names(ix.a, nm) or namesAny(ix.ix, nm), .strand(xs) => namesAny(xs, nm),
+    _ => true,
+  }
+};
+func namesAny(xs: List<parse.Ast>, nm: String) -> Bool { match xs { (h, t) => if names(h, nm) { true } else { namesAny(t, nm) }, _ => false, } };
+func selOk(t: parse.Ast, nm: String) -> Bool {
+  match t {
+    .name(n) => n == nm,
+    .monad(m) => selFn1(m.f) and selOk(m.r, nm),
+    .dyad(d) => selFn2(d.f) and (not names(d.l, nm)) and selOk(d.r, nm),
+    .index(ix) => (not namesAny(ix.ix, nm)) and selOk(ix.a, nm),
+    _ => false,
+  }
+};
+func inRange(xs: List<@>, n: @) -> Bool { match xs { (h, t) => if h >= 1 and h <= n { inRange(t, n) } else { false }, _ => true, } };
+func minus1(xs: List<@>, acc: List<@>) -> List<@> { match xs { (h, t) => minus1(t, (h - 1, acc)), _ => array.revL(acc, ~), } };
+func selAssign(s: parse.SelAssign, v: array.Arr, env: Env) -> Ev {
+  match lookupVar(env, s.nm) {
+    (found, x) => if not found { fail("%value-error", s.nm + " is not defined") }
+    else if not selOk(s.t, s.nm) { fail("%syntax-error", "a selective assignment selects with ↑ ↓ , ⍪ ⌽ ⊖ ⍉ ⍴ / \\ ⌿ ⍀ ⊃ and [] (D-108)") }
+    else {
+      let n = array.size(array.shape(x));
+      let ix = mk(1, array.shape(x), array.iotaL(n, 1));
+      match evalAst(s.t, putVar(env, s.nm, ix)) {
+        .err(e) => Ev.err(e),
+        .ok(r) => match r { (sel, envS) =>
+          if array.isBox(sel) or sel.kind != 1 or not inRange(array.vals(sel), n) { fail("%index-error", "the selection takes a fill or reaches past " + s.nm) }
+          else if array.size(array.shape(v)) != 1 and array.shape(v) != array.shape(sel) { fail(if array.rank(v) != array.rank(sel) { "%rank-error" } else { "%length-error" }, "the value does not fit the selection") }
+          else {
+            let flat = reshapeKeep(x, [n]);
+            let v2 = if array.size(array.shape(v)) == 1 { v } else { reshapeKeep(v, [array.size(array.shape(v))]) };
+            match assignAt(flat, [minus1(array.vals(sel), ~)], v2, env) {
+              .err(e) => Ev.err(e),
+              .ok(r2) => match r2 { (flat2, env3) => okv(v, putVar(env3, s.nm, reshapeKeep(flat2, array.shape(x)))), },
+            }
+          }, },
+      }
+    },
+  }
+};

@@ -1,0 +1,89 @@
+⍝ D-108: strand assignment and selective assignment
+🍎> (A B C)←4 5 6
+🍎> A,B,C
+⍝ expect: 4 5 6
+🍎> D←(E F)←7
+🍎> D,E,F
+⍝ expect: 7 7 7
+🍎> (G H)←(1 2) 'xy'
+🍎> G
+⍝ expect: 1 2
+🍎> H
+⍝ expect: xy
+🍎> (P Q)←1 2 3
+⍝ refuse: %length-error
+🍎> V←⍳6
+🍎> (2↑V)←10 20
+🍎> V
+⍝ expect: 10 20 3 4 5 6
+🍎> (⌽V)←⍳6
+🍎> V
+⍝ expect: 6 5 4 3 2 1
+🍎> (¯2↑V)←0
+🍎> V
+⍝ expect: 6 5 4 3 0 0
+🍎> M←3 3⍴⍳9
+🍎> (1 1⍉M)←0
+🍎> M
+⍝ expect: 0 2 3
+⍝ expect: 4 0 6
+⍝ expect: 7 8 0
+🍎> (,M)←⍳9
+🍎> (1 0 1/M)←0
+🍎> M
+⍝ expect: 0 2 0
+⍝ expect: 0 5 0
+⍝ expect: 0 8 0
+🍎> W←'abcdef'
+🍎> (3↓W)←'XYZ'
+🍎> W
+⍝ expect: abcXYZ
+🍎> X←1 2 3
+🍎> (2↑X)←0.5 1.5
+🍎> X
+⍝ expect: 0.5 1.5 3
+🍎> (5↑X)←1 2 3 4 5
+⍝ refuse: %index-error
+🍎> (X+0)←1
+⍝ refuse: %syntax-error
+🍎> (2↑X)←1 2 3
+⍝ refuse: %length-error
+🍎> (2↑Undef)←1
+⍝ refuse: %value-error
+🍎> V←⍳3
+🍎> (1 2,V)←5 6 7 8 9
+⍝ refuse: %syntax-error
+🍎> M←3 3⍴⍳9
+🍎> (M[;2])←0
+🍎> M
+⍝ expect: 1 0 3
+⍝ expect: 4 0 6
+⍝ expect: 7 0 9
+🍎> (⊖M)←3 3⍴⍳9
+🍎> M[1;]
+⍝ expect: 7 8 9
+🍎> (2 3⍴V)←2 3⍴⍳6
+🍎> V
+⍝ expect: 4 5 6
+🍎> (1 0 1 1\V)←0
+⍝ refuse: %index-error
+🍎> F←{⍵+1}
+🍎> (F V)←1 2 3
+⍝ refuse: %syntax-error
+🍎> F 1
+⍝ expect: 2
+🍎> (A B)←2 2⍴⍳4
+⍝ refuse: %rank-error
+🍎> (2⊃V)←99
+🍎> V
+⍝ expect: 4 99 6
+🍎> ⎕IO←0
+🍎> (1↑V)←0
+🍎> V
+⍝ expect: 0 99 6
+🍎> ⎕IO←1
+🍎> H←{V←⍵ ⋄ (1↑V)←0 ⋄ V}
+🍎> H 5 6
+⍝ expect: 0 6
+🍎> V
+⍝ expect: 0 99 6

@@ -1,6 +1,6 @@
 # Atalante — Roadmap
 
-**Status: P8, P9 and P10 landed 2026-11-03; P11 landed 2026-11-04 on the float half of its exit; P11b is profiled with its first fixes in; the rest of §9 and P12 landed the same day; the GNU APL suite (P13) landed 2026-11-07, its first missing features (P14), APL2's display (P15) and roll and deal (P16) and the next tier of features (P17) on 2026-11-09, and the operators (P18) and gamma with exact naturals (P19) on 2026-11-10; the rest of P11b, the suite's other missing features, complex numbers and the hosts remain.** v0.1.1 implements dialect v1 in full ([release notes](release-v0.1.md)). This file carries what comes after, in the plan's shape: numbered phases from P8, each with its scope, the rules it closes, a mechanical exit test, and what it waits on. The order below is a dependency order and a recommendation; the maintainer rules it. A phase lands as the P0–P7 phases did ([plan.md §3](plan.md)): with its vectors, recorded in the plan with numbers, and the spec's rules pinned.
+**Status: P8, P9 and P10 landed 2026-11-03; P11 landed 2026-11-04 on the float half of its exit; P11b is profiled with its first fixes in; the rest of §9 and P12 landed the same day; the GNU APL suite (P13) landed 2026-11-07, its first missing features (P14), APL2's display (P15) and roll and deal (P16) and the next tier of features (P17) on 2026-11-09, the operators (P18), gamma with exact naturals (P19) and selective assignment (P20) on 2026-11-10; the rest of P11b, the suite's other missing features, complex numbers and the hosts remain.** v0.1.1 implements dialect v1 in full ([release notes](release-v0.1.md)). This file carries what comes after, in the plan's shape: numbered phases from P8, each with its scope, the rules it closes, a mechanical exit test, and what it waits on. The order below is a dependency order and a recommendation; the maintainer rules it. A phase lands as the P0–P7 phases did ([plan.md §3](plan.md)): with its vectors, recorded in the plan with numbers, and the spec's rules pinned.
 
 Two facts fix most of the order. Nested arrays change the array model every structural function sits on, so they precede the primitives that need them (`⍷ ⍪ ≡`, dyadic `⍕`). Dfns need `⍺ ⍵` and guards in the parser before the emitter can see them, so they are a phase of their own and come first, since nothing else depends on them and they are what the v1 tradfn programmer reaches for next.
 
@@ -52,6 +52,10 @@ Two facts fix most of the order. Nested arrays change the array model every stru
 **P19 — Gamma and exact naturals (2026-11-10).** `!` of a fraction through Lanczos's Γ with a log-gamma fallback, APL2's negative binomials (D-106); naturals past 2^63 meeting integers exactly (D-107); integer numerals past 64 bits refuse. A Wizard review found and closed silent wrong answers in D-100, D-101 and D-106 before the merge.
 *Exit:* `atl/gamma` and `atl/exact-ni` pass in every lane and at the prompt, and the reviews pass.
 **LANDED 2026-11-10:** 2,143 of 2,930 typed GNU lines reproduce.
+
+**P20 — Strand and selective assignment (2026-11-10).** `(A B C)←V`, and `(f A)←V` through a selection of structural functions run on A's positions (D-108). An Angel review closed a catenation hole that let foreign values through, refused elided indices, and a strand that overwrote a function.
+*Exit:* `atl/sel-assign` passes in every lane and at the prompt, and no GNU case loses a line.
+**LANDED 2026-11-10:** 2,223 of 2,930 typed GNU lines reproduce. Next: complex numbers, which wait for the maintainer, and the remaining unruled items in the suite notes.
 
 ## Performance
 
